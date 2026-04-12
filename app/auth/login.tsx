@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ScrollView,
   StyleSheet,
 } from "react-native";
 import { Link } from "expo-router";
@@ -70,18 +71,20 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.inner}
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* Brand */}
         <View style={styles.brand}>
-          <Text style={styles.logo}>frileuse</Text>
+          <Text style={styles.logo}>frileux</Text>
           <Text style={styles.tagline}>habille-toi pour le froid</Text>
         </View>
 
-        {/* Form */}
         <View style={styles.form}>
           <TextInput
             style={styles.input}
@@ -91,6 +94,7 @@ export default function LoginScreen() {
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
+            returnKeyType="next"
             selectionColor="#637D8E"
           />
           <TextInput
@@ -100,6 +104,8 @@ export default function LoginScreen() {
             value={password}
             onChangeText={setPassword}
             secureTextEntry
+            returnKeyType="done"
+            onSubmitEditing={handleLogin}
             selectionColor="#637D8E"
           />
 
@@ -124,13 +130,15 @@ export default function LoginScreen() {
             disabled={loading || googleLoading}
             style={({ pressed }) => [styles.btnGoogle, pressed && styles.btnGooglePressed]}
           >
+            <View style={styles.googleIcon}>
+              <Text style={styles.googleIconText}>G</Text>
+            </View>
             <Text style={styles.btnGoogleText}>
               {googleLoading ? "Connexion…" : "Continuer avec Google"}
             </Text>
           </Pressable>
         </View>
 
-        {/* Footer */}
         <Link href="/auth/register" asChild>
           <Pressable style={styles.footer}>
             <Text style={styles.footerText}>
@@ -139,14 +147,20 @@ export default function LoginScreen() {
             </Text>
           </Pressable>
         </Link>
-      </KeyboardAvoidingView>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FAFAF8" },
-  inner: { flex: 1, justifyContent: "center", paddingHorizontal: 32, gap: 48 },
+  root: { flex: 1, backgroundColor: "#FAFAF8" },
+  scroll: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    paddingVertical: 48,
+    gap: 48,
+  },
 
   brand: { alignItems: "flex-start" },
   logo: {
@@ -175,6 +189,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#0F0F0D",
   },
+
   btn: {
     backgroundColor: "#0F0F0D",
     paddingVertical: 18,
@@ -189,36 +204,43 @@ const styles = StyleSheet.create({
     letterSpacing: 2.5,
   },
 
-  divider: { flexDirection: "row", alignItems: "center", gap: 12 },
+  divider: { flexDirection: "row", alignItems: "center", gap: 12, marginVertical: 4 },
   dividerLine: { flex: 1, height: 1, backgroundColor: "#E8E5DF" },
-  dividerText: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 13,
-    color: "#9E9A96",
-  },
+  dividerText: { fontFamily: "Jost_400Regular", fontSize: 12, color: "#C5C2BC" },
 
   btnGoogle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: "#E8E5DF",
-    paddingVertical: 18,
-    alignItems: "center",
-    backgroundColor: "#F2F0EC",
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    backgroundColor: "#FFFFFF",
+    gap: 12,
   },
-  btnGooglePressed: { backgroundColor: "#E8E5DF" },
+  btnGooglePressed: { backgroundColor: "#F5F3EF" },
+  googleIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 2,
+    backgroundColor: "#4285F4",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  googleIconText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontFamily: "Jost_600SemiBold",
+    lineHeight: 14,
+  },
   btnGoogleText: {
     fontFamily: "Jost_400Regular",
     fontSize: 14,
-    color: "#6B6A66",
+    color: "#3C3A36",
   },
 
   footer: { alignItems: "center" },
-  footerText: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 14,
-    color: "#9E9A96",
-  },
-  footerLink: {
-    fontFamily: "Jost_500Medium",
-    color: "#637D8E",
-  },
+  footerText: { fontFamily: "Jost_400Regular", fontSize: 14, color: "#9E9A96" },
+  footerLink: { fontFamily: "Jost_500Medium", color: "#637D8E" },
 });
