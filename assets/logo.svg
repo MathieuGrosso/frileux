@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 52" fill="none">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&amp;display=swap');
+    </style>
+  </defs>
+
+  <!-- Diamond mark — 36w × 40h, centered vertically in 52px -->
+  <!-- top:(27,6) right:(45,26) bottom:(27,46) left:(9,26) girdle:(27,26) -->
+  <polygon points="27,6 9,26 27,26"  fill="#383836"/>
+  <polygon points="27,6 27,26 45,26" fill="#0F0F0D"/>
+  <polygon points="9,26 27,46 27,26" fill="#7B96A8"/>
+  <polygon points="27,26 27,46 45,26" fill="#4A6578"/>
+
+  <!-- Wordmark -->
+  <text
+    x="59"
+    y="26"
+    font-family="'Barlow Condensed', sans-serif"
+    font-weight="800"
+    font-size="34"
+    letter-spacing="-1.2"
+    fill="#0F0F0D"
+    dominant-baseline="middle">frileuse</text>
+</svg>
