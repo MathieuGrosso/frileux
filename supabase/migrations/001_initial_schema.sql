@@ -31,18 +31,6 @@ create policy "Users can insert their own profile"
   on public.profiles for insert
   with check (auth.uid() = id);
 
--- Profiles visible to circle members
-create policy "Circle members can view each other's profiles"
-  on public.profiles for select
-  using (
-    id in (
-      select cm2.user_id
-      from public.circle_members cm1
-      join public.circle_members cm2 on cm1.circle_id = cm2.circle_id
-      where cm1.user_id = auth.uid()
-    )
-  );
-
 -- ============================================
 -- OUTFITS
 -- ============================================
@@ -79,18 +67,6 @@ create policy "Users can delete their own outfits"
   on public.outfits for delete
   using (auth.uid() = user_id);
 
--- Circle members can see each other's outfits
-create policy "Circle members can view each other's outfits"
-  on public.outfits for select
-  using (
-    user_id in (
-      select cm2.user_id
-      from public.circle_members cm1
-      join public.circle_members cm2 on cm1.circle_id = cm2.circle_id
-      where cm1.user_id = auth.uid()
-    )
-  );
-
 -- ============================================
 -- CIRCLES
 -- ============================================
@@ -105,15 +81,6 @@ create table public.circles (
 create unique index idx_circles_invite_code on public.circles(invite_code);
 
 alter table public.circles enable row level security;
-
-create policy "Circle members can view their circles"
-  on public.circles for select
-  using (
-    id in (
-      select circle_id from public.circle_members
-      where user_id = auth.uid()
-    )
-  );
 
 create policy "Authenticated users can view circles by invite code"
   on public.circles for select
@@ -151,6 +118,44 @@ create policy "Users can join circles"
 create policy "Users can leave circles"
   on public.circle_members for delete
   using (auth.uid() = user_id);
+
+-- ============================================
+-- CROSS-TABLE POLICIES (defined after all tables exist)
+-- ============================================
+
+-- Profiles visible to circle members
+create policy "Circle members can view each other's profiles"
+  on public.profiles for select
+  using (
+    id in (
+      select cm2.user_id
+      from public.circle_members cm1
+      join public.circle_members cm2 on cm1.circle_id = cm2.circle_id
+      where cm1.user_id = auth.uid()
+    )
+  );
+
+-- Circle members can see each other's outfits
+create policy "Circle members can view each other's outfits"
+  on public.outfits for select
+  using (
+    user_id in (
+      select cm2.user_id
+      from public.circle_members cm1
+      join public.circle_members cm2 on cm1.circle_id = cm2.circle_id
+      where cm1.user_id = auth.uid()
+    )
+  );
+
+-- Circle members can view their circles
+create policy "Circle members can view their circles"
+  on public.circles for select
+  using (
+    id in (
+      select circle_id from public.circle_members
+      where user_id = auth.uid()
+    )
+  );
 
 -- ============================================
 -- STORAGE BUCKET
