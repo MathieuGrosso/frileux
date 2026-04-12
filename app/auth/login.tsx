@@ -11,18 +11,55 @@ import {
 } from "react-native";
 import { Link } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import * as WebBrowser from "expo-web-browser";
+import { makeRedirectUri } from "expo-auth-session";
 import { supabase } from "@/lib/supabase";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   async function handleLogin() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) Alert.alert("Erreur", error.message);
     setLoading(false);
+  }
+
+  async function handleGoogleLogin() {
+    setGoogleLoading(true);
+    const redirectUri = makeRedirectUri({ scheme: "frileuse", path: "auth/callback" });
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: redirectUri,
+        skipBrowserRedirect: true,
+      },
+    });
+
+    if (error || !data.url) {
+      Alert.alert("Erreur", error?.message ?? "Google sign-in unavailable");
+      setGoogleLoading(false);
+      return;
+    }
+
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
+
+    if (result.type === "success") {
+      const url = new URL(result.url);
+      const code = url.searchParams.get("code");
+      if (code) {
+        const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+        if (sessionError) Alert.alert("Erreur", sessionError.message);
+      }
+    }
+
+    setGoogleLoading(false);
   }
 
   return (
@@ -60,11 +97,27 @@ export default function LoginScreen() {
 
           <Pressable
             onPress={handleLogin}
-            disabled={loading}
+            disabled={loading || googleLoading}
             style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
           >
             <Text style={styles.btnText}>
               {loading ? "Connexion..." : "Se connecter"}
+            </Text>
+          </Pressable>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>ou</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <Pressable
+            onPress={handleGoogleLogin}
+            disabled={loading || googleLoading}
+            style={({ pressed }) => [styles.btnGoogle, pressed && styles.btnGooglePressed]}
+          >
+            <Text style={styles.btnGoogleText}>
+              {googleLoading ? "Connexion..." : "Continuer avec Google"}
             </Text>
           </Pressable>
         </View>
@@ -112,6 +165,20 @@ const styles = StyleSheet.create({
   },
   btnPressed: { backgroundColor: "#D97706" },
   btnText: { fontFamily: "DMSans_700Bold", fontSize: 15, color: "#1C1917" },
+
+  divider: { flexDirection: "row", alignItems: "center", gap: 12 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: "#44403C" },
+  dividerText: { fontFamily: "DMSans_400Regular", fontSize: 13, color: "#57534E" },
+
+  btnGoogle: {
+    borderWidth: 1,
+    borderColor: "#44403C",
+    borderRadius: 12,
+    paddingVertical: 18,
+    alignItems: "center",
+  },
+  btnGooglePressed: { backgroundColor: "#292524" },
+  btnGoogleText: { fontFamily: "DMSans_500Medium", fontSize: 15, color: "#E7E5E4" },
 
   footer: { alignItems: "center" },
   footerText: { fontFamily: "DMSans_400Regular", fontSize: 14, color: "#57534E" },
