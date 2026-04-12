@@ -7,8 +7,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  StyleSheet,
 } from "react-native";
 import { Link } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "@/lib/supabase";
 
 export default function LoginScreen() {
@@ -18,67 +20,100 @@ export default function LoginScreen() {
 
   async function handleLogin() {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) Alert.alert("Erreur", error.message);
     setLoading(false);
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      className="flex-1"
-    >
-      <View className="flex-1 justify-center px-8 bg-midnight">
-        <Text className="text-cream-500 text-5xl font-sans-bold text-center mb-2">
-          frileux
-        </Text>
-        <Text className="text-cream-200 text-lg text-center mb-12 opacity-70">
-          habille-toi pour le froid
-        </Text>
+    <View style={styles.container}>
+      <LinearGradient colors={["#1C1917", "#292524"]} style={StyleSheet.absoluteFill} />
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.inner}>
 
-        <TextInput
-          className="bg-midnight-500 text-cream-50 rounded-xl px-4 py-4 mb-4 text-base"
-          placeholder="Email"
-          placeholderTextColor="#6F6F91"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
+        {/* Brand */}
+        <View style={styles.brand}>
+          <Text style={styles.logo}>frileuse</Text>
+          <Text style={styles.tagline}>habille-toi pour le froid</Text>
+        </View>
 
-        <TextInput
-          className="bg-midnight-500 text-cream-50 rounded-xl px-4 py-4 mb-8 text-base"
-          placeholder="Mot de passe"
-          placeholderTextColor="#6F6F91"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+        {/* Form */}
+        <View style={styles.form}>
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            placeholderTextColor="#57534E"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            selectionColor="#F59E0B"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Mot de passe"
+            placeholderTextColor="#57534E"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            selectionColor="#F59E0B"
+          />
 
-        <Pressable
-          onPress={handleLogin}
-          disabled={loading}
-          className="bg-cream-500 rounded-xl py-4 items-center active:bg-cream-400"
-        >
-          <Text className="text-midnight text-lg font-sans-semibold">
-            {loading ? "Connexion..." : "Se connecter"}
-          </Text>
-        </Pressable>
+          <Pressable
+            onPress={handleLogin}
+            disabled={loading}
+            style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
+          >
+            <Text style={styles.btnText}>
+              {loading ? "Connexion..." : "Se connecter"}
+            </Text>
+          </Pressable>
+        </View>
 
+        {/* Footer */}
         <Link href="/auth/register" asChild>
-          <Pressable className="mt-6 items-center">
-            <Text className="text-cream-300 text-base">
+          <Pressable style={styles.footer}>
+            <Text style={styles.footerText}>
               Pas encore de compte ?{" "}
-              <Text className="text-cream-500 font-sans-semibold">
-                S'inscrire
-              </Text>
+              <Text style={styles.footerLink}>S'inscrire</Text>
             </Text>
           </Pressable>
         </Link>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#1C1917" },
+  inner: { flex: 1, justifyContent: "center", paddingHorizontal: 32, gap: 48 },
+
+  brand: { alignItems: "center" },
+  logo: { fontFamily: "Cormorant_600SemiBold", fontSize: 56, color: "#FAFAF9", letterSpacing: -1 },
+  tagline: { fontFamily: "DMSans_400Regular", fontSize: 14, color: "#57534E", marginTop: 8, letterSpacing: 0.5 },
+
+  form: { gap: 12 },
+  input: {
+    backgroundColor: "#292524",
+    borderWidth: 1,
+    borderColor: "#44403C",
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    fontFamily: "DMSans_400Regular",
+    fontSize: 15,
+    color: "#E7E5E4",
+  },
+  btn: {
+    backgroundColor: "#F59E0B",
+    borderRadius: 12,
+    paddingVertical: 18,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  btnPressed: { backgroundColor: "#D97706" },
+  btnText: { fontFamily: "DMSans_700Bold", fontSize: 15, color: "#1C1917" },
+
+  footer: { alignItems: "center" },
+  footerText: { fontFamily: "DMSans_400Regular", fontSize: 14, color: "#57534E" },
+  footerLink: { fontFamily: "DMSans_500Medium", color: "#F59E0B" },
+});

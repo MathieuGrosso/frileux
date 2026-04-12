@@ -1,5 +1,5 @@
 {
-  "name": "frileux",
+  "name": "frileuse",
   "version": "0.1.0",
   "main": "expo-router/entry",
   "scripts": {
@@ -10,6 +10,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@expo-google-fonts/cormorant": "^0.4.2",
+    "@expo-google-fonts/dm-sans": "^0.4.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.103.0",
     "expo": "~54.0.33",
@@ -17,6 +19,7 @@
     "expo-constants": "~18.0.13",
     "expo-font": "~14.0.11",
     "expo-image-picker": "~17.0.10",
+    "expo-linear-gradient": "~15.0.8",
     "expo-linking": "~8.0.11",
     "expo-location": "~19.0.8",
     "expo-notifications": "~0.32.16",

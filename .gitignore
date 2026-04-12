@@ -45,6 +45,9 @@ coverage/
 # misc
 *.pem
 
+# Worktrees
+.worktrees/
+
 # AI tool configs
 .agents/
 .claude/

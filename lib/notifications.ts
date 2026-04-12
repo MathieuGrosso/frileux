@@ -36,7 +36,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
   }
 
   const token = await Notifications.getExpoPushTokenAsync({
-    projectId: "frileux",
+    projectId: "frileuse",
   });
 
   return token.data;
