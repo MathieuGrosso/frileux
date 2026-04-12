@@ -1,0 +1,66 @@
+{
+  "expo": {
+    "name": "Frileux",
+    "slug": "frileux",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "scheme": "frileux",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a1a2e"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.frileux.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Frileux a besoin de la caméra pour photographier ta tenue du jour.",
+        "NSPhotoLibraryUsageDescription": "Frileux a besoin d'accéder à tes photos pour choisir une photo de tenue.",
+        "NSLocationWhenInUseUsageDescription": "Frileux utilise ta position pour te donner la météo locale."
+      }
+    },
+    "android": {
+      "package": "com.frileux.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1a1a2e"
+      },
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "READ_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Frileux utilise ta position pour la météo locale."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Frileux accède à tes photos pour les tenues."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#1a1a2e"
+        }
+      ],
+      "expo-font"
+    ]
+  }
+}

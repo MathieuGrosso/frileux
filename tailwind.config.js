@@ -1,0 +1,81 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./app/**/*.{js,jsx,ts,tsx}",
+    "./components/**/*.{js,jsx,ts,tsx}",
+    "./lib/**/*.{js,jsx,ts,tsx}",
+  ],
+  presets: [require("nativewind/preset")],
+  theme: {
+    extend: {
+      colors: {
+        // Frileux palette — warm, cozy tones for a cold-weather app
+        cream: {
+          50: "#FFFDF7",
+          100: "#FFF9E8",
+          200: "#FFF3D1",
+          300: "#FFE9A8",
+          400: "#FFDB7A",
+          500: "#FFC94D",
+        },
+        cocoa: {
+          50: "#F9F5F1",
+          100: "#F0E6DB",
+          200: "#E0CCBA",
+          300: "#C9A88E",
+          400: "#B08968",
+          500: "#8B6F47",
+          600: "#6B5335",
+          700: "#4A3928",
+          800: "#33271C",
+          900: "#1E1712",
+        },
+        frost: {
+          50: "#F0F7FF",
+          100: "#DBEAFE",
+          200: "#BFDBFE",
+          300: "#93C5FD",
+          400: "#60A5FA",
+          500: "#3B82F6",
+          600: "#2563EB",
+        },
+        blush: {
+          50: "#FFF1F2",
+          100: "#FFE4E6",
+          200: "#FECDD3",
+          300: "#FDA4AF",
+          400: "#FB7185",
+          500: "#F43F5E",
+        },
+        sage: {
+          50: "#F0FDF4",
+          100: "#DCFCE7",
+          200: "#BBF7D0",
+          300: "#86EFAC",
+          400: "#4ADE80",
+          500: "#22C55E",
+        },
+        midnight: {
+          DEFAULT: "#1a1a2e",
+          50: "#E8E8ED",
+          100: "#C5C5D1",
+          200: "#9B9BB3",
+          300: "#6F6F91",
+          400: "#4A4A70",
+          500: "#2E2E4F",
+          600: "#1a1a2e",
+          700: "#141422",
+          800: "#0F0F1A",
+          900: "#0A0A11",
+        },
+      },
+      fontFamily: {
+        sans: ["SourceSans3"],
+        "sans-medium": ["SourceSans3-Medium"],
+        "sans-semibold": ["SourceSans3-SemiBold"],
+        "sans-bold": ["SourceSans3-Bold"],
+      },
+    },
+  },
+  plugins: [],
+};
