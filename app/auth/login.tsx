@@ -31,7 +31,7 @@ export default function LoginScreen() {
 
   async function handleGoogleLogin() {
     setGoogleLoading(true);
-    const redirectUri = makeRedirectUri({ scheme: "frileuse", path: "auth/callback" });
+    const redirectUri = makeRedirectUri({ path: "auth/callback" });
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
