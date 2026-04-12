@@ -10,7 +10,6 @@ import {
   StyleSheet,
 } from "react-native";
 import { Link } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";
 import { supabase } from "@/lib/supabase";
@@ -36,10 +35,7 @@ export default function LoginScreen() {
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo: redirectUri,
-        skipBrowserRedirect: true,
-      },
+      options: { redirectTo: redirectUri, skipBrowserRedirect: true },
     });
 
     if (error || !data.url) {
@@ -64,9 +60,10 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={["#1C1917", "#292524"]} style={StyleSheet.absoluteFill} />
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.inner}>
-
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.inner}
+      >
         {/* Brand */}
         <View style={styles.brand}>
           <Text style={styles.logo}>frileuse</Text>
@@ -78,21 +75,21 @@ export default function LoginScreen() {
           <TextInput
             style={styles.input}
             placeholder="Email"
-            placeholderTextColor="#57534E"
+            placeholderTextColor="#9E9A96"
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
-            selectionColor="#F59E0B"
+            selectionColor="#637D8E"
           />
           <TextInput
             style={styles.input}
             placeholder="Mot de passe"
-            placeholderTextColor="#57534E"
+            placeholderTextColor="#9E9A96"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            selectionColor="#F59E0B"
+            selectionColor="#637D8E"
           />
 
           <Pressable
@@ -101,7 +98,7 @@ export default function LoginScreen() {
             style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
           >
             <Text style={styles.btnText}>
-              {loading ? "Connexion..." : "Se connecter"}
+              {loading ? "CONNEXION…" : "SE CONNECTER"}
             </Text>
           </Pressable>
 
@@ -117,7 +114,7 @@ export default function LoginScreen() {
             style={({ pressed }) => [styles.btnGoogle, pressed && styles.btnGooglePressed]}
           >
             <Text style={styles.btnGoogleText}>
-              {googleLoading ? "Connexion..." : "Continuer avec Google"}
+              {googleLoading ? "Connexion…" : "Continuer avec Google"}
             </Text>
           </Pressable>
         </View>
@@ -137,50 +134,80 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#1C1917" },
+  container: { flex: 1, backgroundColor: "#FAFAF8" },
   inner: { flex: 1, justifyContent: "center", paddingHorizontal: 32, gap: 48 },
 
-  brand: { alignItems: "center" },
-  logo: { fontFamily: "Cormorant_600SemiBold", fontSize: 56, color: "#FAFAF9", letterSpacing: -1 },
-  tagline: { fontFamily: "DMSans_400Regular", fontSize: 14, color: "#57534E", marginTop: 8, letterSpacing: 0.5 },
+  brand: { alignItems: "flex-start" },
+  logo: {
+    fontFamily: "BarlowCondensed_600SemiBold",
+    fontSize: 56,
+    color: "#0F0F0D",
+    letterSpacing: -1,
+    lineHeight: 56,
+  },
+  tagline: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 13,
+    color: "#9E9A96",
+    marginTop: 6,
+    letterSpacing: 0.5,
+  },
 
   form: { gap: 12 },
   input: {
-    backgroundColor: "#292524",
+    backgroundColor: "#F2F0EC",
     borderWidth: 1,
-    borderColor: "#44403C",
-    borderRadius: 12,
+    borderColor: "#E8E5DF",
     paddingHorizontal: 18,
     paddingVertical: 16,
-    fontFamily: "DMSans_400Regular",
+    fontFamily: "Jost_400Regular",
     fontSize: 15,
-    color: "#E7E5E4",
+    color: "#0F0F0D",
   },
   btn: {
-    backgroundColor: "#F59E0B",
-    borderRadius: 12,
+    backgroundColor: "#0F0F0D",
     paddingVertical: 18,
     alignItems: "center",
     marginTop: 8,
   },
-  btnPressed: { backgroundColor: "#D97706" },
-  btnText: { fontFamily: "DMSans_700Bold", fontSize: 15, color: "#1C1917" },
+  btnPressed: { backgroundColor: "#3A3836" },
+  btnText: {
+    fontFamily: "Jost_600SemiBold",
+    fontSize: 11,
+    color: "#FAFAF8",
+    letterSpacing: 2.5,
+  },
 
   divider: { flexDirection: "row", alignItems: "center", gap: 12 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: "#44403C" },
-  dividerText: { fontFamily: "DMSans_400Regular", fontSize: 13, color: "#57534E" },
+  dividerLine: { flex: 1, height: 1, backgroundColor: "#E8E5DF" },
+  dividerText: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 13,
+    color: "#9E9A96",
+  },
 
   btnGoogle: {
     borderWidth: 1,
-    borderColor: "#44403C",
-    borderRadius: 12,
+    borderColor: "#E8E5DF",
     paddingVertical: 18,
     alignItems: "center",
+    backgroundColor: "#F2F0EC",
   },
-  btnGooglePressed: { backgroundColor: "#292524" },
-  btnGoogleText: { fontFamily: "DMSans_500Medium", fontSize: 15, color: "#E7E5E4" },
+  btnGooglePressed: { backgroundColor: "#E8E5DF" },
+  btnGoogleText: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 14,
+    color: "#6B6A66",
+  },
 
   footer: { alignItems: "center" },
-  footerText: { fontFamily: "DMSans_400Regular", fontSize: 14, color: "#57534E" },
-  footerLink: { fontFamily: "DMSans_500Medium", color: "#F59E0B" },
+  footerText: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 14,
+    color: "#9E9A96",
+  },
+  footerLink: {
+    fontFamily: "Jost_500Medium",
+    color: "#637D8E",
+  },
 });

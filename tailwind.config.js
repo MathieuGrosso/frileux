@@ -9,42 +9,47 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Warm stone — the soul of Frileuse
-        stone: {
-          950: "#0C0A09",
-          900: "#1C1917",
-          800: "#292524",
-          750: "#312E2B",
-          700: "#44403C",
-          600: "#57534E",
-          500: "#78716C",
-          400: "#A8A29E",
-          300: "#D6D3D1",
-          200: "#E7E5E4",
-          100: "#F5F5F4",
-          50: "#FAFAF9",
+        // Light surfaces — warm off-white
+        paper: {
+          DEFAULT: "#FAFAF8",
+          50: "#FFFFFF",
+          100: "#FAFAF8",
+          200: "#F2F0EC",
+          300: "#E8E5DF",
+          400: "#D8D4CE",
+          500: "#C4BFB8",
         },
-        // Amber gold — the accent
-        amber: {
-          600: "#D97706",
-          500: "#F59E0B",
-          400: "#FBBF24",
-          300: "#FCD34D",
-          200: "#FDE68A",
-          100: "#FEF3C7",
-          50: "#FFFBEB",
+        // Near-black type
+        ink: {
+          DEFAULT: "#0F0F0D",
+          900: "#0F0F0D",
+          700: "#3A3836",
+          500: "#6B6A66",
+          300: "#9E9A96",
+          200: "#C4C0BC",
+        },
+        // Cold accent — icy slate blue
+        ice: {
+          DEFAULT: "#637D8E",
+          900: "#2C4A5C",
+          700: "#4E748C",
+          600: "#637D8E",
+          400: "#96ADB9",
+          200: "#D5E4EE",
+          100: "#E8F1F6",
         },
         // Semantic
-        success: "#4ADE80",
-        error: "#F87171",
-        warning: "#FBBF24",
+        success: "#2D7D4A",
+        error: "#C0392B",
+        warning: "#B45309",
       },
       fontFamily: {
-        display: ["Cormorant_600SemiBold"],
-        "display-light": ["Cormorant_300Light"],
-        body: ["DMSans_400Regular"],
-        "body-medium": ["DMSans_500Medium"],
-        "body-bold": ["DMSans_700Bold"],
+        display: ["BarlowCondensed_600SemiBold"],
+        "display-medium": ["BarlowCondensed_500Medium"],
+        "display-regular": ["BarlowCondensed_400Regular"],
+        body: ["Jost_400Regular"],
+        "body-medium": ["Jost_500Medium"],
+        "body-semibold": ["Jost_600SemiBold"],
       },
     },
   },

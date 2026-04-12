@@ -7,14 +7,15 @@ import { registerForPushNotifications, savePushToken } from "@/lib/notifications
 import { View, ActivityIndicator } from "react-native";
 import { useFonts } from "expo-font";
 import {
-  Cormorant_300Light,
-  Cormorant_600SemiBold,
-} from "@expo-google-fonts/cormorant";
+  BarlowCondensed_400Regular,
+  BarlowCondensed_500Medium,
+  BarlowCondensed_600SemiBold,
+} from "@expo-google-fonts/barlow-condensed";
 import {
-  DMSans_400Regular,
-  DMSans_500Medium,
-  DMSans_700Bold,
-} from "@expo-google-fonts/dm-sans";
+  Jost_400Regular,
+  Jost_500Medium,
+  Jost_600SemiBold,
+} from "@expo-google-fonts/jost";
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
@@ -23,11 +24,12 @@ export default function RootLayout() {
   const router = useRouter();
 
   const [fontsLoaded] = useFonts({
-    Cormorant_300Light,
-    Cormorant_600SemiBold,
-    DMSans_400Regular,
-    DMSans_500Medium,
-    DMSans_700Bold,
+    BarlowCondensed_400Regular,
+    BarlowCondensed_500Medium,
+    BarlowCondensed_600SemiBold,
+    Jost_400Regular,
+    Jost_500Medium,
+    Jost_600SemiBold,
   });
 
   useEffect(() => {
@@ -62,8 +64,8 @@ export default function RootLayout() {
 
   if (loading || !fontsLoaded) {
     return (
-      <View className="flex-1 items-center justify-center bg-stone-900">
-        <ActivityIndicator size="large" color="#F59E0B" />
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FAFAF8" }}>
+        <ActivityIndicator size="large" color="#637D8E" />
       </View>
     );
   }

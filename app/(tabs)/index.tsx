@@ -7,10 +7,8 @@ import {
   Image,
   Alert,
   StyleSheet,
-  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/lib/supabase";
@@ -19,8 +17,6 @@ import type { WeatherData } from "@/lib/types";
 import { RatingStars } from "@/components/RatingStars";
 import { useRouter } from "expo-router";
 
-const { width } = Dimensions.get("window");
-
 export default function TodayScreen() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [suggestion, setSuggestion] = useState<string | null>(null);
@@ -28,6 +24,7 @@ export default function TodayScreen() {
   const [rating, setRating] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const router = useRouter();
 
   const today = new Date();
@@ -89,15 +86,16 @@ export default function TodayScreen() {
         date: today.toISOString().split("T")[0], weather_data: weather,
         rating: rating || null, ai_suggestion: suggestion,
       });
-      Alert.alert("Sauvegardé ✓");
-      setPhotoUri(null); setRating(0);
+      setSaved(true);
+      setPhotoUri(null);
+      setRating(0);
+      setTimeout(() => setSaved(false), 3000);
     } catch { Alert.alert("Erreur", "Impossible de sauvegarder."); }
     finally { setSaving(false); }
   }
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={["#1C1917", "#292524", "#1C1917"]} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={styles.safe}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
 
@@ -107,68 +105,82 @@ export default function TodayScreen() {
               <Text style={styles.dayText}>{dayLabel.toUpperCase()}</Text>
               <Text style={styles.dateText}>{dateLabel}</Text>
             </View>
-            <Pressable onPress={() => router.push("/settings")} style={styles.settingsBtn}>
-              <Text style={styles.settingsIcon}>⚙</Text>
+            <Pressable onPress={() => router.push("/settings")} hitSlop={12}>
+              <Text style={styles.settingsIcon}>–</Text>
             </Pressable>
           </View>
 
-          {/* Weather hero */}
-          <View style={styles.weatherHero}>
-            <Text style={styles.weatherEmoji}>
-              {loading ? "—" : weather ? weatherEmoji(weather.icon) : "—"}
-            </Text>
+          {/* Weather */}
+          <View style={styles.weatherSection}>
+            <View style={styles.weatherTopRow}>
+              <Text style={styles.weatherEmojiLabel}>
+                {loading ? "" : weather ? weatherEmoji(weather.icon) : ""}
+              </Text>
+              <Text style={styles.weatherCondition}>
+                {loading ? "CHARGEMENT" : weather?.description?.toUpperCase() ?? "INDISPONIBLE"}
+              </Text>
+            </View>
             <Text style={styles.tempDisplay}>
               {loading ? "—" : weather ? `${weather.temp}°` : "—"}
-            </Text>
-            <Text style={styles.weatherDesc}>
-              {loading ? "CHARGEMENT..." : weather?.description?.toUpperCase() ?? "INDISPONIBLE"}
             </Text>
             {weather && (
               <View style={styles.weatherMeta}>
                 <Text style={styles.weatherMetaText}>Ressenti {weather.feels_like}°</Text>
-                <View style={styles.weatherDot} />
+                <Text style={styles.weatherMetaDot}>·</Text>
                 <Text style={styles.weatherMetaText}>Vent {weather.wind_speed} m/s</Text>
                 {weather.rain && (
-                  <><View style={styles.weatherDot} /><Text style={[styles.weatherMetaText, { color: "#93C5FD" }]}>Pluie</Text></>
+                  <>
+                    <Text style={styles.weatherMetaDot}>·</Text>
+                    <Text style={[styles.weatherMetaText, styles.weatherAccent]}>Pluie</Text>
+                  </>
                 )}
                 {weather.snow && (
-                  <><View style={styles.weatherDot} /><Text style={[styles.weatherMetaText, { color: "#BAE6FD" }]}>Neige</Text></>
+                  <>
+                    <Text style={styles.weatherMetaDot}>·</Text>
+                    <Text style={[styles.weatherMetaText, styles.weatherAccent]}>Neige</Text>
+                  </>
                 )}
               </View>
             )}
           </View>
 
-          {/* AI Suggestion */}
-          <View style={styles.suggestionCard}>
-            <View style={styles.suggestionAccent} />
-            <View style={styles.suggestionContent}>
-              <Text style={styles.suggestionLabel}>SUGGESTION DU JOUR</Text>
-              <Text style={[styles.suggestionText, !suggestion && { color: "#57534E" }]}>
-                {suggestion ?? (loading ? "Récupération de la météo..." : "Génération en cours...")}
-              </Text>
-            </View>
+          <View style={styles.divider} />
+
+          {/* Suggestion */}
+          <View style={styles.suggestionSection}>
+            <Text style={styles.suggestionLabel}>SUGGESTION DU JOUR</Text>
+            <Text style={[styles.suggestionText, !suggestion && styles.suggestionMuted]}>
+              {suggestion ?? (loading ? "Récupération de la météo…" : "Génération en cours…")}
+            </Text>
           </View>
 
-          {/* Photo section */}
+          <View style={styles.divider} />
+
+          {/* Photo */}
           <View style={styles.photoSection}>
             <Text style={styles.sectionLabel}>TENUE DU JOUR</Text>
             {photoUri ? (
               <View style={styles.photoContainer}>
                 <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
-                <LinearGradient colors={["transparent", "rgba(28,25,23,0.9)"]} style={styles.photoGradient} />
                 <Pressable onPress={() => setPhotoUri(null)} style={styles.changePhotoBtn}>
-                  <Text style={styles.changePhotoText}>Changer</Text>
+                  <Text style={styles.changePhotoText}>CHANGER</Text>
                 </Pressable>
               </View>
             ) : (
               <View style={styles.photoButtons}>
-                <Pressable onPress={takePhoto} style={({ pressed }) => [styles.photoBtn, pressed && styles.photoBtnPressed]}>
+                <Pressable
+                  onPress={takePhoto}
+                  style={({ pressed }) => [styles.photoBtn, pressed && styles.photoBtnPressed]}
+                >
                   <Text style={styles.photoBtnIcon}>📷</Text>
-                  <Text style={styles.photoBtnText}>Caméra</Text>
+                  <Text style={styles.photoBtnText}>CAMÉRA</Text>
                 </Pressable>
-                <Pressable onPress={pickPhoto} style={({ pressed }) => [styles.photoBtn, pressed && styles.photoBtnPressed]}>
+                <Pressable
+                  onPress={pickPhoto}
+                  style={({ pressed }) => [styles.photoBtn, pressed && styles.photoBtnPressed]}
+                >
                   <Text style={styles.photoBtnIcon}>🖼</Text>
-                  <Text style={styles.photoBtnText}>Galerie</Text>
+                  <Text style={styles.photoBtnText}>GALERIE</Text>
                 </Pressable>
               </View>
             )}
@@ -176,15 +188,31 @@ export default function TodayScreen() {
 
           {/* Rating + Save */}
           {photoUri && (
-            <View style={styles.ratingSection}>
-              <Text style={styles.sectionLabel}>NOTE TA TENUE</Text>
-              <RatingStars rating={rating} onRate={setRating} />
-              <Pressable
-                onPress={saveOutfit} disabled={saving}
-                style={({ pressed }) => [styles.saveBtn, pressed && styles.saveBtnPressed]}
-              >
-                <Text style={styles.saveBtnText}>{saving ? "Sauvegarde..." : "Sauvegarder"}</Text>
-              </Pressable>
+            <>
+              <View style={styles.divider} />
+              <View style={styles.ratingSection}>
+                <Text style={styles.sectionLabel}>NOTE</Text>
+                <RatingStars rating={rating} onRate={setRating} />
+                <Pressable
+                  onPress={saveOutfit}
+                  disabled={saving}
+                  style={({ pressed }) => [
+                    styles.saveBtn,
+                    pressed && styles.saveBtnPressed,
+                    saving && styles.saveBtnDisabled,
+                  ]}
+                >
+                  <Text style={styles.saveBtnText}>
+                    {saving ? "SAUVEGARDE…" : "SAUVEGARDER"}
+                  </Text>
+                </Pressable>
+              </View>
+            </>
+          )}
+
+          {saved && (
+            <View style={styles.savedBanner}>
+              <Text style={styles.savedBannerText}>Sauvegardé</Text>
             </View>
           )}
 
@@ -196,45 +224,164 @@ export default function TodayScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#1C1917" },
+  container: { flex: 1, backgroundColor: "#FAFAF8" },
   safe: { flex: 1 },
   scroll: { paddingHorizontal: 24, paddingTop: 8 },
 
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32 },
-  dayText: { fontFamily: "DMSans_500Medium", fontSize: 11, color: "#57534E", letterSpacing: 2 },
-  dateText: { fontFamily: "DMSans_400Regular", fontSize: 15, color: "#A8A29E", marginTop: 2 },
-  settingsBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#292524", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#44403C" },
-  settingsIcon: { fontSize: 15 },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 40,
+  },
+  dayText: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 10,
+    color: "#9E9A96",
+    letterSpacing: 2,
+  },
+  dateText: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 16,
+    color: "#0F0F0D",
+    marginTop: 3,
+  },
+  settingsIcon: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 24,
+    color: "#9E9A96",
+    lineHeight: 28,
+    marginTop: 4,
+  },
 
-  weatherHero: { alignItems: "center", paddingVertical: 8, marginBottom: 36 },
-  weatherEmoji: { fontSize: 52, marginBottom: 4 },
-  tempDisplay: { fontFamily: "Cormorant_300Light", fontSize: 120, color: "#FAFAF9", lineHeight: 120, letterSpacing: -4 },
-  weatherDesc: { fontFamily: "DMSans_500Medium", fontSize: 11, color: "#57534E", letterSpacing: 3, marginTop: 12 },
-  weatherMeta: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12, flexWrap: "wrap", justifyContent: "center" },
-  weatherMetaText: { fontFamily: "DMSans_400Regular", fontSize: 13, color: "#78716C" },
-  weatherDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: "#44403C" },
+  weatherSection: { marginBottom: 40 },
+  weatherTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 2,
+  },
+  weatherEmojiLabel: { fontSize: 18 },
+  weatherCondition: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 10,
+    color: "#9E9A96",
+    letterSpacing: 2,
+  },
+  tempDisplay: {
+    fontFamily: "BarlowCondensed_600SemiBold",
+    fontSize: 88,
+    color: "#0F0F0D",
+    lineHeight: 88,
+    letterSpacing: -2,
+    marginBottom: 14,
+  },
+  weatherMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  weatherMetaText: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 12,
+    color: "#6B6A66",
+  },
+  weatherMetaDot: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 12,
+    color: "#C4C0BC",
+  },
+  weatherAccent: { color: "#637D8E" },
 
-  suggestionCard: { flexDirection: "row", backgroundColor: "#292524", borderRadius: 16, overflow: "hidden", marginBottom: 36, borderWidth: 1, borderColor: "#312E2B" },
-  suggestionAccent: { width: 3, backgroundColor: "#F59E0B" },
-  suggestionContent: { flex: 1, padding: 20 },
-  suggestionLabel: { fontFamily: "DMSans_500Medium", fontSize: 10, color: "#F59E0B", letterSpacing: 2, marginBottom: 10 },
-  suggestionText: { fontFamily: "DMSans_400Regular", fontSize: 15, color: "#D6D3D1", lineHeight: 23 },
+  divider: { height: 1, backgroundColor: "#E8E5DF", marginBottom: 32 },
+
+  suggestionSection: { marginBottom: 32 },
+  suggestionLabel: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 9,
+    color: "#637D8E",
+    letterSpacing: 2,
+    marginBottom: 12,
+  },
+  suggestionText: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 15,
+    color: "#3A3836",
+    lineHeight: 25,
+  },
+  suggestionMuted: { color: "#9E9A96" },
 
   photoSection: { marginBottom: 24 },
-  sectionLabel: { fontFamily: "DMSans_500Medium", fontSize: 10, color: "#57534E", letterSpacing: 2, marginBottom: 16 },
-  photoContainer: { borderRadius: 20, overflow: "hidden", height: 440 },
+  sectionLabel: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 9,
+    color: "#9E9A96",
+    letterSpacing: 2,
+    marginBottom: 16,
+  },
+  photoContainer: { height: 440, position: "relative", overflow: "hidden" },
   photo: { width: "100%", height: "100%" },
-  photoGradient: { position: "absolute", bottom: 0, left: 0, right: 0, height: 120 },
-  changePhotoBtn: { position: "absolute", bottom: 16, right: 16, backgroundColor: "rgba(28,25,23,0.85)", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: "#44403C" },
-  changePhotoText: { fontFamily: "DMSans_500Medium", fontSize: 13, color: "#D6D3D1" },
+  changePhotoBtn: {
+    position: "absolute",
+    bottom: 16,
+    right: 16,
+    backgroundColor: "rgba(250,250,248,0.92)",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#E8E5DF",
+  },
+  changePhotoText: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 10,
+    color: "#0F0F0D",
+    letterSpacing: 1.5,
+  },
   photoButtons: { flexDirection: "row", gap: 12 },
-  photoBtn: { flex: 1, backgroundColor: "#292524", borderRadius: 16, paddingVertical: 32, alignItems: "center", borderWidth: 1, borderColor: "#44403C" },
-  photoBtnPressed: { backgroundColor: "#312E2B" },
-  photoBtnIcon: { fontSize: 28, marginBottom: 10 },
-  photoBtnText: { fontFamily: "DMSans_500Medium", fontSize: 13, color: "#A8A29E" },
+  photoBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#E8E5DF",
+    paddingVertical: 36,
+    alignItems: "center",
+    backgroundColor: "#FAFAF8",
+  },
+  photoBtnPressed: { backgroundColor: "#F2F0EC" },
+  photoBtnIcon: { fontSize: 22, marginBottom: 10 },
+  photoBtnText: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 9,
+    color: "#9E9A96",
+    letterSpacing: 1.5,
+  },
 
   ratingSection: { marginBottom: 16 },
-  saveBtn: { backgroundColor: "#F59E0B", borderRadius: 14, paddingVertical: 18, alignItems: "center", marginTop: 24 },
-  saveBtnPressed: { backgroundColor: "#D97706" },
-  saveBtnText: { fontFamily: "DMSans_700Bold", fontSize: 15, color: "#1C1917", letterSpacing: 0.5 },
+  saveBtn: {
+    backgroundColor: "#0F0F0D",
+    paddingVertical: 18,
+    alignItems: "center",
+    marginTop: 24,
+  },
+  saveBtnPressed: { backgroundColor: "#3A3836" },
+  saveBtnDisabled: { backgroundColor: "#C4C0BC" },
+  saveBtnText: {
+    fontFamily: "Jost_600SemiBold",
+    fontSize: 11,
+    color: "#FAFAF8",
+    letterSpacing: 2.5,
+  },
+
+  savedBanner: {
+    backgroundColor: "#E8F1F6",
+    paddingVertical: 12,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  savedBannerText: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 10,
+    color: "#637D8E",
+    letterSpacing: 2,
+  },
 });

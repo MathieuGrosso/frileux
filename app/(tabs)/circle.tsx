@@ -10,7 +10,6 @@ import {
   StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "@/lib/supabase";
 import type { OutfitWithProfile, Circle } from "@/lib/types";
 import { weatherEmoji } from "@/lib/weather";
@@ -21,7 +20,9 @@ export default function CircleScreen() {
   const [inviteCode, setInviteCode] = useState("");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { loadCircle(); }, []);
+  useEffect(() => {
+    loadCircle();
+  }, []);
 
   async function loadCircle() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -51,8 +52,14 @@ export default function CircleScreen() {
 
     if (!members) return;
 
-    const memberIds = members.map((m) => m.user_id).filter((id) => id !== currentUserId);
-    if (memberIds.length === 0) { setLoading(false); return; }
+    const memberIds = members
+      .map((m) => m.user_id)
+      .filter((id) => id !== currentUserId);
+
+    if (memberIds.length === 0) {
+      setLoading(false);
+      return;
+    }
 
     const today = new Date().toISOString().split("T")[0];
     const { data } = await supabase
@@ -71,20 +78,26 @@ export default function CircleScreen() {
     if (!user) return;
 
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+
     const { data, error } = await supabase
       .from("circles")
       .insert({ name: "Mon cercle", invite_code: code, created_by: user.id })
       .select()
       .single();
 
-    if (error || !data) { Alert.alert("Erreur", "Impossible de créer le cercle."); return; }
+    if (error || !data) {
+      Alert.alert("Erreur", "Impossible de créer le cercle.");
+      return;
+    }
+
     await supabase.from("circle_members").insert({ circle_id: data.id, user_id: user.id });
     setCircle(data);
-    Alert.alert("Cercle créé !", `Partage ce code avec tes amis : ${code}`);
+    Alert.alert("Cercle créé", `Code d'invitation : ${code}`);
   }
 
   async function joinCircle() {
     if (!inviteCode.trim()) return;
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -94,244 +107,256 @@ export default function CircleScreen() {
       .eq("invite_code", inviteCode.toUpperCase())
       .single();
 
-    if (!circleData) { Alert.alert("Erreur", "Code invalide."); return; }
+    if (!circleData) {
+      Alert.alert("Erreur", "Code invalide.");
+      return;
+    }
 
-    const { error } = await supabase
-      .from("circle_members")
-      .insert({ circle_id: circleData.id, user_id: user.id });
+    const { error } = await supabase.from("circle_members").insert({
+      circle_id: circleData.id,
+      user_id: user.id,
+    });
 
-    if (error) { Alert.alert("Erreur", "Tu fais peut-être déjà partie de ce cercle."); return; }
+    if (error) {
+      Alert.alert("Erreur", "Tu fais peut-être déjà partie de ce cercle.");
+      return;
+    }
+
     setCircle(circleData);
-    Alert.alert("Bienvenue !", `Tu as rejoint "${circleData.name}".`);
+    Alert.alert("Bienvenue", `Tu as rejoint "${circleData.name}".`);
   }
 
-  // --- Empty state: no circle ---
   if (!circle && !loading) {
     return (
-      <View style={styles.container}>
-        <LinearGradient colors={["#1C1917", "#292524"]} style={StyleSheet.absoluteFill} />
-        <SafeAreaView style={styles.safe}>
-          <View style={styles.onboarding}>
-            <Text style={styles.onboardingEmoji}>👯</Text>
-            <Text style={styles.onboardingTitle}>Cercle privé</Text>
-            <Text style={styles.onboardingText}>
-              Partage tes tenues avec tes proches et vois les leurs.
-            </Text>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.onboardingInner}>
+          <Text style={styles.onboardingTitle}>CERCLE PRIVÉ</Text>
+          <Text style={styles.onboardingSubtitle}>
+            Partage tes tenues avec tes proches
+          </Text>
 
-            <Pressable
-              onPress={createCircle}
-              style={({ pressed }) => [styles.createBtn, pressed && styles.createBtnPressed]}
-            >
-              <Text style={styles.createBtnText}>Créer un cercle</Text>
-            </Pressable>
+          <Pressable
+            onPress={createCircle}
+            style={({ pressed }) => [styles.primaryBtn, pressed && styles.primaryBtnPressed]}
+          >
+            <Text style={styles.primaryBtnText}>CRÉER UN CERCLE</Text>
+          </Pressable>
 
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>ou</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <TextInput
-              style={styles.codeInput}
-              placeholder="CODE D'INVITATION"
-              placeholderTextColor="#57534E"
-              value={inviteCode}
-              onChangeText={setInviteCode}
-              autoCapitalize="characters"
-              maxLength={6}
-              selectionColor="#F59E0B"
-            />
-
-            <Pressable
-              onPress={joinCircle}
-              style={({ pressed }) => [styles.joinBtn, pressed && styles.joinBtnPressed]}
-            >
-              <Text style={styles.joinBtnText}>Rejoindre</Text>
-            </Pressable>
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>ou</Text>
+            <View style={styles.dividerLine} />
           </View>
-        </SafeAreaView>
-      </View>
+
+          <TextInput
+            style={styles.codeInput}
+            placeholder="CODE D'INVITATION"
+            placeholderTextColor="#9E9A96"
+            value={inviteCode}
+            onChangeText={setInviteCode}
+            autoCapitalize="characters"
+            maxLength={6}
+            selectionColor="#637D8E"
+          />
+
+          <Pressable
+            onPress={joinCircle}
+            style={({ pressed }) => [styles.ghostBtn, pressed && styles.ghostBtnPressed]}
+          >
+            <Text style={styles.ghostBtnText}>REJOINDRE</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
     );
   }
 
   function renderOutfit({ item }: { item: OutfitWithProfile }) {
-    const initial = item.profile?.username?.[0]?.toUpperCase() ?? "?";
     return (
-      <View style={styles.feedCard}>
-        <View style={styles.feedCardHeader}>
+      <View style={styles.outfitCard}>
+        <View style={styles.outfitHeader}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initial}</Text>
+            <Text style={styles.avatarInitial}>
+              {item.profile?.username?.[0]?.toUpperCase() ?? "?"}
+            </Text>
           </View>
-          <Text style={styles.feedUsername}>{item.profile?.username ?? "Anonyme"}</Text>
-          <View style={styles.feedWeather}>
+          <Text style={styles.outfitUsername}>
+            {item.profile?.username ?? "Anonyme"}
+          </Text>
+          <View style={styles.outfitWeather}>
             <Text style={{ fontSize: 14 }}>{weatherEmoji(item.weather_data?.icon ?? "01d")}</Text>
-            <Text style={styles.feedTemp}>{item.weather_data?.temp}°</Text>
+            <Text style={styles.outfitTemp}>{item.weather_data?.temp}°</Text>
           </View>
         </View>
-        <Image source={{ uri: item.photo_url }} style={styles.feedPhoto} resizeMode="cover" />
+        <Image
+          source={{ uri: item.photo_url }}
+          style={styles.outfitPhoto}
+          resizeMode="cover"
+        />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <LinearGradient colors={["#1C1917", "#1C1917"]} style={StyleSheet.absoluteFill} />
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>Cercle</Text>
-            <Text style={styles.inviteCode}>Code : {circle?.invite_code}</Text>
-          </View>
-        </View>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>CERCLE</Text>
+        <Text style={styles.inviteCode}>Code : {circle?.invite_code}</Text>
+      </View>
 
-        <FlatList
-          data={outfits}
-          renderItem={renderOutfit}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.feedList}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyEmoji}>🌅</Text>
-              <Text style={styles.emptyTitle}>Aucune tenue aujourd'hui</Text>
-              <Text style={styles.emptyText}>
-                Personne n'a encore posté.{"\n"}Sois la première !
-              </Text>
-            </View>
-          }
-        />
-      </SafeAreaView>
-    </View>
+      <FlatList
+        data={outfits}
+        renderItem={renderOutfit}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>
+              {loading ? "—" : "Personne n'a posté aujourd'hui.\nSois la première !"}
+            </Text>
+          </View>
+        }
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#1C1917" },
-  safe: { flex: 1 },
+  container: { flex: 1, backgroundColor: "#FAFAF8" },
 
-  // Onboarding
-  onboarding: { flex: 1, justifyContent: "center", paddingHorizontal: 32 },
-  onboardingEmoji: { fontSize: 52, textAlign: "center", marginBottom: 20 },
+  onboardingInner: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 32,
+  },
   onboardingTitle: {
-    fontFamily: "Cormorant_600SemiBold",
-    fontSize: 42,
-    color: "#FAFAF9",
-    textAlign: "center",
-    letterSpacing: -1,
-    marginBottom: 10,
+    fontFamily: "BarlowCondensed_600SemiBold",
+    fontSize: 40,
+    color: "#0F0F0D",
+    letterSpacing: 2,
+    marginBottom: 8,
   },
-  onboardingText: {
-    fontFamily: "DMSans_400Regular",
+  onboardingSubtitle: {
+    fontFamily: "Jost_400Regular",
     fontSize: 14,
-    color: "#57534E",
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 36,
+    color: "#9E9A96",
+    marginBottom: 48,
   },
-  createBtn: {
-    backgroundColor: "#F59E0B",
-    borderRadius: 14,
+  primaryBtn: {
+    backgroundColor: "#0F0F0D",
     paddingVertical: 18,
     alignItems: "center",
     marginBottom: 24,
   },
-  createBtnPressed: { backgroundColor: "#D97706" },
-  createBtnText: { fontFamily: "DMSans_700Bold", fontSize: 15, color: "#1C1917" },
-
-  divider: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 24 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: "#292524" },
-  dividerText: { fontFamily: "DMSans_400Regular", fontSize: 13, color: "#57534E" },
-
+  primaryBtnPressed: { backgroundColor: "#3A3836" },
+  primaryBtnText: {
+    fontFamily: "Jost_600SemiBold",
+    fontSize: 11,
+    color: "#FAFAF8",
+    letterSpacing: 2.5,
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 24,
+  },
+  dividerLine: { flex: 1, height: 1, backgroundColor: "#E8E5DF" },
+  dividerText: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 13,
+    color: "#9E9A96",
+  },
   codeInput: {
-    backgroundColor: "#292524",
     borderWidth: 1,
-    borderColor: "#44403C",
-    borderRadius: 12,
+    borderColor: "#E8E5DF",
+    backgroundColor: "#F2F0EC",
     paddingHorizontal: 18,
     paddingVertical: 16,
-    fontFamily: "DMSans_500Medium",
-    fontSize: 16,
-    color: "#E7E5E4",
+    fontFamily: "BarlowCondensed_600SemiBold",
+    fontSize: 20,
+    color: "#0F0F0D",
     textAlign: "center",
     letterSpacing: 6,
     marginBottom: 12,
   },
-  joinBtn: {
+  ghostBtn: {
     borderWidth: 1,
-    borderColor: "#F59E0B",
-    borderRadius: 14,
+    borderColor: "#0F0F0D",
     paddingVertical: 18,
     alignItems: "center",
   },
-  joinBtnPressed: { backgroundColor: "rgba(245,158,11,0.08)" },
-  joinBtnText: { fontFamily: "DMSans_700Bold", fontSize: 15, color: "#F59E0B" },
+  ghostBtnPressed: { backgroundColor: "#F2F0EC" },
+  ghostBtnText: {
+    fontFamily: "Jost_600SemiBold",
+    fontSize: 11,
+    color: "#0F0F0D",
+    letterSpacing: 2.5,
+  },
 
-  // Main view
   header: {
     paddingHorizontal: 24,
     paddingTop: 8,
     paddingBottom: 20,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E8E5DF",
+    marginBottom: 8,
   },
   title: {
-    fontFamily: "Cormorant_600SemiBold",
-    fontSize: 42,
-    color: "#FAFAF9",
-    letterSpacing: -1,
+    fontFamily: "BarlowCondensed_600SemiBold",
+    fontSize: 36,
+    color: "#0F0F0D",
+    letterSpacing: 1,
+    marginBottom: 2,
   },
   inviteCode: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: 12,
-    color: "#57534E",
-    marginTop: 2,
+    fontFamily: "Jost_400Regular",
+    fontSize: 11,
+    color: "#9E9A96",
     letterSpacing: 1,
   },
-
-  feedList: { paddingHorizontal: 24, paddingBottom: 32, gap: 20 },
-  feedCard: {
-    backgroundColor: "#292524",
-    borderRadius: 20,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#312E2B",
-  },
-  feedCardHeader: {
+  list: { paddingHorizontal: 24, paddingBottom: 24 },
+  outfitCard: { marginBottom: 32 },
+  outfitHeader: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 14,
     gap: 10,
+    marginBottom: 12,
   },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(245,158,11,0.15)",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#E8F1F6",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "rgba(245,158,11,0.3)",
+    borderColor: "#D5E4EE",
   },
-  avatarText: { fontFamily: "DMSans_700Bold", fontSize: 13, color: "#F59E0B" },
-  feedUsername: { fontFamily: "DMSans_500Medium", fontSize: 14, color: "#D6D3D1", flex: 1 },
-  feedWeather: { flexDirection: "row", alignItems: "center", gap: 4 },
-  feedTemp: { fontFamily: "DMSans_400Regular", fontSize: 13, color: "#78716C" },
-  feedPhoto: { width: "100%", height: 360 },
-
+  avatarInitial: {
+    fontFamily: "Jost_600SemiBold",
+    fontSize: 11,
+    color: "#637D8E",
+  },
+  outfitUsername: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 13,
+    color: "#0F0F0D",
+    flex: 1,
+  },
+  outfitWeather: { flexDirection: "row", alignItems: "center", gap: 4 },
+  outfitTemp: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 12,
+    color: "#6B6A66",
+  },
+  outfitPhoto: { width: "100%", height: 320 },
   empty: { alignItems: "center", paddingTop: 80 },
-  emptyEmoji: { fontSize: 52, marginBottom: 16 },
-  emptyTitle: {
-    fontFamily: "Cormorant_600SemiBold",
-    fontSize: 26,
-    color: "#FAFAF9",
-    marginBottom: 8,
-  },
   emptyText: {
-    fontFamily: "DMSans_400Regular",
+    fontFamily: "Jost_400Regular",
     fontSize: 14,
-    color: "#57534E",
+    color: "#9E9A96",
     textAlign: "center",
-    lineHeight: 22,
+    lineHeight: 24,
   },
 });

@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Pressable, StyleSheet } from "react-native";
 
 interface RatingStarsProps {
   rating: number;
@@ -7,29 +7,35 @@ interface RatingStarsProps {
 }
 
 export function RatingStars({ rating, onRate, size = "default" }: RatingStarsProps) {
-  const starSize = size === "small" ? 16 : 26;
+  const dotSize = size === "small" ? 7 : 11;
+  const gap = size === "small" ? 5 : 9;
 
   return (
-    <View style={styles.row}>
-      {[1, 2, 3, 4, 5].map((star) => (
+    <View style={[styles.row, { gap }]}>
+      {[1, 2, 3, 4, 5].map((dot) => (
         <Pressable
-          key={star}
-          onPress={() => onRate?.(star)}
+          key={dot}
+          onPress={() => onRate?.(dot)}
           disabled={!onRate}
-          style={styles.star}
-        >
-          <Text style={[{ fontSize: starSize }, star <= rating ? styles.filled : styles.empty]}>
-            {star <= rating ? "★" : "☆"}
-          </Text>
-        </Pressable>
+          hitSlop={10}
+          style={[
+            styles.dot,
+            {
+              width: dotSize,
+              height: dotSize,
+              borderRadius: dotSize / 2,
+              backgroundColor: dot <= rating ? "#0F0F0D" : "transparent",
+              borderWidth: 1,
+              borderColor: dot <= rating ? "#0F0F0D" : "#C4C0BC",
+            },
+          ]}
+        />
       ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", gap: 4 },
-  star: { padding: 2 },
-  filled: { color: "#F59E0B" },
-  empty: { color: "#44403C" },
+  row: { flexDirection: "row", alignItems: "center" },
+  dot: {},
 });

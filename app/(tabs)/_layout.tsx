@@ -4,7 +4,7 @@ import { Text, View, StyleSheet } from "react-native";
 function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
   return (
     <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
-      <Text style={{ fontSize: 18 }}>{emoji}</Text>
+      <Text style={{ fontSize: 16 }}>{emoji}</Text>
       {focused && <Text style={styles.tabLabel}>{label}</Text>}
     </View>
   );
@@ -49,30 +49,31 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: "#1C1917",
+    backgroundColor: "#FAFAF8",
     borderTopWidth: 1,
-    borderTopColor: "#292524",
+    borderTopColor: "#E8E5DF",
     height: 80,
     paddingBottom: 8,
     paddingTop: 8,
     paddingHorizontal: 8,
+    elevation: 0,
+    shadowOpacity: 0,
   },
   tabIcon: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 30,
   },
   tabIconActive: {
-    backgroundColor: "#292524",
+    backgroundColor: "#E8F1F6",
     borderWidth: 1,
-    borderColor: "#44403C",
+    borderColor: "#D5E4EE",
   },
   tabLabel: {
-    fontFamily: "DMSans_500Medium",
-    fontSize: 13,
-    color: "#D6D3D1",
+    fontFamily: "Jost_500Medium",
+    fontSize: 12,
+    color: "#0F0F0D",
   },
 });

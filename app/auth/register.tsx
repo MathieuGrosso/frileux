@@ -10,7 +10,6 @@ import {
   StyleSheet,
 } from "react-native";
 import { Link } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "@/lib/supabase";
 
 export default function RegisterScreen() {
@@ -32,9 +31,10 @@ export default function RegisterScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={["#1C1917", "#292524"]} style={StyleSheet.absoluteFill} />
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.inner}>
-
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.inner}
+      >
         <View style={styles.brand}>
           <Text style={styles.logo}>frileuse</Text>
           <Text style={styles.tagline}>crée ton compte</Text>
@@ -42,30 +42,48 @@ export default function RegisterScreen() {
 
         <View style={styles.form}>
           <TextInput
-            style={styles.input} placeholder="Prénom ou pseudo" placeholderTextColor="#57534E"
-            value={username} onChangeText={setUsername} selectionColor="#F59E0B"
+            style={styles.input}
+            placeholder="Prénom ou pseudo"
+            placeholderTextColor="#9E9A96"
+            value={username}
+            onChangeText={setUsername}
+            selectionColor="#637D8E"
           />
           <TextInput
-            style={styles.input} placeholder="Email" placeholderTextColor="#57534E"
-            value={email} onChangeText={setEmail} autoCapitalize="none"
-            keyboardType="email-address" selectionColor="#F59E0B"
+            style={styles.input}
+            placeholder="Email"
+            placeholderTextColor="#9E9A96"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            selectionColor="#637D8E"
           />
           <TextInput
-            style={styles.input} placeholder="Mot de passe" placeholderTextColor="#57534E"
-            value={password} onChangeText={setPassword} secureTextEntry selectionColor="#F59E0B"
+            style={styles.input}
+            placeholder="Mot de passe"
+            placeholderTextColor="#9E9A96"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            selectionColor="#637D8E"
           />
           <Pressable
-            onPress={handleRegister} disabled={loading}
+            onPress={handleRegister}
+            disabled={loading}
             style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
           >
-            <Text style={styles.btnText}>{loading ? "Création..." : "Créer mon compte"}</Text>
+            <Text style={styles.btnText}>
+              {loading ? "CRÉATION…" : "CRÉER MON COMPTE"}
+            </Text>
           </Pressable>
         </View>
 
         <Link href="/auth/login" asChild>
           <Pressable style={styles.footer}>
             <Text style={styles.footerText}>
-              Déjà un compte ? <Text style={styles.footerLink}>Se connecter</Text>
+              Déjà un compte ?{" "}
+              <Text style={styles.footerLink}>Se connecter</Text>
             </Text>
           </Pressable>
         </Link>
@@ -75,20 +93,57 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#1C1917" },
+  container: { flex: 1, backgroundColor: "#FAFAF8" },
   inner: { flex: 1, justifyContent: "center", paddingHorizontal: 32, gap: 48 },
-  brand: { alignItems: "center" },
-  logo: { fontFamily: "Cormorant_600SemiBold", fontSize: 56, color: "#FAFAF9", letterSpacing: -1 },
-  tagline: { fontFamily: "DMSans_400Regular", fontSize: 14, color: "#57534E", marginTop: 8 },
+
+  brand: { alignItems: "flex-start" },
+  logo: {
+    fontFamily: "BarlowCondensed_600SemiBold",
+    fontSize: 56,
+    color: "#0F0F0D",
+    letterSpacing: -1,
+    lineHeight: 56,
+  },
+  tagline: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 13,
+    color: "#9E9A96",
+    marginTop: 6,
+  },
+
   form: { gap: 12 },
   input: {
-    backgroundColor: "#292524", borderWidth: 1, borderColor: "#44403C", borderRadius: 12,
-    paddingHorizontal: 18, paddingVertical: 16, fontFamily: "DMSans_400Regular", fontSize: 15, color: "#E7E5E4",
+    backgroundColor: "#F2F0EC",
+    borderWidth: 1,
+    borderColor: "#E8E5DF",
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    fontFamily: "Jost_400Regular",
+    fontSize: 15,
+    color: "#0F0F0D",
   },
-  btn: { backgroundColor: "#F59E0B", borderRadius: 12, paddingVertical: 18, alignItems: "center", marginTop: 8 },
-  btnPressed: { backgroundColor: "#D97706" },
-  btnText: { fontFamily: "DMSans_700Bold", fontSize: 15, color: "#1C1917" },
+  btn: {
+    backgroundColor: "#0F0F0D",
+    paddingVertical: 18,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  btnPressed: { backgroundColor: "#3A3836" },
+  btnText: {
+    fontFamily: "Jost_600SemiBold",
+    fontSize: 11,
+    color: "#FAFAF8",
+    letterSpacing: 2.5,
+  },
+
   footer: { alignItems: "center" },
-  footerText: { fontFamily: "DMSans_400Regular", fontSize: 14, color: "#57534E" },
-  footerLink: { fontFamily: "DMSans_500Medium", color: "#F59E0B" },
+  footerText: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 14,
+    color: "#9E9A96",
+  },
+  footerLink: {
+    fontFamily: "Jost_500Medium",
+    color: "#637D8E",
+  },
 });
