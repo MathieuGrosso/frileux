@@ -2,9 +2,6 @@
 -- Frileux — Initial Database Schema
 -- ============================================
 
--- Enable UUID generation
-create extension if not exists "uuid-ossp";
-
 -- ============================================
 -- PROFILES
 -- ============================================
@@ -35,7 +32,7 @@ create policy "Users can insert their own profile"
 -- OUTFITS
 -- ============================================
 create table public.outfits (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles(id) on delete cascade,
   photo_url text not null,
   date date not null default current_date,
@@ -71,7 +68,7 @@ create policy "Users can delete their own outfits"
 -- CIRCLES
 -- ============================================
 create table public.circles (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   name text not null,
   invite_code text not null unique,
   created_by uuid not null references public.profiles(id) on delete cascade,
