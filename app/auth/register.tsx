@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  StyleSheet,
 } from "react-native";
 import { Link } from "expo-router";
 import { supabase } from "@/lib/supabase";
@@ -20,87 +21,129 @@ export default function RegisterScreen() {
   async function handleRegister() {
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({ email, password });
-
-    if (error) {
-      Alert.alert("Erreur", error.message);
-      setLoading(false);
-      return;
-    }
-
-    // Create profile
+    if (error) { Alert.alert("Erreur", error.message); setLoading(false); return; }
     if (data.user) {
-      await supabase.from("profiles").insert({
-        id: data.user.id,
-        username,
-        coldness_level: 3,
-      });
+      await supabase.from("profiles").insert({ id: data.user.id, username, coldness_level: 3 });
     }
-
     Alert.alert("Bienvenue !", "Ton compte a été créé.");
     setLoading(false);
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      className="flex-1"
-    >
-      <View className="flex-1 justify-center px-8 bg-midnight">
-        <Text className="text-cream-500 text-4xl font-sans-bold text-center mb-2">
-          Rejoins frileux
-        </Text>
-        <Text className="text-cream-200 text-base text-center mb-10 opacity-70">
-          Crée ton compte en 30 secondes
-        </Text>
+    <View style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.inner}
+      >
+        <View style={styles.brand}>
+          <Text style={styles.logo}>frileuse</Text>
+          <Text style={styles.tagline}>crée ton compte</Text>
+        </View>
 
-        <TextInput
-          className="bg-midnight-500 text-cream-50 rounded-xl px-4 py-4 mb-4 text-base"
-          placeholder="Prénom ou pseudo"
-          placeholderTextColor="#6F6F91"
-          value={username}
-          onChangeText={setUsername}
-        />
-
-        <TextInput
-          className="bg-midnight-500 text-cream-50 rounded-xl px-4 py-4 mb-4 text-base"
-          placeholder="Email"
-          placeholderTextColor="#6F6F91"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-
-        <TextInput
-          className="bg-midnight-500 text-cream-50 rounded-xl px-4 py-4 mb-8 text-base"
-          placeholder="Mot de passe"
-          placeholderTextColor="#6F6F91"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-
-        <Pressable
-          onPress={handleRegister}
-          disabled={loading}
-          className="bg-cream-500 rounded-xl py-4 items-center active:bg-cream-400"
-        >
-          <Text className="text-midnight text-lg font-sans-semibold">
-            {loading ? "Création..." : "Créer mon compte"}
-          </Text>
-        </Pressable>
+        <View style={styles.form}>
+          <TextInput
+            style={styles.input}
+            placeholder="Prénom ou pseudo"
+            placeholderTextColor="#9E9A96"
+            value={username}
+            onChangeText={setUsername}
+            selectionColor="#637D8E"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            placeholderTextColor="#9E9A96"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            selectionColor="#637D8E"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Mot de passe"
+            placeholderTextColor="#9E9A96"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            selectionColor="#637D8E"
+          />
+          <Pressable
+            onPress={handleRegister}
+            disabled={loading}
+            style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
+          >
+            <Text style={styles.btnText}>
+              {loading ? "CRÉATION…" : "CRÉER MON COMPTE"}
+            </Text>
+          </Pressable>
+        </View>
 
         <Link href="/auth/login" asChild>
-          <Pressable className="mt-6 items-center">
-            <Text className="text-cream-300 text-base">
+          <Pressable style={styles.footer}>
+            <Text style={styles.footerText}>
               Déjà un compte ?{" "}
-              <Text className="text-cream-500 font-sans-semibold">
-                Se connecter
-              </Text>
+              <Text style={styles.footerLink}>Se connecter</Text>
             </Text>
           </Pressable>
         </Link>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#FAFAF8" },
+  inner: { flex: 1, justifyContent: "center", paddingHorizontal: 32, gap: 48 },
+
+  brand: { alignItems: "flex-start" },
+  logo: {
+    fontFamily: "BarlowCondensed_600SemiBold",
+    fontSize: 56,
+    color: "#0F0F0D",
+    letterSpacing: -1,
+    lineHeight: 56,
+  },
+  tagline: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 13,
+    color: "#9E9A96",
+    marginTop: 6,
+  },
+
+  form: { gap: 12 },
+  input: {
+    backgroundColor: "#F2F0EC",
+    borderWidth: 1,
+    borderColor: "#E8E5DF",
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    fontFamily: "Jost_400Regular",
+    fontSize: 15,
+    color: "#0F0F0D",
+  },
+  btn: {
+    backgroundColor: "#0F0F0D",
+    paddingVertical: 18,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  btnPressed: { backgroundColor: "#3A3836" },
+  btnText: {
+    fontFamily: "Jost_600SemiBold",
+    fontSize: 11,
+    color: "#FAFAF8",
+    letterSpacing: 2.5,
+  },
+
+  footer: { alignItems: "center" },
+  footerText: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 14,
+    color: "#9E9A96",
+  },
+  footerLink: {
+    fontFamily: "Jost_500Medium",
+    color: "#637D8E",
+  },
+});

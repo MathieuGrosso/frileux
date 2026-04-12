@@ -1,31 +1,41 @@
 import { useState, useEffect } from "react";
-import { View, Text, Pressable, Alert, StyleSheet, ScrollView } from "react-native";
+import { View, Text, Pressable, Alert, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import type { ColdnessLevel } from "@/lib/types";
 
-const COLDNESS_OPTIONS: { level: ColdnessLevel; emoji: string; label: string; sub: string }[] = [
-  { level: 1, emoji: "🌤️", label: "Pas frileuse", sub: "Le froid ne m'affecte pas" },
-  { level: 2, emoji: "🧥", label: "Un peu frileuse", sub: "Je sens le froid sans en souffrir" },
-  { level: 3, emoji: "🧣", label: "Frileuse", sub: "Je superpose facilement" },
-  { level: 4, emoji: "🧤", label: "Très frileuse", sub: "Je me couvre toujours bien" },
-  { level: 5, emoji: "🥶", label: "Frileuse extrême", sub: "Je vis en doudoune" },
-];
+const COLDNESS_LABELS: Record<ColdnessLevel, string> = {
+  1: "Un peu frileuse",
+  2: "Frileuse",
+  3: "Très frileuse",
+  4: "Ultra frileuse",
+  5: "Je vis en doudoune",
+};
+
+const COLDNESS_EMOJIS: Record<ColdnessLevel, string> = {
+  1: "🌤️",
+  2: "🧥",
+  3: "🧣",
+  4: "🧤",
+  5: "🥶",
+};
 
 export default function SettingsScreen() {
   const router = useRouter();
   const [coldnessLevel, setColdnessLevel] = useState<ColdnessLevel>(3);
   const [username, setUsername] = useState("");
 
-  useEffect(() => { loadProfile(); }, []);
+  useEffect(() => {
+    loadProfile();
+  }, []);
 
   async function loadProfile() {
     const { data } = await supabase
       .from("profiles")
       .select("coldness_level, username")
       .single();
+
     if (data) {
       setColdnessLevel(data.coldness_level as ColdnessLevel);
       setUsername(data.username);
@@ -34,100 +44,96 @@ export default function SettingsScreen() {
 
   async function updateColdness(level: ColdnessLevel) {
     setColdnessLevel(level);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from("profiles").update({ coldness_level: level }).eq("id", user.id);
-    }
+    await supabase
+      .from("profiles")
+      .update({ coldness_level: level })
+      .eq("id", (await supabase.auth.getUser()).data.user?.id);
   }
 
   async function handleLogout() {
     Alert.alert("Déconnexion", "Tu veux te déconnecter ?", [
       { text: "Annuler", style: "cancel" },
-      { text: "Déconnexion", style: "destructive", onPress: () => supabase.auth.signOut() },
+      {
+        text: "Déconnexion",
+        style: "destructive",
+        onPress: async () => {
+          await supabase.auth.signOut();
+        },
+      },
     ]);
   }
 
-  const initial = username?.[0]?.toUpperCase() ?? "?";
-
   return (
-    <View style={styles.container}>
-      <LinearGradient colors={["#1C1917", "#292524", "#1C1917"]} style={StyleSheet.absoluteFill} />
-      <SafeAreaView style={styles.safe}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-
-          {/* Header */}
-          <View style={styles.header}>
-            <Pressable onPress={() => router.back()} style={styles.backBtn}>
-              <Text style={styles.backText}>←</Text>
-            </Pressable>
-            <Text style={styles.headerTitle}>Réglages</Text>
-            <View style={{ width: 36 }} />
-          </View>
-
-          {/* Profile card */}
-          <View style={styles.profileCard}>
-            <View style={styles.avatarRing}>
-              <Text style={styles.avatarText}>{initial}</Text>
-            </View>
-            <Text style={styles.profileName}>{username}</Text>
-            <Text style={styles.profileSub}>Membre frileux</Text>
-          </View>
-
-          {/* Coldness section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>NIVEAU DE FRILOSITÉ</Text>
-            <Text style={styles.sectionSub}>Les suggestions s'adaptent à ton profil</Text>
-
-            <View style={styles.optionsList}>
-              {COLDNESS_OPTIONS.map((opt) => {
-                const active = coldnessLevel === opt.level;
-                return (
-                  <Pressable
-                    key={opt.level}
-                    onPress={() => updateColdness(opt.level)}
-                    style={({ pressed }) => [
-                      styles.option,
-                      active && styles.optionActive,
-                      pressed && styles.optionPressed,
-                    ]}
-                  >
-                    <Text style={styles.optionEmoji}>{opt.emoji}</Text>
-                    <View style={styles.optionText}>
-                      <Text style={[styles.optionLabel, active && styles.optionLabelActive]}>
-                        {opt.label}
-                      </Text>
-                      <Text style={styles.optionSub}>{opt.sub}</Text>
-                    </View>
-                    {active && (
-                      <View style={styles.checkmark}>
-                        <Text style={styles.checkmarkText}>✓</Text>
-                      </View>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Logout */}
-          <Pressable
-            onPress={handleLogout}
-            style={({ pressed }) => [styles.logoutBtn, pressed && styles.logoutBtnPressed]}
-          >
-            <Text style={styles.logoutText}>Se déconnecter</Text>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.inner}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} hitSlop={12}>
+            <Text style={styles.backText}>← Retour</Text>
           </Pressable>
+          <Text style={styles.headerTitle}>RÉGLAGES</Text>
+          <View style={{ width: 60 }} />
+        </View>
 
-          <View style={{ height: 40 }} />
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+        {/* Profile */}
+        <View style={styles.profileCard}>
+          <View style={styles.profileAvatar}>
+            <Text style={styles.profileInitial}>
+              {username?.[0]?.toUpperCase() ?? "?"}
+            </Text>
+          </View>
+          <Text style={styles.profileName}>{username}</Text>
+        </View>
+
+        <View style={styles.divider} />
+
+        {/* Coldness Level */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>NIVEAU DE FRILOSITÉ</Text>
+          <Text style={styles.sectionHint}>
+            Les suggestions seront adaptées à ton niveau
+          </Text>
+
+          {([1, 2, 3, 4, 5] as ColdnessLevel[]).map((level) => (
+            <Pressable
+              key={level}
+              onPress={() => updateColdness(level)}
+              style={[
+                styles.coldnessRow,
+                coldnessLevel === level && styles.coldnessRowActive,
+              ]}
+            >
+              <Text style={styles.coldnessEmoji}>{COLDNESS_EMOJIS[level]}</Text>
+              <Text style={[
+                styles.coldnessLabel,
+                coldnessLevel === level && styles.coldnessLabelActive,
+              ]}>
+                {COLDNESS_LABELS[level]}
+              </Text>
+              {coldnessLevel === level && (
+                <Text style={styles.coldnessCheck}>✓</Text>
+              )}
+            </Pressable>
+          ))}
+        </View>
+
+        <View style={styles.divider} />
+
+        {/* Logout */}
+        <Pressable
+          onPress={handleLogout}
+          style={({ pressed }) => [styles.logoutBtn, pressed && styles.logoutBtnPressed]}
+        >
+          <Text style={styles.logoutText}>Se déconnecter</Text>
+        </Pressable>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#1C1917" },
-  safe: { flex: 1 },
-  scroll: { paddingHorizontal: 24, paddingTop: 8 },
+  container: { flex: 1, backgroundColor: "#FAFAF8" },
+  inner: { paddingHorizontal: 24, paddingTop: 8 },
 
   header: {
     flexDirection: "row",
@@ -135,131 +141,104 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 32,
   },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#292524",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#44403C",
+  backText: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 14,
+    color: "#9E9A96",
   },
-  backText: { fontFamily: "DMSans_500Medium", fontSize: 18, color: "#D6D3D1" },
   headerTitle: {
-    fontFamily: "DMSans_500Medium",
-    fontSize: 15,
-    color: "#A8A29E",
-    letterSpacing: 0.5,
+    fontFamily: "BarlowCondensed_600SemiBold",
+    fontSize: 16,
+    color: "#0F0F0D",
+    letterSpacing: 2,
   },
 
   profileCard: {
-    backgroundColor: "#292524",
-    borderRadius: 20,
-    padding: 24,
     alignItems: "center",
-    marginBottom: 32,
-    borderWidth: 1,
-    borderColor: "#312E2B",
+    paddingVertical: 24,
   },
-  avatarRing: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: "rgba(245,158,11,0.12)",
+  profileAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#E8F1F6",
+    borderWidth: 1,
+    borderColor: "#D5E4EE",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: "rgba(245,158,11,0.35)",
-    marginBottom: 14,
+    marginBottom: 12,
   },
-  avatarText: {
-    fontFamily: "Cormorant_600SemiBold",
-    fontSize: 30,
-    color: "#F59E0B",
-    lineHeight: 36,
+  profileInitial: {
+    fontFamily: "BarlowCondensed_600SemiBold",
+    fontSize: 22,
+    color: "#637D8E",
   },
   profileName: {
-    fontFamily: "Cormorant_600SemiBold",
-    fontSize: 26,
-    color: "#FAFAF9",
-    letterSpacing: -0.5,
-    marginBottom: 4,
-  },
-  profileSub: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: 12,
-    color: "#57534E",
-    letterSpacing: 0.5,
+    fontFamily: "Jost_500Medium",
+    fontSize: 16,
+    color: "#0F0F0D",
   },
 
-  section: { marginBottom: 32 },
+  divider: { height: 1, backgroundColor: "#E8E5DF", marginBottom: 28 },
+
+  section: { marginBottom: 28 },
   sectionLabel: {
-    fontFamily: "DMSans_500Medium",
-    fontSize: 10,
-    color: "#57534E",
+    fontFamily: "Jost_500Medium",
+    fontSize: 9,
+    color: "#9E9A96",
     letterSpacing: 2,
     marginBottom: 4,
   },
-  sectionSub: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: 13,
-    color: "#44403C",
+  sectionHint: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 12,
+    color: "#9E9A96",
     marginBottom: 16,
   },
 
-  optionsList: { gap: 8 },
-  option: {
+  coldnessRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
-    backgroundColor: "#292524",
-    borderRadius: 14,
-    paddingHorizontal: 16,
+    gap: 12,
     paddingVertical: 14,
+    paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: "#312E2B",
+    borderColor: "#E8E5DF",
+    marginBottom: 6,
+    backgroundColor: "#FAFAF8",
   },
-  optionActive: {
-    backgroundColor: "rgba(245,158,11,0.06)",
-    borderColor: "rgba(245,158,11,0.35)",
+  coldnessRowActive: {
+    backgroundColor: "#E8F1F6",
+    borderColor: "#D5E4EE",
   },
-  optionPressed: { opacity: 0.8 },
-  optionEmoji: { fontSize: 22 },
-  optionText: { flex: 1 },
-  optionLabel: {
-    fontFamily: "DMSans_500Medium",
+  coldnessEmoji: { fontSize: 20 },
+  coldnessLabel: {
+    fontFamily: "Jost_400Regular",
     fontSize: 14,
-    color: "#A8A29E",
-    marginBottom: 2,
+    color: "#6B6A66",
+    flex: 1,
   },
-  optionLabelActive: { color: "#F59E0B" },
-  optionSub: {
-    fontFamily: "DMSans_400Regular",
-    fontSize: 12,
-    color: "#44403C",
+  coldnessLabelActive: {
+    fontFamily: "Jost_500Medium",
+    color: "#637D8E",
   },
-  checkmark: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "#F59E0B",
-    alignItems: "center",
-    justifyContent: "center",
+  coldnessCheck: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 14,
+    color: "#637D8E",
   },
-  checkmarkText: { fontFamily: "DMSans_700Bold", fontSize: 11, color: "#1C1917" },
 
   logoutBtn: {
     borderWidth: 1,
-    borderColor: "#292524",
-    borderRadius: 14,
+    borderColor: "#C0392B",
     paddingVertical: 16,
     alignItems: "center",
   },
-  logoutBtnPressed: { backgroundColor: "#292524" },
+  logoutBtnPressed: { backgroundColor: "#FDF2F1" },
   logoutText: {
-    fontFamily: "DMSans_500Medium",
-    fontSize: 14,
-    color: "#57534E",
+    fontFamily: "Jost_500Medium",
+    fontSize: 13,
+    color: "#C0392B",
+    letterSpacing: 0.5,
   },
 });

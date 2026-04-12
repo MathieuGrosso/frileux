@@ -1,9 +1,12 @@
 import { Tabs } from "expo-router";
-import { Text } from "react-native";
+import { Text, View, StyleSheet } from "react-native";
 
-function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
+function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
   return (
-    <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>{emoji}</Text>
+    <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
+      <Text style={{ fontSize: 16 }}>{emoji}</Text>
+      {focused && <Text style={styles.tabLabel}>{label}</Text>}
+    </View>
   );
 }
 
@@ -12,48 +15,65 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: "#1a1a2e",
-          borderTopColor: "#2E2E4F",
-          paddingBottom: 8,
-          paddingTop: 8,
-          height: 88,
-        },
-        tabBarActiveTintColor: "#FFC94D",
-        tabBarInactiveTintColor: "#6F6F91",
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "600",
-        },
+        tabBarStyle: styles.tabBar,
+        tabBarShowLabel: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Aujourd'hui",
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🧣" focused={focused} />
+            <TabIcon emoji="🧣" label="Aujourd'hui" focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
-          title: "Historique",
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="📸" focused={focused} />
+            <TabIcon emoji="📸" label="Historique" focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
         name="circle"
         options={{
-          title: "Cercle",
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="👯" focused={focused} />
+            <TabIcon emoji="👯" label="Cercle" focused={focused} />
           ),
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBar: {
+    backgroundColor: "#FAFAF8",
+    borderTopWidth: 1,
+    borderTopColor: "#E8E5DF",
+    height: 80,
+    paddingBottom: 8,
+    paddingTop: 8,
+    paddingHorizontal: 8,
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  tabIcon: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  tabIconActive: {
+    backgroundColor: "#E8F1F6",
+    borderWidth: 1,
+    borderColor: "#D5E4EE",
+  },
+  tabLabel: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 12,
+    color: "#0F0F0D",
+  },
+});

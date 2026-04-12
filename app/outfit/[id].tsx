@@ -10,7 +10,6 @@ import {
   StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import type { Outfit } from "@/lib/types";
@@ -85,31 +84,26 @@ export default function OutfitDetailScreen() {
       <SafeAreaView style={styles.safe}>
         <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
 
-          {/* Photo hero */}
+          {/* Photo with bare back button — no gradient overlay */}
           <View style={styles.heroContainer}>
             <Image source={{ uri: outfit.photo_url }} style={styles.heroPhoto} resizeMode="cover" />
-            <LinearGradient
-              colors={["rgba(28,25,23,0.6)", "transparent", "rgba(28,25,23,0.95)"]}
-              style={StyleSheet.absoluteFill}
-            />
-            {/* Back button */}
             <Pressable onPress={() => router.back()} style={styles.backBtn}>
               <Text style={styles.backText}>←</Text>
             </Pressable>
+          </View>
 
-            {/* Date overlay */}
-            <View style={styles.heroMeta}>
+          <View style={styles.content}>
+
+            {/* Date + weather row */}
+            <View style={styles.metaRow}>
               <Text style={styles.heroDate}>{dateStr}</Text>
               {weather && (
                 <View style={styles.heroBadge}>
-                  <Text style={{ fontSize: 16 }}>{weatherEmoji(weather.icon)}</Text>
+                  <Text style={{ fontSize: 14 }}>{weatherEmoji(weather.icon)}</Text>
                   <Text style={styles.heroBadgeTemp}>{weather.temp}°</Text>
                 </View>
               )}
             </View>
-          </View>
-
-          <View style={styles.content}>
 
             {/* Weather strip */}
             {weather && (
@@ -124,16 +118,17 @@ export default function OutfitDetailScreen() {
               </View>
             )}
 
+            <View style={styles.divider} />
+
             {/* AI Suggestion */}
             {outfit.ai_suggestion && (
-              <View style={styles.suggestionCard}>
-                <View style={styles.suggestionAccent} />
-                <View style={styles.suggestionContent}>
-                  <Text style={styles.suggestionLabel}>SUGGESTION IA</Text>
-                  <Text style={styles.suggestionText}>{outfit.ai_suggestion}</Text>
-                </View>
+              <View style={styles.suggestionSection}>
+                <Text style={styles.suggestionLabel}>SUGGESTION IA</Text>
+                <Text style={styles.suggestionText}>{outfit.ai_suggestion}</Text>
               </View>
             )}
+
+            {outfit.ai_suggestion && <View style={styles.divider} />}
 
             {/* Rating */}
             <View style={styles.section}>
@@ -148,16 +143,16 @@ export default function OutfitDetailScreen() {
                 <TextInput
                   style={styles.notesInput}
                   placeholder="Comment te sentais-tu dans cette tenue ?"
-                  placeholderTextColor="#57534E"
+                  placeholderTextColor="#9E9A96"
                   value={notes}
                   onChangeText={setNotes}
                   multiline
                   textAlignVertical="top"
-                  selectionColor="#F59E0B"
+                  selectionColor="#637D8E"
                 />
               ) : (
-                <Text style={styles.notesText}>
-                  {notes || <Text style={styles.notesMuted}>Aucune note</Text>}
+                <Text style={[styles.notesText, !notes && styles.notesMuted]}>
+                  {notes || "Aucune note"}
                 </Text>
               )}
             </View>
@@ -170,10 +165,14 @@ export default function OutfitDetailScreen() {
                     onPress={saveChanges}
                     style={({ pressed }) => [styles.saveBtn, pressed && styles.saveBtnPressed]}
                   >
-                    <Text style={styles.saveBtnText}>Sauvegarder</Text>
+                    <Text style={styles.saveBtnText}>SAUVEGARDER</Text>
                   </Pressable>
                   <Pressable
-                    onPress={() => { setEditing(false); setRating(outfit.rating ?? 0); setNotes(outfit.notes ?? ""); }}
+                    onPress={() => {
+                      setEditing(false);
+                      setRating(outfit.rating ?? 0);
+                      setNotes(outfit.notes ?? "");
+                    }}
                     style={({ pressed }) => [styles.cancelBtn, pressed && styles.cancelBtnPressed]}
                   >
                     <Text style={styles.cancelBtnText}>Annuler</Text>
@@ -185,7 +184,7 @@ export default function OutfitDetailScreen() {
                     onPress={() => setEditing(true)}
                     style={({ pressed }) => [styles.editBtn, pressed && styles.editBtnPressed]}
                   >
-                    <Text style={styles.editBtnText}>Modifier</Text>
+                    <Text style={styles.editBtnText}>MODIFIER</Text>
                   </Pressable>
                   <Pressable
                     onPress={deleteOutfit}
@@ -215,15 +214,29 @@ function WeatherStat({ label, value }: { label: string; value: string }) {
 }
 
 const weatherStatStyles = StyleSheet.create({
-  label: { fontFamily: "DMSans_500Medium", fontSize: 9, color: "#57534E", letterSpacing: 1.5, marginBottom: 4 },
-  value: { fontFamily: "DMSans_500Medium", fontSize: 13, color: "#D6D3D1" },
+  label: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 8,
+    color: "#9E9A96",
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  value: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 13,
+    color: "#0F0F0D",
+  },
 });
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#1C1917" },
+  container: { flex: 1, backgroundColor: "#FAFAF8" },
   safe: { flex: 1 },
   loadingCenter: { flex: 1, alignItems: "center", justifyContent: "center" },
-  loadingText: { fontFamily: "Cormorant_600SemiBold", fontSize: 48, color: "#292524" },
+  loadingText: {
+    fontFamily: "BarlowCondensed_600SemiBold",
+    fontSize: 48,
+    color: "#C4C0BC",
+  },
 
   heroContainer: { height: 520, position: "relative" },
   heroPhoto: { width: "100%", height: "100%" },
@@ -231,154 +244,159 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 16,
     left: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(28,25,23,0.7)",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: "rgba(250,250,248,0.9)",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderWidth: 1,
-    borderColor: "#44403C",
+    borderColor: "#E8E5DF",
   },
-  backText: { fontFamily: "DMSans_500Medium", fontSize: 18, color: "#D6D3D1" },
+  backText: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 14,
+    color: "#0F0F0D",
+  },
 
-  heroMeta: {
-    position: "absolute",
-    bottom: 20,
-    left: 20,
-    right: 20,
+  content: { paddingHorizontal: 24, paddingTop: 24 },
+
+  metaRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
+    marginBottom: 20,
   },
   heroDate: {
-    fontFamily: "Cormorant_600SemiBold",
-    fontSize: 22,
-    color: "#FAFAF9",
+    fontFamily: "BarlowCondensed_600SemiBold",
+    fontSize: 24,
+    color: "#0F0F0D",
+    letterSpacing: 0.5,
     flex: 1,
-    lineHeight: 28,
   },
   heroBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "rgba(28,25,23,0.7)",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderWidth: 1,
-    borderColor: "#44403C",
+    borderColor: "#E8E5DF",
+    backgroundColor: "#F2F0EC",
   },
-  heroBadgeTemp: { fontFamily: "DMSans_500Medium", fontSize: 14, color: "#D6D3D1" },
-
-  content: { paddingHorizontal: 24, paddingTop: 24 },
+  heroBadgeTemp: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 13,
+    color: "#6B6A66",
+  },
 
   weatherStrip: {
     flexDirection: "row",
-    backgroundColor: "#292524",
-    borderRadius: 14,
+    backgroundColor: "#F2F0EC",
+    borderWidth: 1,
+    borderColor: "#E8E5DF",
     paddingVertical: 16,
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: "#312E2B",
   },
-  weatherDivider: { width: 1, backgroundColor: "#44403C", marginVertical: 4 },
+  weatherDivider: { width: 1, backgroundColor: "#E8E5DF", marginVertical: 4 },
 
-  suggestionCard: {
-    flexDirection: "row",
-    backgroundColor: "#292524",
-    borderRadius: 16,
-    overflow: "hidden",
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: "#312E2B",
-  },
-  suggestionAccent: { width: 3, backgroundColor: "#F59E0B" },
-  suggestionContent: { flex: 1, padding: 16 },
+  divider: { height: 1, backgroundColor: "#E8E5DF", marginBottom: 24 },
+
+  suggestionSection: { marginBottom: 24 },
   suggestionLabel: {
-    fontFamily: "DMSans_500Medium",
+    fontFamily: "Jost_500Medium",
     fontSize: 9,
-    color: "#F59E0B",
+    color: "#637D8E",
     letterSpacing: 2,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   suggestionText: {
-    fontFamily: "DMSans_400Regular",
+    fontFamily: "Jost_400Regular",
     fontSize: 14,
-    color: "#D6D3D1",
-    lineHeight: 22,
+    color: "#3A3836",
+    lineHeight: 23,
   },
 
   section: { marginBottom: 24 },
   sectionLabel: {
-    fontFamily: "DMSans_500Medium",
-    fontSize: 10,
-    color: "#57534E",
+    fontFamily: "Jost_500Medium",
+    fontSize: 9,
+    color: "#9E9A96",
     letterSpacing: 2,
     marginBottom: 12,
   },
   notesInput: {
-    backgroundColor: "#292524",
+    backgroundColor: "#F2F0EC",
     borderWidth: 1,
-    borderColor: "#44403C",
-    borderRadius: 12,
+    borderColor: "#E8E5DF",
     paddingHorizontal: 16,
     paddingVertical: 14,
-    fontFamily: "DMSans_400Regular",
+    fontFamily: "Jost_400Regular",
     fontSize: 14,
-    color: "#E7E5E4",
+    color: "#0F0F0D",
     minHeight: 100,
     lineHeight: 22,
   },
   notesText: {
-    fontFamily: "DMSans_400Regular",
+    fontFamily: "Jost_400Regular",
     fontSize: 14,
-    color: "#D6D3D1",
+    color: "#3A3836",
     lineHeight: 22,
   },
-  notesMuted: { color: "#57534E" },
+  notesMuted: { color: "#9E9A96" },
 
   actions: { flexDirection: "row", gap: 10, marginTop: 8 },
   saveBtn: {
     flex: 1,
-    backgroundColor: "#F59E0B",
-    borderRadius: 12,
+    backgroundColor: "#0F0F0D",
     paddingVertical: 16,
     alignItems: "center",
   },
-  saveBtnPressed: { backgroundColor: "#D97706" },
-  saveBtnText: { fontFamily: "DMSans_700Bold", fontSize: 14, color: "#1C1917" },
+  saveBtnPressed: { backgroundColor: "#3A3836" },
+  saveBtnText: {
+    fontFamily: "Jost_600SemiBold",
+    fontSize: 11,
+    color: "#FAFAF8",
+    letterSpacing: 2,
+  },
 
   cancelBtn: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#44403C",
-    borderRadius: 12,
+    borderColor: "#E8E5DF",
     paddingVertical: 16,
     alignItems: "center",
   },
-  cancelBtnPressed: { backgroundColor: "#292524" },
-  cancelBtnText: { fontFamily: "DMSans_500Medium", fontSize: 14, color: "#78716C" },
+  cancelBtnPressed: { backgroundColor: "#F2F0EC" },
+  cancelBtnText: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 14,
+    color: "#9E9A96",
+  },
 
   editBtn: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#F59E0B",
-    borderRadius: 12,
+    borderColor: "#0F0F0D",
     paddingVertical: 16,
     alignItems: "center",
   },
-  editBtnPressed: { backgroundColor: "rgba(245,158,11,0.08)" },
-  editBtnText: { fontFamily: "DMSans_500Medium", fontSize: 14, color: "#F59E0B" },
+  editBtnPressed: { backgroundColor: "#F2F0EC" },
+  editBtnText: {
+    fontFamily: "Jost_600SemiBold",
+    fontSize: 11,
+    color: "#0F0F0D",
+    letterSpacing: 2,
+  },
 
   deleteBtn: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#44403C",
-    borderRadius: 12,
+    borderColor: "#E8E5DF",
     paddingVertical: 16,
     alignItems: "center",
   },
-  deleteBtnPressed: { backgroundColor: "#292524" },
-  deleteBtnText: { fontFamily: "DMSans_500Medium", fontSize: 14, color: "#78716C" },
+  deleteBtnPressed: { backgroundColor: "#FDF2F1" },
+  deleteBtnText: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 14,
+    color: "#C0392B",
+  },
 });

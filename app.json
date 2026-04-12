@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "Frileux",
-    "slug": "frileux",
+    "name": "Frileuse",
+    "slug": "frileuse",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "scheme": "frileux",
+    "scheme": "frileuse",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -15,15 +15,15 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.frileux.app",
+      "bundleIdentifier": "com.frileuse.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "Frileux a besoin de la caméra pour photographier ta tenue du jour.",
-        "NSPhotoLibraryUsageDescription": "Frileux a besoin d'accéder à tes photos pour choisir une photo de tenue.",
-        "NSLocationWhenInUseUsageDescription": "Frileux utilise ta position pour te donner la météo locale."
+        "NSCameraUsageDescription": "Frileuse a besoin de la caméra pour photographier ta tenue du jour.",
+        "NSPhotoLibraryUsageDescription": "Frileuse a besoin d'accéder à tes photos pour choisir une photo de tenue.",
+        "NSLocationWhenInUseUsageDescription": "Frileuse utilise ta position pour te donner la météo locale."
       }
     },
     "android": {
-      "package": "com.frileux.app",
+      "package": "com.frileuse.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1a1a2e"
@@ -44,13 +44,13 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Frileux utilise ta position pour la météo locale."
+          "locationWhenInUsePermission": "Frileuse utilise ta position pour la météo locale."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Frileux accède à tes photos pour les tenues."
+          "photosPermission": "Frileuse accède à tes photos pour les tenues."
         }
       ],
       [
