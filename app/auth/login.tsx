@@ -9,12 +9,17 @@ import {
   Alert,
 } from "react-native";
 import { Link } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
+import { makeRedirectUri } from "expo-auth-session";
 import { supabase } from "@/lib/supabase";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   async function handleLogin() {
     setLoading(true);
@@ -24,6 +29,38 @@ export default function LoginScreen() {
     });
     if (error) Alert.alert("Erreur", error.message);
     setLoading(false);
+  }
+
+  async function handleGoogleLogin() {
+    setGoogleLoading(true);
+    const redirectUri = makeRedirectUri({ scheme: "frileux", path: "auth/callback" });
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: redirectUri,
+        skipBrowserRedirect: true,
+      },
+    });
+
+    if (error || !data.url) {
+      Alert.alert("Erreur", error?.message ?? "Google sign-in unavailable");
+      setGoogleLoading(false);
+      return;
+    }
+
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
+
+    if (result.type === "success") {
+      const url = new URL(result.url);
+      const code = url.searchParams.get("code");
+      if (code) {
+        const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+        if (sessionError) Alert.alert("Erreur", sessionError.message);
+      }
+    }
+
+    setGoogleLoading(false);
   }
 
   return (
@@ -60,11 +97,27 @@ export default function LoginScreen() {
 
         <Pressable
           onPress={handleLogin}
-          disabled={loading}
+          disabled={loading || googleLoading}
           className="bg-cream-500 rounded-xl py-4 items-center active:bg-cream-400"
         >
           <Text className="text-midnight text-lg font-sans-semibold">
             {loading ? "Connexion..." : "Se connecter"}
+          </Text>
+        </Pressable>
+
+        <View className="flex-row items-center my-6">
+          <View className="flex-1 h-px bg-midnight-400" />
+          <Text className="text-cream-300 opacity-50 mx-3 text-sm">ou</Text>
+          <View className="flex-1 h-px bg-midnight-400" />
+        </View>
+
+        <Pressable
+          onPress={handleGoogleLogin}
+          disabled={loading || googleLoading}
+          className="border border-midnight-400 rounded-xl py-4 flex-row items-center justify-center active:bg-midnight-500"
+        >
+          <Text className="text-cream-200 text-base font-sans-semibold">
+            {googleLoading ? "Connexion..." : "Continuer avec Google"}
           </Text>
         </Pressable>
 
