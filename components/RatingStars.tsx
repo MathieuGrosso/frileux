@@ -1,4 +1,4 @@
-import { View, Text, Pressable } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 
 interface RatingStarsProps {
   rating: number;
@@ -6,26 +6,30 @@ interface RatingStarsProps {
   size?: "small" | "default";
 }
 
-export function RatingStars({
-  rating,
-  onRate,
-  size = "default",
-}: RatingStarsProps) {
-  const starSize = size === "small" ? "text-lg" : "text-2xl";
+export function RatingStars({ rating, onRate, size = "default" }: RatingStarsProps) {
+  const starSize = size === "small" ? 16 : 26;
 
   return (
-    <View className="flex-row gap-1">
+    <View style={styles.row}>
       {[1, 2, 3, 4, 5].map((star) => (
         <Pressable
           key={star}
           onPress={() => onRate?.(star)}
           disabled={!onRate}
+          style={styles.star}
         >
-          <Text className={`${starSize} ${star <= rating ? "" : "opacity-30"}`}>
-            {star <= rating ? "⭐" : "☆"}
+          <Text style={[{ fontSize: starSize }, star <= rating ? styles.filled : styles.empty]}>
+            {star <= rating ? "★" : "☆"}
           </Text>
         </Pressable>
       ))}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  row: { flexDirection: "row", gap: 4 },
+  star: { padding: 2 },
+  filled: { color: "#F59E0B" },
+  empty: { color: "#44403C" },
+});
