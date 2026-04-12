@@ -3,6 +3,9 @@ export interface Profile {
   username: string;
   avatar_url: string | null;
   coldness_level: ColdnessLevel;
+  push_token: string | null;
+  last_latitude: number | null;
+  last_longitude: number | null;
   created_at: string;
   updated_at: string;
 }

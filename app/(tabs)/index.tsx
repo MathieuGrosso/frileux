@@ -40,11 +40,19 @@ export default function TodayScreen() {
       }
 
       const location = await Location.getCurrentPositionAsync({});
-      const data = await getWeather(
-        location.coords.latitude,
-        location.coords.longitude
-      );
+      const { latitude, longitude } = location.coords;
+
+      const data = await getWeather(latitude, longitude);
       setWeather(data);
+
+      // Save location for server-side daily notification
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        supabase.from("profiles").update({
+          last_latitude: latitude,
+          last_longitude: longitude,
+        }).eq("id", user.id);
+      }
 
       // Fetch AI suggestion
       fetchSuggestion(data);
