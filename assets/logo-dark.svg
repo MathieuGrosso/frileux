@@ -1,24 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 52" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 52" fill="none">
   <defs>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800&amp;display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300&amp;display=swap');
     </style>
   </defs>
 
-  <!-- Diamond mark — white version for dark backgrounds -->
-  <polygon points="27,6 9,26 27,26"  fill="#E8E8E6"/>
-  <polygon points="27,6 27,26 45,26" fill="#FAFAF8"/>
-  <polygon points="9,26 27,46 27,26" fill="#637D8E"/>
-  <polygon points="27,26 27,46 45,26" fill="#4A6578"/>
+  <!-- V-mark — white version -->
+  <polyline
+    points="8,44 24,8 40,44"
+    stroke="#FAFAF8"
+    stroke-width="2"
+    stroke-linecap="square"
+    stroke-linejoin="miter"
+    fill="none"/>
 
-  <!-- Wordmark -->
+  <!-- Wordmark — white -->
   <text
-    x="59"
+    x="58"
     y="26"
-    font-family="'Barlow Condensed', sans-serif"
-    font-weight="800"
-    font-size="34"
-    letter-spacing="-1.2"
+    font-family="'Jost', sans-serif"
+    font-weight="300"
+    font-size="24"
+    letter-spacing="7"
     fill="#FAFAF8"
     dominant-baseline="middle">frileuse</text>
 </svg>
