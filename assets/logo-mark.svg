@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- V-mark — thin chevron, no base. Reads as V-neck / cold peak / precision cut -->
+  <polyline
+    points="16,84 50,16 84,84"
+    stroke="#0F0F0D"
+    stroke-width="3"
+    stroke-linecap="square"
+    stroke-linejoin="miter"
+    fill="none"/>
+</svg>

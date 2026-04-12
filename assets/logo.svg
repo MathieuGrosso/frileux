@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 52" fill="none">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300&amp;display=swap');
+    </style>
+  </defs>
+
+  <!-- V-mark — scaled to 52px container, 36px tall, 32px wide -->
+  <!-- apex:(24,8) left:(8,44) right:(40,44) -->
+  <polyline
+    points="8,44 24,8 40,44"
+    stroke="#0F0F0D"
+    stroke-width="2"
+    stroke-linecap="square"
+    stroke-linejoin="miter"
+    fill="none"/>
+
+  <!-- Wordmark — Jost Light, generous tracking, lowercase -->
+  <text
+    x="58"
+    y="26"
+    font-family="'Jost', sans-serif"
+    font-weight="300"
+    font-size="24"
+    letter-spacing="7"
+    fill="#0F0F0D"
+    dominant-baseline="middle">frileuse</text>
+</svg>

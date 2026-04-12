@@ -19,13 +19,17 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
 
   async function handleRegister() {
+    if (!username.trim() || !email.trim() || !password.trim()) {
+      Alert.alert("Erreur", "Remplis tous les champs.");
+      return;
+    }
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) { Alert.alert("Erreur", error.message); setLoading(false); return; }
     if (data.user) {
-      await supabase.from("profiles").insert({ id: data.user.id, username, coldness_level: 3 });
+      await supabase.from("profiles").insert({ id: data.user.id, username: username.trim(), coldness_level: 3 });
     }
-    Alert.alert("Bienvenue !", "Ton compte a été créé.");
+    // navigation handled automatically by onAuthStateChange in _layout.tsx
     setLoading(false);
   }
 
