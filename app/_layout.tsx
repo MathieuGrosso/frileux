@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { registerForPushNotifications, savePushToken } from "@/lib/notifications";
 import { View, ActivityIndicator } from "react-native";
 
 export default function RootLayout() {
@@ -21,6 +22,12 @@ export default function RootLayout() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      // Register push notifications when user logs in
+      if (session) {
+        registerForPushNotifications().then((token) => {
+          if (token) savePushToken(token);
+        });
+      }
     });
 
     return () => subscription.unsubscribe();
