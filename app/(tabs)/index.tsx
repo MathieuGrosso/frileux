@@ -11,6 +11,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
+import { decode } from "base64-arraybuffer";
 import { supabase } from "@/lib/supabase";
 import { getWeather, weatherEmoji } from "@/lib/weather";
 import type { WeatherData } from "@/lib/types";
@@ -75,11 +77,10 @@ export default function TodayScreen() {
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) { setSaving(false); return; }
       const fileName = `${user.id}/${Date.now()}.jpg`;
-      const response = await fetch(photoUri);
-      const blob = await response.blob();
-      await supabase.storage.from("outfits").upload(fileName, blob, { contentType: "image/jpeg" });
+      const base64 = await FileSystem.readAsStringAsync(photoUri, { encoding: FileSystem.EncodingType.Base64 });
+      await supabase.storage.from("outfits").upload(fileName, decode(base64), { contentType: "image/jpeg" });
       const { data: urlData } = supabase.storage.from("outfits").getPublicUrl(fileName);
       await supabase.from("outfits").insert({
         user_id: user.id, photo_url: urlData.publicUrl,

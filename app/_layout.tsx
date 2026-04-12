@@ -62,7 +62,10 @@ export default function RootLayout() {
     } else if (session && inAuthGroup) {
       router.replace("/");
     }
-  }, [session, loading, segments]);
+    // segments intentionally omitted: this effect should only react to auth state changes,
+    // not every navigation event. Reading segments from closure is correct here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, loading]);
 
   if (loading || !fontsLoaded) {
     return (
