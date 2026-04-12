@@ -31,6 +31,17 @@ export default function LoginScreen() {
 
   async function handleGoogleLogin() {
     setGoogleLoading(true);
+
+    if (Platform.OS === "web") {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin },
+      });
+      if (error) Alert.alert("Erreur", error.message);
+      setGoogleLoading(false);
+      return;
+    }
+
     const redirectUri = makeRedirectUri({ path: "auth/callback" });
 
     const { data, error } = await supabase.auth.signInWithOAuth({
