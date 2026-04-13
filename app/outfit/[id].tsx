@@ -17,6 +17,7 @@ import type { Outfit, OutfitOccasion, ThermalFeeling } from "@/lib/types";
 import { OUTFIT_OCCASIONS, THERMAL_FEELINGS } from "@/lib/types";
 import { weatherEmoji } from "@/lib/weather";
 import { RatingStars } from "@/components/RatingStars";
+import { OutfitNotes } from "@/components/circle/OutfitNotes";
 
 export default function OutfitDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,6 +28,7 @@ export default function OutfitDetailScreen() {
   const [occasion, setOccasion] = useState<OutfitOccasion | null>(null);
   const [thermal, setThermal] = useState<ThermalFeeling | null>(null);
   const [editing, setEditing] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => { loadOutfit(); }, [id]);
 
@@ -38,6 +40,8 @@ export default function OutfitDetailScreen() {
       setNotes(data.notes ?? "");
       setOccasion(data.occasion ?? null);
       setThermal(data.thermal_feeling ?? null);
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsOwner(!!user && user.id === data.user_id);
     }
   }
 
@@ -230,7 +234,8 @@ export default function OutfitDetailScreen() {
               )}
             </View>
 
-            {/* Actions */}
+            {/* Actions — owner only */}
+            {isOwner && (
             <View style={styles.actions}>
               {editing ? (
                 <>
@@ -270,6 +275,9 @@ export default function OutfitDetailScreen() {
                 </>
               )}
             </View>
+            )}
+
+            {outfit && <OutfitNotes outfitId={outfit.id} />}
 
             <View style={{ height: 40 }} />
           </View>
