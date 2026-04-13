@@ -162,6 +162,7 @@ export default function OnboardingSwipe() {
             <View style={[styles.progressDot, styles.progressDotActive]} />
             <View style={[styles.progressDot, styles.progressDotActive]} />
             <View style={[styles.progressDot, styles.progressDotActive]} />
+            <View style={[styles.progressDot, styles.progressDotActive]} />
           </View>
           <Pressable onPress={backToVestiaire} hitSlop={12}>
             <Text style={styles.backText}>← VESTIAIRE</Text>
@@ -194,6 +195,7 @@ export default function OnboardingSwipe() {
           <View style={[styles.progressDot, styles.progressDotActive]} />
           <View style={[styles.progressDot, styles.progressDotActive]} />
           <View style={[styles.progressDot, styles.progressDotActive]} />
+          <View style={[styles.progressDot, styles.progressDotActive]} />
         </View>
         <View style={styles.topBarRight}>
           <Pressable onPress={backToVestiaire} hitSlop={12}>
@@ -206,7 +208,7 @@ export default function OnboardingSwipe() {
       </View>
 
       <View style={styles.header}>
-        <Text style={styles.kicker}>ÉTAPE 03 / 03</Text>
+        <Text style={styles.kicker}>ÉTAPE 04 / 04</Text>
         <Text style={styles.title}>TON ŒIL</Text>
         <Text style={styles.subtitle}>
           Swipe → garder · Swipe ← passer. On affine les suggestions à ton goût.

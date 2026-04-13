@@ -7,7 +7,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint:colors": "bash scripts/check-hex.sh"
   },
   "dependencies": {
     "@expo-google-fonts/barlow-condensed": "^0.4.1",
