@@ -302,10 +302,10 @@ enabled = false
 # domain = "example.clerk.accounts.dev"
 
 [functions.suggest-outfit]
-verify_jwt = false
+verify_jwt = true
 
 [functions.wardrobe-ai]
-verify_jwt = false
+verify_jwt = true
 
 [edge_runtime]
 enabled = true
