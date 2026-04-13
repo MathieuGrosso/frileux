@@ -5,15 +5,18 @@ import { CircleOnboarding } from "@/components/circle/CircleOnboarding";
 import { CircleFeedHeader } from "@/components/circle/CircleFeedHeader";
 import { CircleOutfitCard } from "@/components/circle/CircleOutfitCard";
 import { CircleFeedSkeleton } from "@/components/circle/CircleFeedSkeleton";
+import { CircleSwitcher } from "@/components/circle/CircleSwitcher";
 import { EmptyState } from "@/components/EmptyState";
 
 export default function CircleScreen() {
   const {
+    circles,
     circle,
     outfits,
     loading,
     refreshing,
     refresh,
+    setActiveCircleId,
     createCircle,
     joinCircle,
   } = useCircle();
@@ -38,6 +41,11 @@ export default function CircleScreen() {
   return (
     <SafeAreaView className="flex-1 bg-paper-100">
       {circle && <CircleFeedHeader circle={circle} />}
+      <CircleSwitcher
+        circles={circles}
+        activeId={circle?.id ?? null}
+        onSelect={(id) => { void setActiveCircleId(id); }}
+      />
       <FlatList
         data={outfits}
         renderItem={({ item, index }) => (
@@ -47,7 +55,7 @@ export default function CircleScreen() {
           />
         )}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 24 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
