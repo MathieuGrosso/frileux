@@ -14,6 +14,7 @@ import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/lib/supabase";
 import { getDayForecast, getWeather, weatherEmoji } from "@/lib/weather";
+import { generateOutfitImage } from "@/lib/gemini";
 import type { DayForecast, WeatherData } from "@/lib/types";
 import { RatingStars } from "@/components/RatingStars";
 import { useRouter } from "expo-router";
@@ -22,6 +23,8 @@ export default function TodayScreen() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [forecast, setForecast] = useState<DayForecast | null>(null);
   const [suggestion, setSuggestion] = useState<string | null>(null);
+  const [suggestionImage, setSuggestionImage] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [rating, setRating] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -125,12 +128,28 @@ export default function TodayScreen() {
         setSuggestion("Suggestion indisponible.");
         return;
       }
-      if (data?.suggestion) setSuggestion(data.suggestion);
-      else setSuggestion("Suggestion indisponible.");
+      if (data?.suggestion) {
+        const cleaned = stripMarkdown(data.suggestion);
+        setSuggestion(cleaned);
+        setImageLoading(true);
+        generateOutfitImage(cleaned)
+          .then((url) => setSuggestionImage(url))
+          .catch((err) => { if (__DEV__) console.warn("outfit image failed:", err); })
+          .finally(() => setImageLoading(false));
+      } else setSuggestion("Suggestion indisponible.");
     } catch (e) {
       if (__DEV__) console.error("fetchSuggestion exception:", e);
       setSuggestion("Suggestion indisponible.");
     }
+  }
+
+  function stripMarkdown(text: string): string {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/\*(.*?)\*/g, "$1")
+      .replace(/^[-•]\s+/gm, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
   }
 
   async function takePhoto() {
@@ -291,6 +310,23 @@ export default function TodayScreen() {
           {/* Suggestion */}
           <View style={styles.suggestionSection}>
             <Text style={styles.suggestionLabel}>SUGGESTION DU JOUR</Text>
+
+            <View style={styles.suggestionImageWrap}>
+              {suggestionImage ? (
+                <Image
+                  source={{ uri: suggestionImage }}
+                  style={styles.suggestionImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.suggestionImagePlaceholder}>
+                  {(imageLoading || (suggestion && !suggestionImage)) && (
+                    <ActivityIndicator size="small" color="#637D8E" />
+                  )}
+                </View>
+              )}
+            </View>
+
             {suggestion ? (
               <Text style={styles.suggestionText}>{suggestion}</Text>
             ) : (
@@ -485,6 +521,19 @@ const styles = StyleSheet.create({
     lineHeight: 25,
   },
   suggestionMuted: { color: "#9E9A96" },
+
+  suggestionImageWrap: {
+    aspectRatio: 1,
+    backgroundColor: "#EFEBE5",
+    marginBottom: 16,
+    overflow: "hidden",
+  },
+  suggestionImage: { width: "100%", height: "100%" },
+  suggestionImagePlaceholder: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
   photoSection: { marginBottom: 24 },
   sectionLabel: {
