@@ -6,9 +6,47 @@ export interface Profile {
   push_token: string | null;
   last_latitude: number | null;
   last_longitude: number | null;
+  onboarding_completed: boolean;
   created_at: string;
   updated_at: string;
 }
+
+export type WardrobeItemType = "top" | "bottom" | "outerwear" | "shoes" | "accessory";
+
+export interface WardrobeItem {
+  id: string;
+  user_id: string;
+  photo_url: string | null;
+  type: WardrobeItemType;
+  color: string | null;
+  material: string | null;
+  style_tags: string[];
+  description: string;
+  created_at: string;
+}
+
+export interface ClothingAnalysis {
+  type: WardrobeItemType;
+  color: string;
+  material: string | null;
+  style_tags: string[];
+  description: string;
+}
+
+export interface OutfitCombo {
+  item_ids: string[];
+  rationale: string;
+}
+
+export interface PieceSuggestion {
+  type: WardrobeItemType;
+  description: string;
+  rationale: string;
+}
+
+export type SwipeCardPayload =
+  | { kind: "combo"; combo: OutfitCombo; items: WardrobeItem[] }
+  | { kind: "suggestion"; suggestion: PieceSuggestion };
 
 export type ColdnessLevel = 1 | 2 | 3 | 4 | 5;
 // 1 = "un peu frileuse" → 5 = "je vis en doudoune"

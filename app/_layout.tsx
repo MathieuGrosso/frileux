@@ -22,6 +22,7 @@ import {
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
   const segments = useSegments();
   const router = useRouter();
 
@@ -48,24 +49,47 @@ export default function RootLayout() {
         registerForPushNotifications().then((token) => {
           if (token) savePushToken(token);
         });
+      } else {
+        setOnboardingCompleted(null);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
+  // Fetch onboarding flag whenever session changes.
+  useEffect(() => {
+    if (!session) return;
+    supabase
+      .from("profiles")
+      .select("onboarding_completed")
+      .eq("id", session.user.id)
+      .single()
+      .then(({ data }) => {
+        setOnboardingCompleted(data?.onboarding_completed ?? false);
+      });
+  }, [session]);
+
   useEffect(() => {
     if (loading) return;
     const inAuthGroup = segments[0] === "auth";
-    if (!session && !inAuthGroup) {
-      router.replace("/auth/login");
-    } else if (session && inAuthGroup) {
+    const inOnboarding = segments[0] === "onboarding";
+
+    if (!session) {
+      if (!inAuthGroup) router.replace("/auth/login");
+      return;
+    }
+
+    // Wait for onboarding flag to be fetched before deciding.
+    if (onboardingCompleted === null) return;
+
+    if (!onboardingCompleted) {
+      if (!inOnboarding) router.replace("/onboarding");
+    } else if (inAuthGroup || inOnboarding) {
       router.replace("/");
     }
-    // segments intentionally omitted: this effect should only react to auth state changes,
-    // not every navigation event. Reading segments from closure is correct here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, loading]);
+  }, [session, loading, onboardingCompleted]);
 
   if (loading || !fontsLoaded) {
     return (
