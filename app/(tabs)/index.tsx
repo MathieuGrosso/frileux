@@ -94,7 +94,13 @@ export default function TodayScreen() {
 
       if (fromGeoloc) {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) supabase.from("profiles").update({ last_latitude: latitude, last_longitude: longitude }).eq("id", user.id);
+        if (user) {
+          const { error: upErr } = await supabase
+            .from("profiles")
+            .update({ last_latitude: latitude, last_longitude: longitude })
+            .eq("id", user.id);
+          if (upErr && __DEV__) console.warn("profile location update:", upErr.message);
+        }
       }
     } catch (e) { if (__DEV__) console.error(e); }
     finally { setLoading(false); }

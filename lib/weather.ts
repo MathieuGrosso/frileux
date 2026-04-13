@@ -1,120 +1,16 @@
-import type { DayForecast, DayForecastSlot, WeatherData } from "./types";
-
-const API_KEY = process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY;
-const BASE_URL = "https://api.openweathermap.org/data/2.5";
-
-interface OpenWeatherResponse {
-  main: {
-    temp: number;
-    feels_like: number;
-    humidity: number;
-  };
-  wind: { speed: number };
-  weather: Array<{ description: string; icon: string; main: string }>;
-  rain?: { "1h"?: number };
-  snow?: { "1h"?: number };
-}
-
-interface UVResponse {
-  value: number;
-}
+import { supabase } from "./supabase";
+import type { WeatherData } from "./types";
 
 export async function getWeather(
   lat: number,
   lon: number
 ): Promise<WeatherData> {
-  const [weatherRes, uvRes] = await Promise.all([
-    fetch(
-      `${BASE_URL}/weather?lat=${lat}&lon=${lon}&units=metric&lang=fr&appid=${API_KEY}`
-    ),
-    fetch(
-      `${BASE_URL}/uvi?lat=${lat}&lon=${lon}&appid=${API_KEY}`
-    ).catch(() => null),
-  ]);
-
-  if (!weatherRes.ok) {
-    throw new Error(`Erreur météo: ${weatherRes.status}`);
-  }
-
-  const weather: OpenWeatherResponse = await weatherRes.json();
-  const uv: UVResponse | null = uvRes?.ok ? await uvRes.json() : null;
-
-  return {
-    temp: Math.round(weather.main.temp),
-    feels_like: Math.round(weather.main.feels_like),
-    humidity: weather.main.humidity,
-    wind_speed: weather.wind.speed,
-    description: weather.weather[0]?.description ?? "",
-    icon: weather.weather[0]?.icon ?? "01d",
-    rain: !!weather.rain || weather.weather[0]?.main === "Rain",
-    snow: !!weather.snow || weather.weather[0]?.main === "Snow",
-    uv_index: uv?.value ?? 0,
-  };
-}
-
-interface ForecastEntry {
-  dt: number;
-  main: { temp: number };
-  weather: Array<{ icon: string; main: string }>;
-  rain?: { "3h"?: number };
-}
-
-interface ForecastResponse {
-  list: ForecastEntry[];
-  city: { timezone: number };
-}
-
-/**
- * Fenetre meteo de la journee : matin (~9h), midi (~13h), soir (~19h)
- * en heure locale du lieu. Granularite 3h via /forecast.
- */
-export async function getDayForecast(
-  lat: number,
-  lon: number
-): Promise<DayForecast> {
-  const res = await fetch(
-    `${BASE_URL}/forecast?lat=${lat}&lon=${lon}&units=metric&lang=fr&appid=${API_KEY}`
-  );
-  if (!res.ok) throw new Error(`Erreur forecast: ${res.status}`);
-  const data: ForecastResponse = await res.json();
-  const tzShift = data.city.timezone;
-
-  const todayLocalDate = new Date(Date.now() + tzShift * 1000)
-    .toISOString()
-    .split("T")[0];
-
-  const todaySlots = data.list
-    .map((entry) => {
-      const local = new Date((entry.dt + tzShift) * 1000);
-      return {
-        entry,
-        localDate: local.toISOString().split("T")[0],
-        localHour: local.getUTCHours(),
-      };
-    })
-    .filter((s) => s.localDate === todayLocalDate);
-
-  function pickClosest(targetHour: number): DayForecastSlot | null {
-    if (todaySlots.length === 0) return null;
-    const best = todaySlots.reduce((a, b) =>
-      Math.abs(a.localHour - targetHour) <= Math.abs(b.localHour - targetHour)
-        ? a
-        : b
-    );
-    return {
-      hour: best.localHour,
-      temp: Math.round(best.entry.main.temp),
-      icon: best.entry.weather[0]?.icon ?? "01d",
-      rain:
-        !!best.entry.rain || best.entry.weather[0]?.main === "Rain",
-    };
-  }
-
-  return {
-    morning: pickClosest(9),
-    midday: pickClosest(13),
-    evening: pickClosest(19),
-  };
+  const { data, error } = await supabase.functions.invoke("get-weather", {
+    body: { lat, lon },
+  });
+  if (error) throw new Error(`Erreur météo: ${error.message}`);
+  if (!data) throw new Error("Erreur météo: réponse vide");
+  return data as WeatherData;
 }
 
 /** Get a weather emoji from the icon code */

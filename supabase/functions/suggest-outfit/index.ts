@@ -4,6 +4,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") ?? "*";
 
 interface TasteBody {
   gender_presentation?: "menswear" | "womenswear" | "both" | null;
@@ -28,14 +29,14 @@ interface RequestBody {
     uv_index: number;
   };
   coldness_level: number; // 1-5
-  recent_worn?: string[]; // descriptions des tenues portees ces 7 derniers jours
+  recent_worn?: string[];
   recent_feedback?: Array<{
     description: string;
     thermal: "too_cold" | "just_right" | "too_warm" | null;
     occasion: string | null;
     feels_like: number | null;
   }>;
-  occasion?: string | null; // contexte demande pour aujourd'hui
+  occasion?: string | null;
   taste?: TasteBody;
 }
 
@@ -68,11 +69,55 @@ function buildTasteBlock(t?: TasteBody): string {
   return `\n\nProfil stylistique :\n${lines.join("\n")}\n\nLe vocabulaire doit refléter ce niveau de goût (éditorial, précis). Évite "joli", "mignon", "sympa". Pense silhouette, matière, proportion.`;
 }
 
+function isFiniteNumber(v: unknown): v is number {
+  return typeof v === "number" && Number.isFinite(v);
+}
+
+function validate(body: unknown): RequestBody {
+  if (!body || typeof body !== "object") throw new Error("invalid body");
+  const b = body as Record<string, unknown>;
+  const cl = b.coldness_level;
+  if (!isFiniteNumber(cl) || cl < 1 || cl > 5 || !Number.isInteger(cl)) {
+    throw new Error("coldness_level must be an integer 1-5");
+  }
+  const w = b.weather as Record<string, unknown> | undefined;
+  if (!w || typeof w !== "object") throw new Error("weather required");
+  for (const k of ["temp", "feels_like", "humidity", "wind_speed"] as const) {
+    if (!isFiniteNumber(w[k])) throw new Error(`weather.${k} must be a number`);
+  }
+  if (typeof w.description !== "string" || w.description.length > 200) {
+    throw new Error("weather.description invalid");
+  }
+  const rw = b.recent_worn;
+  if (rw !== undefined) {
+    if (!Array.isArray(rw) || rw.length > 14) throw new Error("recent_worn invalid");
+    for (const item of rw) {
+      if (typeof item !== "string" || item.length > 500) {
+        throw new Error("recent_worn entry invalid");
+      }
+    }
+  }
+  const rf = b.recent_feedback;
+  if (rf !== undefined) {
+    if (!Array.isArray(rf) || rf.length > 14) throw new Error("recent_feedback invalid");
+  }
+  const oc = b.occasion;
+  if (oc !== undefined && oc !== null && (typeof oc !== "string" || oc.length > 200)) {
+    throw new Error("occasion invalid");
+  }
+  const t = b.taste;
+  if (t !== undefined && (t === null || typeof t !== "object" || Array.isArray(t))) {
+    throw new Error("taste invalid");
+  }
+  return body as RequestBody;
+}
+
 Deno.serve(async (req: Request) => {
   const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "authorization, content-type, x-client-info, apikey",
+    "Vary": "Origin",
   };
 
   if (req.method === "OPTIONS") {
@@ -80,7 +125,9 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { weather, coldness_level, recent_worn, recent_feedback, occasion, taste }: RequestBody = await req.json();
+    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
+    const raw = await req.json();
+    const { weather, coldness_level, recent_worn, recent_feedback, occasion, taste } = validate(raw);
     const tasteBlock = buildTasteBlock(taste);
 
     const coldnessDescriptions: Record<number, string> = {
@@ -138,7 +185,7 @@ Pull col roulé laine grise, jean droit brut, manteau en laine noire, bottines e
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY!,
+        "x-api-key": ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
@@ -148,6 +195,10 @@ Pull col roulé laine grise, jean droit brut, manteau en laine noire, bottines e
       }),
     });
 
+    if (!response.ok) {
+      throw new Error(`Anthropic error ${response.status}`);
+    }
+
     const data = await response.json();
     const suggestion =
       data.content?.[0]?.text ?? "Impossible de générer une suggestion.";
@@ -156,14 +207,13 @@ Pull col roulé laine grise, jean droit brut, manteau en laine noire, bottines e
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown";
+    const status = message.includes("must be") || message.includes("required") || message.includes("invalid") ? 400 : 500;
     return new Response(
       JSON.stringify({ error: "Erreur lors de la génération de la suggestion." }),
       {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
+        status,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );
   }

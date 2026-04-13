@@ -14,10 +14,15 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
-const OPENWEATHER_API_KEY = Deno.env.get("OPENWEATHER_API_KEY")!;
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+const OPENWEATHER_API_KEY = Deno.env.get("OPENWEATHER_API_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+function requireEnv(name: string, value: string | undefined): string {
+  if (!value) throw new Error(`${name} not configured`);
+  return value;
+}
 
 interface Profile {
   id: string;
@@ -40,10 +45,13 @@ interface WeatherData {
 }
 
 async function fetchWeather(lat: number, lon: number): Promise<WeatherData> {
+  const key = requireEnv("OPENWEATHER_API_KEY", OPENWEATHER_API_KEY);
   const res = await fetch(
-    `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=fr&appid=${OPENWEATHER_API_KEY}`
+    `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=fr&appid=${key}`
   );
+  if (!res.ok) throw new Error(`OpenWeather error ${res.status}`);
   const data = await res.json();
+  if (!data?.main || !data?.weather?.[0]) throw new Error("OpenWeather invalid response");
   return {
     temp: Math.round(data.main.temp),
     feels_like: Math.round(data.main.feels_like),
@@ -134,11 +142,12 @@ ${horizon} : ${weather.temp}°C (ressenti ${weather.feels_like}°C), ${weather.d
 
 Donne une suggestion de tenue ULTRA COURTE en français (1 phrase, 15 mots max). Liste 3 à 5 pièces séparées par des virgules. Pas de markdown, pas d'emoji, pas d'introduction. Format : "pull laine grise, jean droit, manteau noir, bottines cuir."`;
 
+  const key = requireEnv("ANTHROPIC_API_KEY", ANTHROPIC_API_KEY);
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-api-key": ANTHROPIC_API_KEY,
+      "x-api-key": key,
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
@@ -148,6 +157,7 @@ Donne une suggestion de tenue ULTRA COURTE en français (1 phrase, 15 mots max).
     }),
   });
 
+  if (!res.ok) throw new Error(`Anthropic error ${res.status}`);
   const data = await res.json();
   return data.content?.[0]?.text ?? "Couvre-toi bien aujourd'hui !";
 }
@@ -194,7 +204,10 @@ Deno.serve(async (req: Request) => {
   const mode = url.searchParams.get("mode") === "evening" ? "evening" : "morning";
   const forTomorrow = mode === "evening";
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const supabase = createClient(
+    requireEnv("SUPABASE_URL", SUPABASE_URL),
+    requireEnv("SUPABASE_SERVICE_ROLE_KEY", SUPABASE_SERVICE_ROLE_KEY),
+  );
 
   // Get all users with push token + stored location
   const { data: profiles, error } = await supabase
