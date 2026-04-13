@@ -109,20 +109,35 @@ export default function TodayScreen() {
       setColdness(userColdness);
 
       let recent_worn: string[] = [];
+      let recent_feedback: Array<{
+        description: string;
+        thermal: ThermalFeeling | null;
+        occasion: OutfitOccasion | null;
+        feels_like: number | null;
+      }> = [];
       if (user) {
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         const { data: recentOutfits } = await supabase
           .from("outfits")
-          .select("worn_description")
+          .select("worn_description, thermal_feeling, occasion, weather_data")
           .eq("user_id", user.id)
           .gte("date", sevenDaysAgo.toISOString().split("T")[0])
           .not("worn_description", "is", null)
           .order("date", { ascending: false })
           .limit(7);
-        recent_worn = (recentOutfits ?? [])
+        const rows = recentOutfits ?? [];
+        recent_worn = rows
           .map((o) => o.worn_description as string | null)
           .filter((w): w is string => !!w && w.trim().length > 0);
+        recent_feedback = rows
+          .filter((o) => !!o.worn_description)
+          .map((o) => ({
+            description: o.worn_description as string,
+            thermal: (o.thermal_feeling as ThermalFeeling | null) ?? null,
+            occasion: (o.occasion as OutfitOccasion | null) ?? null,
+            feels_like: (o.weather_data as { feels_like?: number } | null)?.feels_like ?? null,
+          }));
       }
 
       const { data, error } = await supabase.functions.invoke("suggest-outfit", {
@@ -130,6 +145,8 @@ export default function TodayScreen() {
           weather: weatherData,
           coldness_level: userColdness,
           recent_worn,
+          recent_feedback,
+          occasion,
         },
       });
       if (error) {
