@@ -13,7 +13,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
-import type { Outfit } from "@/lib/types";
+import type { Outfit, OutfitOccasion, ThermalFeeling } from "@/lib/types";
+import { OUTFIT_OCCASIONS, THERMAL_FEELINGS } from "@/lib/types";
 import { weatherEmoji } from "@/lib/weather";
 import { RatingStars } from "@/components/RatingStars";
 
@@ -23,6 +24,8 @@ export default function OutfitDetailScreen() {
   const [outfit, setOutfit] = useState<Outfit | null>(null);
   const [rating, setRating] = useState(0);
   const [notes, setNotes] = useState("");
+  const [occasion, setOccasion] = useState<OutfitOccasion | null>(null);
+  const [thermal, setThermal] = useState<ThermalFeeling | null>(null);
   const [editing, setEditing] = useState(false);
 
   useEffect(() => { loadOutfit(); }, [id]);
@@ -33,6 +36,8 @@ export default function OutfitDetailScreen() {
       setOutfit(data);
       setRating(data.rating ?? 0);
       setNotes(data.notes ?? "");
+      setOccasion(data.occasion ?? null);
+      setThermal(data.thermal_feeling ?? null);
     }
   }
 
@@ -40,13 +45,18 @@ export default function OutfitDetailScreen() {
     if (!outfit) return;
     const { error } = await supabase
       .from("outfits")
-      .update({ rating, notes: notes || null })
+      .update({
+        rating,
+        notes: notes || null,
+        occasion,
+        thermal_feeling: thermal,
+      })
       .eq("id", outfit.id);
     if (error) {
       Alert.alert("Erreur", "Impossible de sauvegarder.");
     } else {
       setEditing(false);
-      setOutfit({ ...outfit, rating, notes });
+      setOutfit({ ...outfit, rating, notes, occasion, thermal_feeling: thermal });
     }
   }
 
@@ -139,6 +149,60 @@ export default function OutfitDetailScreen() {
 
             {(outfit.ai_suggestion || outfit.worn_description) && <View style={styles.divider} />}
 
+            {/* Occasion */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>OCCASION</Text>
+              {editing ? (
+                <View style={styles.chipRow}>
+                  {OUTFIT_OCCASIONS.map((opt) => {
+                    const active = occasion === opt.value;
+                    return (
+                      <Pressable
+                        key={opt.value}
+                        onPress={() => setOccasion(active ? null : opt.value)}
+                        style={[styles.chip, active && styles.chipActive]}
+                      >
+                        <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                          {opt.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : (
+                <Text style={[styles.notesText, !occasion && styles.notesMuted]}>
+                  {OUTFIT_OCCASIONS.find((o) => o.value === occasion)?.label ?? "Non renseignée"}
+                </Text>
+              )}
+            </View>
+
+            {/* Ressenti thermique */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>RESSENTI</Text>
+              {editing ? (
+                <View style={styles.chipRow}>
+                  {THERMAL_FEELINGS.map((opt) => {
+                    const active = thermal === opt.value;
+                    return (
+                      <Pressable
+                        key={opt.value}
+                        onPress={() => setThermal(active ? null : opt.value)}
+                        style={[styles.chip, active && styles.chipActive]}
+                      >
+                        <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                          {opt.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : (
+                <Text style={[styles.notesText, !thermal && styles.notesMuted]}>
+                  {THERMAL_FEELINGS.find((t) => t.value === thermal)?.label ?? "Non renseigné"}
+                </Text>
+              )}
+            </View>
+
             {/* Rating */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>NOTE</Text>
@@ -181,6 +245,8 @@ export default function OutfitDetailScreen() {
                       setEditing(false);
                       setRating(outfit.rating ?? 0);
                       setNotes(outfit.notes ?? "");
+                      setOccasion(outfit.occasion ?? null);
+                      setThermal(outfit.thermal_feeling ?? null);
                     }}
                     style={({ pressed }) => [styles.cancelBtn, pressed && styles.cancelBtnPressed]}
                   >
@@ -332,6 +398,21 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginBottom: 12,
   },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  chip: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#E8E5DF",
+    backgroundColor: "#FFFFFF",
+  },
+  chipActive: { backgroundColor: "#0F0F0D", borderColor: "#0F0F0D" },
+  chipText: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 12,
+    color: "#0F0F0D",
+  },
+  chipTextActive: { color: "#FAFAF8" },
   notesInput: {
     backgroundColor: "#F2F0EC",
     borderWidth: 1,
