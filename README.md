@@ -60,14 +60,25 @@ supabase/               # Migrations + Edge Functions
 
 ## Déploiement
 
-### Web (live)
+### Web (live) — https://frileuse.expo.app
 
-URL prod : **https://frileuse.expo.app** (EAS Hosting)
+Hébergé sur **EAS Hosting**. Deux étapes : export statique puis deploy.
 
 ```bash
-npx expo export --platform web
+# 1. Build le bundle web dans dist/
+npx expo export -p web
+
+# 2. Push + promote en prod
 eas deploy --prod
 ```
+
+Le CLI renvoie une URL de déploiement unique (`frileuse--xxxx.expo.app`) + promeut sur la prod `frileuse.expo.app`. Pour un preview sans écraser la prod :
+
+```bash
+eas deploy           # sans --prod → URL de preview uniquement
+```
+
+Dashboard des déploiements : https://expo.dev/accounts/batmat9/projects/frileuse/hosting/deployments
 
 Native modules (caméra, géoloc, notifs) dégradés sur web — fallbacks navigateur.
 
