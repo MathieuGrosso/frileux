@@ -16,10 +16,12 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.frileuse.app",
+      "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "Frileuse a besoin de la caméra pour photographier ta tenue du jour.",
         "NSPhotoLibraryUsageDescription": "Frileuse a besoin d'accéder à tes photos pour choisir une photo de tenue.",
-        "NSLocationWhenInUseUsageDescription": "Frileuse utilise ta position pour te donner la météo locale."
+        "NSLocationWhenInUseUsageDescription": "Frileuse utilise ta position pour te donner la météo locale.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -30,9 +32,16 @@
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
-        "CAMERA",
-        "ACCESS_FINE_LOCATION",
-        "READ_EXTERNAL_STORAGE"
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -61,6 +70,19 @@
         }
       ],
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5e287f75-b84d-42c3-932b-d23cb8917006"
+      }
+    },
+    "owner": "batmat9",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/5e287f75-b84d-42c3-932b-d23cb8917006"
+    }
   }
 }
