@@ -1,12 +1,23 @@
-import { FlatList, RefreshControl } from "react-native";
+import { useMemo } from "react";
+import { SectionList, FlatList, RefreshControl, View, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useCircle } from "@/hooks/useCircle";
+import type { OutfitWithProfile } from "@/lib/types";
 import { CircleOnboarding } from "@/components/circle/CircleOnboarding";
 import { CircleFeedHeader } from "@/components/circle/CircleFeedHeader";
 import { CircleOutfitCard } from "@/components/circle/CircleOutfitCard";
 import { CircleFeedSkeleton } from "@/components/circle/CircleFeedSkeleton";
 import { CircleSwitcher } from "@/components/circle/CircleSwitcher";
+import { ViewModeToggle } from "@/components/circle/ViewModeToggle";
 import { EmptyState } from "@/components/EmptyState";
+
+function formatDayHeader(dateIso: string): string {
+  const d = new Date(dateIso);
+  const weekday = d.toLocaleDateString("fr-FR", { weekday: "short" });
+  const day = d.getDate();
+  const month = d.toLocaleDateString("fr-FR", { month: "short" });
+  return `${weekday.toUpperCase()} ${day} ${month.toUpperCase()}`;
+}
 
 export default function CircleScreen() {
   const {
@@ -16,10 +27,25 @@ export default function CircleScreen() {
     loading,
     refreshing,
     refresh,
+    viewMode,
+    setViewMode,
     setActiveCircleId,
     createCircle,
     joinCircle,
   } = useCircle();
+
+  const sections = useMemo(() => {
+    if (viewMode !== "week") return null;
+    const byDate = new Map<string, OutfitWithProfile[]>();
+    for (const o of outfits) {
+      const arr = byDate.get(o.date) ?? [];
+      arr.push(o);
+      byDate.set(o.date, arr);
+    }
+    return Array.from(byDate.entries())
+      .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+      .map(([date, data]) => ({ title: date, data }));
+  }, [outfits, viewMode]);
 
   if (!circle && !loading) {
     return (
@@ -46,31 +72,65 @@ export default function CircleScreen() {
         activeId={circle?.id ?? null}
         onSelect={(id) => { void setActiveCircleId(id); }}
       />
-      <FlatList
-        data={outfits}
-        renderItem={({ item, index }) => (
-          <CircleOutfitCard
-            outfit={item}
-            isFirst={index === outfits.length - 1 && outfits.length > 1}
-          />
-        )}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 24 }}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={refresh}
-            tintColor="#637D8E"
-          />
-        }
-        ListEmptyComponent={
-          <EmptyState
-            title="Personne aujourd'hui"
-            subtitle="Aucun membre du cercle n'a encore partagé sa tenue. Sois la première."
-          />
-        }
+      <ViewModeToggle
+        mode={viewMode}
+        onChange={(m) => { void setViewMode(m); }}
       />
+      {viewMode === "today" ? (
+        <FlatList
+          data={outfits}
+          renderItem={({ item, index }) => (
+            <CircleOutfitCard
+              outfit={item}
+              isFirst={index === outfits.length - 1 && outfits.length > 1}
+            />
+          )}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#637D8E" />
+          }
+          ListEmptyComponent={
+            <EmptyState
+              title="Personne aujourd'hui"
+              subtitle="Aucun membre du cercle n'a encore partagé sa tenue. Sois la première."
+            />
+          }
+        />
+      ) : (
+        <SectionList
+          sections={sections ?? []}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
+          showsVerticalScrollIndicator={false}
+          stickySectionHeadersEnabled
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#637D8E" />
+          }
+          renderSectionHeader={({ section }) => (
+            <View className="bg-paper-100 py-3 border-b border-paper-300">
+              <Text
+                className="font-display text-ink-900"
+                style={{ fontSize: 20, letterSpacing: 1.5 }}
+              >
+                {formatDayHeader(section.title)}
+              </Text>
+            </View>
+          )}
+          renderItem={({ item }) => (
+            <View className="pt-4">
+              <CircleOutfitCard outfit={item} />
+            </View>
+          )}
+          ListEmptyComponent={
+            <EmptyState
+              title="Rien cette semaine"
+              subtitle="Aucune tenue partagée ces 7 derniers jours."
+            />
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
