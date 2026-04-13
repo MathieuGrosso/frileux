@@ -9,7 +9,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-const MODEL = "gemini-1.5-flash";
+const MODEL = "gemini-2.5-flash";
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
 const CORS = {
