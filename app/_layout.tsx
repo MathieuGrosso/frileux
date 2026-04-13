@@ -15,6 +15,7 @@ import {
   BarlowCondensed_600SemiBold,
 } from "@expo-google-fonts/barlow-condensed";
 import {
+  Jost_300Light,
   Jost_400Regular,
   Jost_500Medium,
   Jost_600SemiBold,
@@ -31,6 +32,7 @@ export default function RootLayout() {
     BarlowCondensed_400Regular,
     BarlowCondensed_500Medium,
     BarlowCondensed_600SemiBold,
+    Jost_300Light,
     Jost_400Regular,
     Jost_500Medium,
     Jost_600SemiBold,
