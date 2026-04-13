@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import type { Outfit } from "@/lib/types";
 import { weatherEmoji } from "@/lib/weather";
 import { RatingStars } from "@/components/RatingStars";
+import { EmptyState } from "@/components/EmptyState";
 
 export default function HistoryScreen() {
   const [outfits, setOutfits] = useState<Outfit[]>([]);
@@ -117,11 +118,13 @@ export default function HistoryScreen() {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>
-              {loading ? "—" : "Pas encore de tenue.\nPrends ta première photo."}
-            </Text>
-          </View>
+          loading ? null : (
+            <EmptyState
+              title="Aucune tenue"
+              subtitle="Tes prochaines tenues s'archiveront ici. Prends ta première photo depuis Aujourd'hui."
+              cta={{ label: "Aller à aujourd'hui", onPress: () => router.replace("/(tabs)") }}
+            />
+          )
         }
       />
     </SafeAreaView>
