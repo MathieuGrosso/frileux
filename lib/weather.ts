@@ -1,5 +1,28 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
 import type { WeatherData } from "./types";
+
+const WEATHER_TTL_MS = 15 * 60 * 1000;
+
+function cacheKey(lat: number, lon: number) {
+  return `weather:${lat.toFixed(2)}:${lon.toFixed(2)}`;
+}
+
+async function readCache(key: string): Promise<WeatherData | null> {
+  try {
+    const raw = await AsyncStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { ts: number; value: WeatherData };
+    if (Date.now() - parsed.ts > WEATHER_TTL_MS) return null;
+    return parsed.value;
+  } catch { return null; }
+}
+
+async function writeCache(key: string, value: WeatherData): Promise<void> {
+  try {
+    await AsyncStorage.setItem(key, JSON.stringify({ ts: Date.now(), value }));
+  } catch {}
+}
 
 export async function getWeather(
   lat: number,
@@ -11,6 +34,31 @@ export async function getWeather(
   if (error) throw new Error(`Erreur météo: ${error.message}`);
   if (!data) throw new Error("Erreur météo: réponse vide");
   return data as WeatherData;
+}
+
+/**
+ * SWR-style : cache hit < 15 min → renvoyé immédiatement, revalidation
+ * silencieuse en arrière-plan (callback `onFresh` pour mettre à jour l'UI).
+ */
+export async function getWeatherCached(
+  lat: number,
+  lon: number,
+  onFresh?: (fresh: WeatherData) => void
+): Promise<WeatherData> {
+  const key = cacheKey(lat, lon);
+  const cached = await readCache(key);
+  if (cached) {
+    getWeather(lat, lon)
+      .then((fresh) => {
+        writeCache(key, fresh);
+        if (onFresh) onFresh(fresh);
+      })
+      .catch(() => {});
+    return cached;
+  }
+  const fresh = await getWeather(lat, lon);
+  writeCache(key, fresh);
+  return fresh;
 }
 
 /** Get a weather emoji from the icon code */
