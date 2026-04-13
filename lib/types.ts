@@ -65,6 +65,19 @@ export interface Outfit {
   created_at: string;
 }
 
+export interface DayForecastSlot {
+  hour: number;
+  temp: number;
+  icon: string;
+  rain: boolean;
+}
+
+export interface DayForecast {
+  morning: DayForecastSlot | null;
+  midday: DayForecastSlot | null;
+  evening: DayForecastSlot | null;
+}
+
 export interface WeatherData {
   temp: number; // Celsius
   feels_like: number;
