@@ -19,6 +19,13 @@ interface RequestBody {
   };
   coldness_level: number; // 1-5
   recent_worn?: string[];
+  recent_feedback?: Array<{
+    description: string;
+    thermal: "too_cold" | "just_right" | "too_warm" | null;
+    occasion: string | null;
+    feels_like: number | null;
+  }>;
+  occasion?: string | null;
 }
 
 function isFiniteNumber(v: unknown): v is number {
@@ -49,8 +56,15 @@ function validate(body: unknown): RequestBody {
       }
     }
   }
+  const rf = b.recent_feedback;
+  if (rf !== undefined) {
+    if (!Array.isArray(rf) || rf.length > 14) throw new Error("recent_feedback invalid");
+  }
+  const oc = b.occasion;
+  if (oc !== undefined && oc !== null && (typeof oc !== "string" || oc.length > 200)) {
+    throw new Error("occasion invalid");
+  }
   return body as RequestBody;
-}
 
 Deno.serve(async (req: Request) => {
   const corsHeaders = {
@@ -67,7 +81,7 @@ Deno.serve(async (req: Request) => {
   try {
     if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
     const raw = await req.json();
-    const { weather, coldness_level, recent_worn } = validate(raw);
+    const { weather, coldness_level, recent_worn, recent_feedback, occasion } = validate(raw);
 
     const coldnessDescriptions: Record<number, string> = {
       1: "légèrement frileuse",
@@ -81,6 +95,24 @@ Deno.serve(async (req: Request) => {
       ? `\n\nTenues portées ces 7 derniers jours (à NE PAS répéter — propose des pièces, couleurs et silhouettes différentes) :\n${recent_worn.map((w, i) => `${i + 1}. ${w}`).join("\n")}`
       : "";
 
+    const thermalLabel: Record<string, string> = {
+      too_cold: "elle a eu trop froid",
+      just_right: "le ressenti était pile bien",
+      too_warm: "elle a eu trop chaud",
+    };
+
+    const feedbackBlock = recent_feedback && recent_feedback.length > 0
+      ? `\n\nFeedback récent (à utiliser pour calibrer le niveau de chaleur) :\n${recent_feedback
+          .filter((f) => f.thermal)
+          .slice(0, 5)
+          .map((f) => `- ${f.description} (ressenti ${f.feels_like ?? "?"}°) → ${thermalLabel[f.thermal!] ?? "?"}`)
+          .join("\n")}`
+      : "";
+
+    const occasionBlock = occasion
+      ? `\n\nContexte demandé pour aujourd'hui : ${occasion}. Adapte le code vestimentaire (ex: travail = un cran plus formel, sortie = plus expressif, sport = technique).`
+      : "";
+
     const prompt = `Tu es une styliste personnelle pour une personne ${coldnessDescriptions[coldness_level] ?? "très frileuse"}.
 
 Météo du jour :
@@ -89,7 +121,7 @@ Météo du jour :
 - Vent : ${weather.wind_speed} m/s
 - Humidité : ${weather.humidity}%
 ${weather.rain ? "- Il pleut" : ""}
-${weather.snow ? "- Il neige" : ""}${recentBlock}
+${weather.snow ? "- Il neige" : ""}${occasionBlock}${recentBlock}${feedbackBlock}
 
 Donne une suggestion de tenue ULTRA COURTE en français (1 phrase, 20 mots max). Liste 4 à 6 pièces séparées par des virgules, dans l'ordre haut → bas (haut, bas, manteau si besoin, chaussures, accessoires). Sois spécifique sur les matières (ex: "pull laine épaisse" plutôt que "pull"). Adapte au fait que la personne est ${coldnessDescriptions[coldness_level]}.${recentBlock ? " Varie les matières, couleurs et coupes par rapport aux dernières tenues." : ""}
 

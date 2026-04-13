@@ -20,6 +20,7 @@ import { comfortVerdict } from "@/lib/comfort";
 import type { ColdnessLevel, DayForecast, OutfitOccasion, ThermalFeeling, WeatherData } from "@/lib/types";
 import { OUTFIT_OCCASIONS, THERMAL_FEELINGS } from "@/lib/types";
 import { RatingStars } from "@/components/RatingStars";
+import { Skeleton } from "@/components/Skeleton";
 import { useRouter } from "expo-router";
 
 export default function TodayScreen() {
@@ -115,20 +116,35 @@ export default function TodayScreen() {
       setColdness(userColdness);
 
       let recent_worn: string[] = [];
+      let recent_feedback: Array<{
+        description: string;
+        thermal: ThermalFeeling | null;
+        occasion: OutfitOccasion | null;
+        feels_like: number | null;
+      }> = [];
       if (user) {
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         const { data: recentOutfits } = await supabase
           .from("outfits")
-          .select("worn_description")
+          .select("worn_description, thermal_feeling, occasion, weather_data")
           .eq("user_id", user.id)
           .gte("date", sevenDaysAgo.toISOString().split("T")[0])
           .not("worn_description", "is", null)
           .order("date", { ascending: false })
           .limit(7);
-        recent_worn = (recentOutfits ?? [])
+        const rows = recentOutfits ?? [];
+        recent_worn = rows
           .map((o) => o.worn_description as string | null)
           .filter((w): w is string => !!w && w.trim().length > 0);
+        recent_feedback = rows
+          .filter((o) => !!o.worn_description)
+          .map((o) => ({
+            description: o.worn_description as string,
+            thermal: (o.thermal_feeling as ThermalFeeling | null) ?? null,
+            occasion: (o.occasion as OutfitOccasion | null) ?? null,
+            feels_like: (o.weather_data as { feels_like?: number } | null)?.feels_like ?? null,
+          }));
       }
 
       const { data, error } = await supabase.functions.invoke("suggest-outfit", {
@@ -136,6 +152,8 @@ export default function TodayScreen() {
           weather: weatherData,
           coldness_level: userColdness,
           recent_worn,
+          recent_feedback,
+          occasion,
         },
       });
       if (error) {
@@ -273,9 +291,13 @@ export default function TodayScreen() {
                 {loading ? "CHARGEMENT" : weather?.description?.toUpperCase() ?? "INDISPONIBLE"}
               </Text>
             </View>
-            <Text style={styles.tempDisplay}>
-              {loading ? "—" : weather ? `${weather.temp}°` : "—"}
-            </Text>
+            {loading ? (
+              <Skeleton style={styles.tempSkeleton} />
+            ) : (
+              <Text style={styles.tempDisplay}>
+                {weather ? `${weather.temp}°` : "—"}
+              </Text>
+            )}
             {forecast && (forecast.morning || forecast.midday || forecast.evening) && (
               <View style={styles.forecastRow}>
                 {forecast.morning && (
@@ -350,11 +372,7 @@ export default function TodayScreen() {
                   resizeMode="cover"
                 />
               ) : (
-                <View style={styles.suggestionImagePlaceholder}>
-                  {(imageLoading || (suggestion && !suggestionImage)) && (
-                    <ActivityIndicator size="small" color="#637D8E" />
-                  )}
-                </View>
+                <Skeleton style={styles.suggestionImageSkeleton} />
               )}
             </View>
 
@@ -555,6 +573,7 @@ const styles = StyleSheet.create({
     color: "#C4C0BC",
   },
   weatherAccent: { color: "#637D8E" },
+  tempSkeleton: { width: 140, height: 88, marginBottom: 14 },
 
   comfortRow: { marginBottom: 10 },
   comfortLabel: {
@@ -616,11 +635,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   suggestionImage: { width: "100%", height: "100%" },
-  suggestionImagePlaceholder: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  suggestionImageSkeleton: { width: "100%", height: "100%" },
 
   photoSection: { marginBottom: 24 },
   sectionLabel: {
