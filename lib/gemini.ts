@@ -48,6 +48,17 @@ export async function refineClothingImage(
   return res.photo_url;
 }
 
+export async function generateOutfitImage(suggestion: string): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const res = await invoke<{ photo_url: string | null }>({
+    action: "generate_outfit_image",
+    suggestion,
+    user_id: user.id,
+  });
+  return res.photo_url;
+}
+
 function liteItems(items: WardrobeItem[]) {
   return items.map((i) => ({
     id: i.id,
