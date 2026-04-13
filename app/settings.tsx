@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, Pressable, Alert, StyleSheet } from "react-native";
+import { View, Text, Pressable, Alert, Platform, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
@@ -51,16 +51,18 @@ export default function SettingsScreen() {
   }
 
   async function handleLogout() {
-    Alert.alert("Déconnexion", "Tu veux te déconnecter ?", [
-      { text: "Annuler", style: "cancel" },
-      {
-        text: "Déconnexion",
-        style: "destructive",
-        onPress: async () => {
-          await supabase.auth.signOut();
-        },
-      },
-    ]);
+    const confirmed =
+      Platform.OS === "web"
+        ? window.confirm("Tu veux te déconnecter ?")
+        : await new Promise<boolean>((resolve) => {
+            Alert.alert("Déconnexion", "Tu veux te déconnecter ?", [
+              { text: "Annuler", style: "cancel", onPress: () => resolve(false) },
+              { text: "Déconnexion", style: "destructive", onPress: () => resolve(true) },
+            ]);
+          });
+    if (!confirmed) return;
+    await supabase.auth.signOut();
+    router.replace("/auth/login");
   }
 
   return (
