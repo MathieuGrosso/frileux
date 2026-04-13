@@ -9,6 +9,7 @@ export interface UseCircleResult {
   refreshing: boolean;
   userId: string | null;
   reload: () => Promise<void>;
+  refresh: () => Promise<void>;
   createCircle: () => Promise<Circle | null>;
   joinCircle: (code: string) => Promise<Circle | null>;
 }
@@ -89,6 +90,53 @@ export function useCircle(): UseCircleResult {
     void reload();
   }, [reload]);
 
+  // Realtime: new outfits from circle members for today
+  useEffect(() => {
+    if (!circle || !userId) return;
+    const today = todayIso();
+    const channel = supabase
+      .channel(`circle-outfits-${circle.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "outfits" },
+        async (payload) => {
+          const row = payload.new as { id: string; user_id: string; date: string };
+          if (row.user_id === userId) return;
+          if (row.date !== today) return;
+
+          const { data: membership } = await supabase
+            .from("circle_members")
+            .select("user_id")
+            .eq("circle_id", circle.id)
+            .eq("user_id", row.user_id)
+            .maybeSingle();
+          if (!membership) return;
+
+          const { data: full } = await supabase
+            .from("outfits")
+            .select("*, profile:profiles(username, avatar_url)")
+            .eq("id", row.id)
+            .single();
+          if (!full) return;
+
+          setOutfits((prev) => {
+            if (prev.some((o) => o.id === full.id)) return prev;
+            return [full as unknown as OutfitWithProfile, ...prev];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [circle, userId]);
+
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    await reload();
+  }, [reload]);
+
   const createCircle = useCallback(async (): Promise<Circle | null> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
@@ -142,6 +190,7 @@ export function useCircle(): UseCircleResult {
     refreshing,
     userId,
     reload,
+    refresh,
     createCircle,
     joinCircle,
   };
