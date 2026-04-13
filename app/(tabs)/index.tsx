@@ -13,13 +13,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/lib/supabase";
-import { getWeather, weatherEmoji } from "@/lib/weather";
-import type { WeatherData } from "@/lib/types";
+import { getDayForecast, getWeather, weatherEmoji } from "@/lib/weather";
+import type { DayForecast, WeatherData } from "@/lib/types";
 import { RatingStars } from "@/components/RatingStars";
 import { useRouter } from "expo-router";
 
 export default function TodayScreen() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [forecast, setForecast] = useState<DayForecast | null>(null);
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [rating, setRating] = useState(0);
@@ -68,9 +69,17 @@ export default function TodayScreen() {
         }
       }
 
-      const data = await getWeather(latitude, longitude);
+      if (latitude === null || longitude === null) return;
+      const lat = latitude;
+      const lon = longitude;
+
+      const data = await getWeather(lat, lon);
       setWeather(data);
       fetchSuggestion(data);
+
+      getDayForecast(lat, lon)
+        .then(setForecast)
+        .catch((err) => { if (__DEV__) console.warn("forecast failed:", err); });
 
       if (fromGeoloc) {
         const { data: { user } } = await supabase.auth.getUser();
@@ -228,6 +237,34 @@ export default function TodayScreen() {
             <Text style={styles.tempDisplay}>
               {loading ? "—" : weather ? `${weather.temp}°` : "—"}
             </Text>
+            {forecast && (forecast.morning || forecast.midday || forecast.evening) && (
+              <View style={styles.forecastRow}>
+                {forecast.morning && (
+                  <View style={styles.forecastSlot}>
+                    <Text style={styles.forecastLabel}>MATIN</Text>
+                    <Text style={styles.forecastTemp}>{forecast.morning.temp}°</Text>
+                  </View>
+                )}
+                {forecast.morning && (forecast.midday || forecast.evening) && (
+                  <Text style={styles.forecastSep}>—</Text>
+                )}
+                {forecast.midday && (
+                  <View style={styles.forecastSlot}>
+                    <Text style={styles.forecastLabel}>MIDI</Text>
+                    <Text style={styles.forecastTemp}>{forecast.midday.temp}°</Text>
+                  </View>
+                )}
+                {forecast.midday && forecast.evening && (
+                  <Text style={styles.forecastSep}>—</Text>
+                )}
+                {forecast.evening && (
+                  <View style={styles.forecastSlot}>
+                    <Text style={styles.forecastLabel}>SOIR</Text>
+                    <Text style={styles.forecastTemp}>{forecast.evening.temp}°</Text>
+                  </View>
+                )}
+              </View>
+            )}
             {weather && (
               <View style={styles.weatherMeta}>
                 <Text style={styles.weatherMetaText}>Ressenti {weather.feels_like}°</Text>
@@ -405,6 +442,31 @@ const styles = StyleSheet.create({
     color: "#C4C0BC",
   },
   weatherAccent: { color: "#637D8E" },
+
+  forecastRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 14,
+    marginBottom: 14,
+  },
+  forecastSlot: { flexDirection: "column", gap: 2 },
+  forecastLabel: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 9,
+    color: "#637D8E",
+    letterSpacing: 1.8,
+  },
+  forecastTemp: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 14,
+    color: "#3A3836",
+  },
+  forecastSep: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 14,
+    color: "#C4C0BC",
+    paddingBottom: 1,
+  },
 
   divider: { height: 1, backgroundColor: "#E8E5DF", marginBottom: 32 },
 
