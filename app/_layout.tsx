@@ -1,9 +1,10 @@
 import "react-native-url-polyfill/auto";
 import "../global.css";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { OnboardingContext } from "@/lib/onboarding-context";
 import { registerForPushNotifications, savePushToken } from "@/lib/notifications";
 import { View, ActivityIndicator } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -57,18 +58,21 @@ export default function RootLayout() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch onboarding flag whenever session changes.
-  useEffect(() => {
+  const refreshOnboardingFlag = useCallback(async () => {
     if (!session) return;
-    supabase
+    const { data } = await supabase
       .from("profiles")
       .select("onboarding_completed")
       .eq("id", session.user.id)
-      .single()
-      .then(({ data }) => {
-        setOnboardingCompleted(data?.onboarding_completed ?? false);
-      });
+      .single();
+    setOnboardingCompleted(data?.onboarding_completed ?? false);
   }, [session]);
+
+  // Fetch onboarding flag whenever session changes.
+  useEffect(() => {
+    if (!session) return;
+    refreshOnboardingFlag();
+  }, [session, refreshOnboardingFlag]);
 
   useEffect(() => {
     if (loading) return;
@@ -100,8 +104,12 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <Slot />
-    </GestureHandlerRootView>
+    <OnboardingContext.Provider
+      value={{ completed: onboardingCompleted, refresh: refreshOnboardingFlag }}
+    >
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <Slot />
+      </GestureHandlerRootView>
+    </OnboardingContext.Provider>
   );
 }
