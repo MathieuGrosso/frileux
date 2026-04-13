@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -6,20 +6,25 @@ import {
   ScrollView,
   Image,
   Alert,
-  ActivityIndicator,
+  Animated,
   TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/lib/supabase";
-import { getDayForecast, getWeather } from "@/lib/weather";
+import { getWeatherCached } from "@/lib/weather";
 import { generateOutfitImage } from "@/lib/gemini";
 import { comfortVerdict } from "@/lib/comfort";
 import type { ColdnessLevel, DayForecast, OutfitOccasion, ThermalFeeling, WeatherData } from "@/lib/types";
 import { OUTFIT_OCCASIONS, THERMAL_FEELINGS } from "@/lib/types";
 import { RatingStars } from "@/components/RatingStars";
 import { Skeleton } from "@/components/Skeleton";
+import { TodayLoader, type LoaderStep } from "@/components/TodayLoader";
+import { HatchedPlaceholder } from "@/components/HatchedPlaceholder";
+import { loadProfileBundle, type ProfileBundle } from "@/lib/profile";
+import { patchSuggestionImage, readSuggestion, writeSuggestion } from "@/lib/suggestionCache";
+import { motion } from "@/lib/theme";
 import { useRouter } from "expo-router";
 
 export default function TodayScreen() {
@@ -43,7 +48,12 @@ export default function TodayScreen() {
   const dayLabel = today.toLocaleDateString("fr-FR", { weekday: "long" });
   const dateLabel = today.toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
 
-  useEffect(() => { loadWeather(); }, []);
+  const profilePromiseRef = useRef<Promise<ProfileBundle> | null>(null);
+
+  useEffect(() => {
+    profilePromiseRef.current = loadProfileBundle();
+    loadWeather();
+  }, []);
 
   async function loadWeather() {
     try {
@@ -83,13 +93,11 @@ export default function TodayScreen() {
       const lat = latitude;
       const lon = longitude;
 
-      const data = await getWeather(lat, lon);
+      const data = await getWeatherCached(lat, lon, (fresh) => {
+        setWeather(fresh);
+      });
       setWeather(data);
       fetchSuggestion(data);
-
-      getDayForecast(lat, lon)
-        .then(setForecast)
-        .catch((err) => { if (__DEV__) console.warn("forecast failed:", err); });
 
       if (fromGeoloc) {
         const { data: { user } } = await supabase.auth.getUser();
@@ -107,61 +115,33 @@ export default function TodayScreen() {
 
   async function fetchSuggestion(weatherData: WeatherData) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: profile } = user
-        ? await supabase
-            .from("profiles")
-            .select("coldness_level, gender_presentation, style_universes, favorite_brands, avoid_tags, fit_preference, build, height_cm, shoe_size_eu")
-            .eq("id", user.id)
-            .maybeSingle()
-        : { data: null };
-      const userColdness = (profile?.coldness_level ?? 3) as ColdnessLevel;
+      const bundle = await (profilePromiseRef.current ?? loadProfileBundle());
+      const { userId, coldness: userColdness, taste, recent_worn, recent_feedback } = bundle;
       setColdness(userColdness);
 
-      let recent_worn: string[] = [];
-      let recent_feedback: Array<{
-        description: string;
-        thermal: ThermalFeeling | null;
-        occasion: OutfitOccasion | null;
-        feels_like: number | null;
-      }> = [];
-      if (user) {
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const { data: recentOutfits } = await supabase
-          .from("outfits")
-          .select("worn_description, thermal_feeling, occasion, weather_data")
-          .eq("user_id", user.id)
-          .gte("date", sevenDaysAgo.toISOString().split("T")[0])
-          .not("worn_description", "is", null)
-          .order("date", { ascending: false })
-          .limit(7);
-        const rows = recentOutfits ?? [];
-        recent_worn = rows
-          .map((o) => o.worn_description as string | null)
-          .filter((w): w is string => !!w && w.trim().length > 0);
-        recent_feedback = rows
-          .filter((o) => !!o.worn_description)
-          .map((o) => ({
-            description: o.worn_description as string,
-            thermal: (o.thermal_feeling as ThermalFeeling | null) ?? null,
-            occasion: (o.occasion as OutfitOccasion | null) ?? null,
-            feels_like: (o.weather_data as { feels_like?: number } | null)?.feels_like ?? null,
-          }));
-      }
-
-      const taste = profile
-        ? {
-            gender_presentation: profile.gender_presentation ?? null,
-            style_universes: profile.style_universes ?? [],
-            favorite_brands: profile.favorite_brands ?? [],
-            avoid_tags: profile.avoid_tags ?? [],
-            fit_preference: profile.fit_preference ?? null,
-            build: profile.build ?? null,
-            height_cm: profile.height_cm ?? null,
-            shoe_size_eu: profile.shoe_size_eu ?? null,
+      if (userId) {
+        const cached = await readSuggestion({
+          userId,
+          coldness: userColdness,
+          occasion,
+          currentTemp: weatherData.temp,
+        });
+        if (cached) {
+          setSuggestion(cached.text);
+          if (cached.imageUrl) setSuggestionImage(cached.imageUrl);
+          else {
+            setImageLoading(true);
+            generateOutfitImage(cached.text)
+              .then((url) => {
+                setSuggestionImage(url);
+                if (url) patchSuggestionImage({ userId, coldness: userColdness, occasion }, url);
+              })
+              .catch((err) => { if (__DEV__) console.warn("outfit image failed:", err); })
+              .finally(() => setImageLoading(false));
           }
-        : undefined;
+          return;
+        }
+      }
 
       const { data, error } = await supabase.functions.invoke("suggest-outfit", {
         body: {
@@ -181,9 +161,18 @@ export default function TodayScreen() {
       if (data?.suggestion) {
         const cleaned = stripMarkdown(data.suggestion);
         setSuggestion(cleaned);
+        if (userId) {
+          writeSuggestion(
+            { userId, coldness: userColdness, occasion },
+            { text: cleaned, imageUrl: null, weather: weatherData }
+          );
+        }
         setImageLoading(true);
         generateOutfitImage(cleaned)
-          .then((url) => setSuggestionImage(url))
+          .then((url) => {
+            setSuggestionImage(url);
+            if (userId && url) patchSuggestionImage({ userId, coldness: userColdness, occasion }, url);
+          })
           .catch((err) => { if (__DEV__) console.warn("outfit image failed:", err); })
           .finally(() => setImageLoading(false));
       } else setSuggestion("Suggestion indisponible.");
@@ -281,6 +270,31 @@ export default function TodayScreen() {
     }
     finally { setSaving(false); }
   }
+
+  const loaderStep: LoaderStep = !weather ? 1 : !suggestion ? 2 : 3;
+  const suggestionFade = useRef(new Animated.Value(0)).current;
+  const suggestionShift = useRef(new Animated.Value(6)).current;
+  useEffect(() => {
+    if (!suggestion) {
+      suggestionFade.setValue(0);
+      suggestionShift.setValue(6);
+      return;
+    }
+    Animated.parallel([
+      Animated.timing(suggestionFade, {
+        toValue: 1,
+        duration: motion.base,
+        easing: motion.easing,
+        useNativeDriver: true,
+      }),
+      Animated.timing(suggestionShift, {
+        toValue: 0,
+        duration: motion.base,
+        easing: motion.easing,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [suggestion, suggestionFade, suggestionShift]);
 
   const verdict = weather && coldness ? comfortVerdict(weather.feels_like, coldness) : null;
   const verdictToneClass =
@@ -388,7 +402,7 @@ export default function TodayScreen() {
               SUGGESTION DU JOUR
             </Text>
 
-            <View className="aspect-square bg-paper-200 mb-4 overflow-hidden">
+            <View className="aspect-square mb-4">
               {suggestionImage ? (
                 <Image
                   source={{ uri: suggestionImage }}
@@ -396,21 +410,22 @@ export default function TodayScreen() {
                   resizeMode="cover"
                 />
               ) : (
-                <Skeleton style={{ width: "100%", height: "100%" }} />
+                <HatchedPlaceholder style={{ width: "100%", height: "100%" }} />
               )}
             </View>
 
             {suggestion ? (
-              <Text className="font-body text-[15px] text-ink-700 leading-[25px]">
+              <Animated.Text
+                className="font-body text-[15px] text-ink-700 leading-[25px]"
+                style={{
+                  opacity: suggestionFade,
+                  transform: [{ translateY: suggestionShift }],
+                }}
+              >
                 {suggestion}
-              </Text>
+              </Animated.Text>
             ) : (
-              <View className="flex-row items-center" style={{ gap: 10 }}>
-                <ActivityIndicator size="small" color="#637D8E" />
-                <Text className="font-body text-[15px] text-ink-300 leading-[25px]">
-                  {loading ? "Récupération de la météo…" : "Génération en cours…"}
-                </Text>
-              </View>
+              <TodayLoader step={loaderStep} />
             )}
           </View>
 

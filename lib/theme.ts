@@ -4,6 +4,8 @@
 //
 // Source de verite : tailwind.config.js. Modifier les deux ensemble.
 
+import { Easing } from "react-native";
+
 export const colors = {
   paper: {
     DEFAULT: "#FAFAF8",
@@ -65,4 +67,14 @@ export const spacing = {
   lg: 24,
   xl: 32,
   xxl: 48,
+} as const;
+
+// Tokens de motion. Pas de spring, pas de bounce.
+export const motion = {
+  fast: 180,
+  base: 220,
+  slow: 320,
+  loop: 1400,
+  easing: Easing.out(Easing.cubic),
+  easingInOut: Easing.inOut(Easing.cubic),
 } as const;
