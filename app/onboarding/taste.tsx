@@ -141,10 +141,7 @@ export default function OnboardingTaste() {
   const removeBrand = (name: string) =>
     setBrands((prev) => prev.filter((b) => b !== name));
 
-  const canContinue = !!gender;
-
   async function saveAndContinue() {
-    if (!canContinue) return;
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -387,21 +384,17 @@ export default function OnboardingTaste() {
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <Pressable
-          style={[styles.continueBtn, !canContinue && styles.continueBtnDisabled]}
-          onPress={saveAndContinue}
-          disabled={!canContinue || saving}
-        >
+        <Pressable style={styles.continueBtn} onPress={saveAndContinue} disabled={saving}>
           {saving ? (
             <ActivityIndicator color="#FAFAF8" size="small" />
           ) : (
-            <Text style={[styles.continueText, !canContinue && styles.continueTextDisabled]}>
+            <Text style={styles.continueText}>
               {isUpgrade ? "TERMINER →" : "CONTINUER →"}
             </Text>
           )}
         </Pressable>
-        {!canContinue && (
-          <Text style={styles.bottomHint}>Choisis une présentation pour continuer</Text>
+        {!gender && (
+          <Text style={styles.bottomHint}>Tout est optionnel — tu peux passer.</Text>
         )}
       </View>
     </SafeAreaView>
