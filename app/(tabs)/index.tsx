@@ -86,8 +86,30 @@ export default function TodayScreen() {
       const { data: profile } = user
         ? await supabase.from("profiles").select("coldness_level").eq("id", user.id).maybeSingle()
         : { data: null };
+
+      let recent_worn: string[] = [];
+      if (user) {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const { data: recentOutfits } = await supabase
+          .from("outfits")
+          .select("worn_description")
+          .eq("user_id", user.id)
+          .gte("date", sevenDaysAgo.toISOString().split("T")[0])
+          .not("worn_description", "is", null)
+          .order("date", { ascending: false })
+          .limit(7);
+        recent_worn = (recentOutfits ?? [])
+          .map((o) => o.worn_description as string | null)
+          .filter((w): w is string => !!w && w.trim().length > 0);
+      }
+
       const { data, error } = await supabase.functions.invoke("suggest-outfit", {
-        body: { weather: weatherData, coldness_level: profile?.coldness_level ?? 3 },
+        body: {
+          weather: weatherData,
+          coldness_level: profile?.coldness_level ?? 3,
+          recent_worn,
+        },
       });
       if (error) {
         if (__DEV__) console.error("suggest-outfit error:", error);
