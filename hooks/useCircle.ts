@@ -4,6 +4,9 @@ import { supabase } from "@/lib/supabase";
 import type { Circle, OutfitWithProfile } from "@/lib/types";
 
 const ACTIVE_CIRCLE_KEY = "frileux.circle.active";
+const VIEW_MODE_PREFIX = "frileux.circle.viewMode.";
+
+export type CircleViewMode = "today" | "week";
 
 export interface UseCircleResult {
   circles: Circle[];
@@ -12,6 +15,8 @@ export interface UseCircleResult {
   loading: boolean;
   refreshing: boolean;
   userId: string | null;
+  viewMode: CircleViewMode;
+  setViewMode: (mode: CircleViewMode) => Promise<void>;
   setActiveCircleId: (id: string) => Promise<void>;
   reload: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -27,6 +32,12 @@ function todayIso(): string {
   return new Date().toISOString().split("T")[0];
 }
 
+function weekAgoIso(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 6);
+  return d.toISOString().split("T")[0];
+}
+
 export function useCircle(): UseCircleResult {
   const [circles, setCircles] = useState<Circle[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -34,10 +45,15 @@ export function useCircle(): UseCircleResult {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [viewMode, setViewModeState] = useState<CircleViewMode>("today");
 
   const circle = circles.find((c) => c.id === activeId) ?? null;
 
-  const loadOutfits = useCallback(async (circleId: string, currentUserId: string) => {
+  const loadOutfits = useCallback(async (
+    circleId: string,
+    currentUserId: string,
+    mode: CircleViewMode,
+  ) => {
     const { data: members } = await supabase
       .from("circle_members")
       .select("user_id")
@@ -57,13 +73,19 @@ export function useCircle(): UseCircleResult {
       return;
     }
 
-    const { data } = await supabase
+    let query = supabase
       .from("outfits")
       .select("*, profile:profiles(username, avatar_url)")
       .in("user_id", memberIds)
-      .eq("date", todayIso())
       .order("created_at", { ascending: false });
 
+    if (mode === "today") {
+      query = query.eq("date", todayIso());
+    } else {
+      query = query.gte("date", weekAgoIso()).lte("date", todayIso());
+    }
+
+    const { data } = await query;
     setOutfits((data as unknown as OutfitWithProfile[]) ?? []);
   }, []);
 
@@ -97,7 +119,12 @@ export function useCircle(): UseCircleResult {
     const nextId =
       stored && list.some((c) => c.id === stored) ? stored : list[0].id;
     setActiveId(nextId);
-    await loadOutfits(nextId, user.id);
+
+    const storedMode = await AsyncStorage.getItem(VIEW_MODE_PREFIX + nextId);
+    const mode: CircleViewMode = storedMode === "week" ? "week" : "today";
+    setViewModeState(mode);
+
+    await loadOutfits(nextId, user.id, mode);
 
     setLoading(false);
     setRefreshing(false);
@@ -118,7 +145,8 @@ export function useCircle(): UseCircleResult {
         async (payload) => {
           const row = payload.new as { id: string; user_id: string; date: string };
           if (row.user_id === userId) return;
-          if (row.date !== today) return;
+          if (viewMode === "today" && row.date !== today) return;
+          if (viewMode === "week" && row.date < weekAgoIso()) return;
 
           const { data: membership } = await supabase
             .from("circle_members")
@@ -146,15 +174,25 @@ export function useCircle(): UseCircleResult {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [circle, userId]);
+  }, [circle, userId, viewMode]);
 
   const setActiveCircleId = useCallback(async (id: string) => {
     if (!userId) return;
     setActiveId(id);
     setOutfits([]);
     await AsyncStorage.setItem(ACTIVE_CIRCLE_KEY, id);
-    await loadOutfits(id, userId);
+    const storedMode = await AsyncStorage.getItem(VIEW_MODE_PREFIX + id);
+    const mode: CircleViewMode = storedMode === "week" ? "week" : "today";
+    setViewModeState(mode);
+    await loadOutfits(id, userId, mode);
   }, [userId, loadOutfits]);
+
+  const setViewMode = useCallback(async (mode: CircleViewMode) => {
+    if (!userId || !activeId) return;
+    setViewModeState(mode);
+    await AsyncStorage.setItem(VIEW_MODE_PREFIX + activeId, mode);
+    await loadOutfits(activeId, userId, mode);
+  }, [userId, activeId, loadOutfits]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -207,7 +245,8 @@ export function useCircle(): UseCircleResult {
     setCircles((prev) => (prev.some((c) => c.id === joined.id) ? prev : [...prev, joined]));
     setActiveId(joined.id);
     await AsyncStorage.setItem(ACTIVE_CIRCLE_KEY, joined.id);
-    await loadOutfits(joined.id, user.id);
+    setViewModeState("today");
+    await loadOutfits(joined.id, user.id, "today");
     return joined;
   }, [loadOutfits]);
 
@@ -218,6 +257,8 @@ export function useCircle(): UseCircleResult {
     loading,
     refreshing,
     userId,
+    viewMode,
+    setViewMode,
     setActiveCircleId,
     reload,
     refresh,
