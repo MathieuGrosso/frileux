@@ -20,14 +20,14 @@ interface RequestBody {
 }
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, content-type, x-client-info, apikey",
+  };
+
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST",
-        "Access-Control-Allow-Headers": "authorization, content-type",
-      },
-    });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
@@ -74,10 +74,7 @@ Réponds UNIQUEMENT avec la suggestion, sans introduction ni conclusion.`;
       data.content?.[0]?.text ?? "Impossible de générer une suggestion.";
 
     return new Response(JSON.stringify({ suggestion }), {
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
+      headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (error) {
     return new Response(

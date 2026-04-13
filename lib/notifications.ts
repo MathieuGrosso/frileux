@@ -13,6 +13,8 @@ Notifications.setNotificationHandler({
 });
 
 export async function registerForPushNotifications(): Promise<string | null> {
+  if (Platform.OS === "web") return null;
+
   // Physical device only — simulators don't support push
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("default", {
