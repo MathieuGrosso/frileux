@@ -15,7 +15,8 @@ import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/lib/supabase";
 import { getDayForecast, getWeather, weatherEmoji } from "@/lib/weather";
 import { generateOutfitImage } from "@/lib/gemini";
-import type { DayForecast, WeatherData } from "@/lib/types";
+import type { DayForecast, OutfitOccasion, WeatherData } from "@/lib/types";
+import { OUTFIT_OCCASIONS } from "@/lib/types";
 import { RatingStars } from "@/components/RatingStars";
 import { useRouter } from "expo-router";
 
@@ -27,6 +28,7 @@ export default function TodayScreen() {
   const [imageLoading, setImageLoading] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [rating, setRating] = useState(0);
+  const [occasion, setOccasion] = useState<OutfitOccasion | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -212,13 +214,14 @@ export default function TodayScreen() {
         user_id: user.id, photo_url: urlData.publicUrl,
         date: today.toISOString().split("T")[0], weather_data: weather,
         rating: rating || null, ai_suggestion: suggestion,
-        worn_description,
+        worn_description, occasion,
       });
       if (insertError) throw insertError;
 
       setSaved(true);
       setPhotoUri(null);
       setRating(0);
+      setOccasion(null);
       setTimeout(() => setSaved(false), 3000);
     } catch (e: any) {
       if (__DEV__) console.error("saveOutfit error:", e);
@@ -376,7 +379,25 @@ export default function TodayScreen() {
             <>
               <View style={styles.divider} />
               <View style={styles.ratingSection}>
-                <Text style={styles.sectionLabel}>NOTE</Text>
+                <Text style={styles.sectionLabel}>OCCASION</Text>
+                <View style={styles.occasionRow}>
+                  {OUTFIT_OCCASIONS.map((opt) => {
+                    const active = occasion === opt.value;
+                    return (
+                      <Pressable
+                        key={opt.value}
+                        onPress={() => setOccasion(active ? null : opt.value)}
+                        style={[styles.occasionChip, active && styles.occasionChipActive]}
+                      >
+                        <Text style={[styles.occasionChipText, active && styles.occasionChipTextActive]}>
+                          {opt.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                <Text style={[styles.sectionLabel, { marginTop: 24 }]}>NOTE</Text>
                 <RatingStars rating={rating} onRate={setRating} />
                 <Pressable
                   onPress={saveOutfit}
@@ -580,6 +601,25 @@ const styles = StyleSheet.create({
   },
 
   ratingSection: { marginBottom: 16 },
+
+  occasionRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  occasionChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#E8E5DF",
+    backgroundColor: "#FFFFFF",
+  },
+  occasionChipActive: {
+    backgroundColor: "#0F0F0D",
+    borderColor: "#0F0F0D",
+  },
+  occasionChipText: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 12,
+    color: "#0F0F0D",
+  },
+  occasionChipTextActive: { color: "#FAFAF8" },
   saveBtn: {
     backgroundColor: "#0F0F0D",
     paddingVertical: 18,
