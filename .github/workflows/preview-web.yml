@@ -1,0 +1,68 @@
+name: Preview Web (PR)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+concurrency:
+  group: preview-web-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Setup Expo + EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Export web bundle
+        run: npx expo export -p web
+
+      - name: Deploy preview to EAS Hosting
+        id: deploy
+        run: |
+          set -o pipefail
+          eas deploy --non-interactive 2>&1 | tee deploy.log
+          URL=$(grep -Eo 'https://[a-zA-Z0-9.-]+\.expo\.app' deploy.log | tail -n 1)
+          echo "url=${URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Comment preview URL on PR
+        if: steps.deploy.outputs.url != ''
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: preview-web
+          message: |
+            🌐 **Preview web** : ${{ steps.deploy.outputs.url }}
+
+            Déploiement éphémère Expo Hosting pour cette PR. Mis à jour à chaque push.
+            Dashboard : https://expo.dev/accounts/batmat9/projects/frileuse/hosting/deployments
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## 🌐 Preview Web"
+            echo ""
+            echo "- URL : ${{ steps.deploy.outputs.url || '(deploy a échoué)' }}"
+            echo "- PR : #${{ github.event.pull_request.number }}"
+            echo "- Commit : \`${{ github.event.pull_request.head.sha }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

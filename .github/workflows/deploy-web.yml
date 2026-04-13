@@ -1,13 +1,23 @@
-name: Deploy Web
+name: Deploy Web (prod)
 
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "NIGHT_LOG.md"
+      - "BACKLOG.md"
+      - ".github/ISSUE_TEMPLATE/**"
   workflow_dispatch:
+
+concurrency:
+  group: deploy-web-prod
+  cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -16,13 +26,38 @@ jobs:
           node-version: 20
           cache: npm
 
-      - run: npm ci
+      - name: Install deps
+        run: npm ci
 
-      - uses: expo/expo-github-action@v8
+      - name: Setup Expo + EAS
+        uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - run: npx expo export -p web
+      - name: Cache Expo export
+        uses: actions/cache@v4
+        with:
+          path: |
+            .expo
+            dist
+          key: expo-web-${{ hashFiles('package-lock.json', 'app.json', 'metro.config.js', 'babel.config.js', 'tailwind.config.js') }}
+          restore-keys: |
+            expo-web-
 
-      - run: eas deploy --prod --non-interactive
+      - name: Export web bundle
+        run: npx expo export -p web
+
+      - name: Deploy to EAS Hosting (prod)
+        run: eas deploy --prod --non-interactive
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## 🚀 Deploy Web"
+            echo ""
+            echo "- Alias prod : https://frileuse.expo.app/"
+            echo "- Dashboard : https://expo.dev/accounts/batmat9/projects/frileuse/hosting/deployments"
+            echo "- Commit : \`${{ github.sha }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
