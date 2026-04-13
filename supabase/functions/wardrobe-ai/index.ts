@@ -89,14 +89,13 @@ const PIECES_SCHEMA = {
   required: ["pieces"],
 };
 
-async function generateProductImage(description: string, userId: string): Promise<string | null> {
+async function callImageGen(parts: unknown[], userId: string): Promise<string | null> {
   try {
-    const prompt = `Editorial fashion product photograph of: ${description}. Single clothing item centered on a clean light beige studio background. Soft diffused lighting, no model, no human, no text, no logo. Minimal Muji / Ssense product photography style. High detail fabric texture. Square composition.`;
     const res = await fetch(`${IMAGE_ENDPOINT}?key=${GEMINI_API_KEY}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [{ role: "user", parts }],
         generationConfig: { responseModalities: ["IMAGE"] },
       }),
     });
@@ -130,9 +129,50 @@ async function generateProductImage(description: string, userId: string): Promis
     }
     return `${SUPABASE_URL}/storage/v1/object/public/wardrobe/${path}`;
   } catch (e) {
-    console.error("generateProductImage exception:", e);
+    console.error("callImageGen exception:", e);
     return null;
   }
+}
+
+async function fetchImageAsBase64(url: string): Promise<{ data: string; mime: string } | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const mime = res.headers.get("content-type") ?? "image/png";
+    const buf = new Uint8Array(await res.arrayBuffer());
+    let binary = "";
+    for (let i = 0; i < buf.length; i++) binary += String.fromCharCode(buf[i]);
+    return { data: btoa(binary), mime };
+  } catch {
+    return null;
+  }
+}
+
+async function generateProductImage(description: string, userId: string): Promise<string | null> {
+  const prompt = `Editorial fashion product photograph of: ${description}. Single clothing item centered on a clean light beige studio background. Soft diffused lighting, no model, no human, no text, no logo. Minimal Muji / Ssense product photography style. High detail fabric texture. Square composition.`;
+  return callImageGen([{ text: prompt }], userId);
+}
+
+async function refineProductImage(
+  currentUrl: string,
+  refinement: string,
+  description: string,
+  userId: string
+): Promise<string | null> {
+  const img = await fetchImageAsBase64(currentUrl);
+  if (!img) {
+    console.error("Could not fetch current image for refinement");
+    return generateProductImage(`${description}. ${refinement}`, userId);
+  }
+  const prompt = `Refine this product photograph of "${description}". Apply these adjustments: ${refinement}.
+Keep the editorial product photography style: single clothing item, clean light beige studio background, soft diffused lighting, no model, no human, no text, no logo. Muji / Ssense aesthetic. Square composition. High detail fabric texture.`;
+  return callImageGen(
+    [
+      { text: prompt },
+      { inlineData: { mimeType: img.mime, data: img.data } },
+    ],
+    userId
+  );
 }
 
 async function callGemini(parts: unknown[], responseSchema: unknown) {
@@ -222,6 +262,18 @@ Deno.serve(async (req: Request) => {
       let photo_url: string | null = null;
       if (user_id) photo_url = await generateProductImage(analysis.description, user_id);
       result = { ...analysis, photo_url };
+    } else if (action === "refine_image") {
+      const { current_photo_url, refinement, description, user_id } = body;
+      if (!user_id) throw new Error("user_id required");
+      if (!current_photo_url) throw new Error("current_photo_url required");
+      if (!refinement) throw new Error("refinement required");
+      const photo_url = await refineProductImage(
+        current_photo_url,
+        refinement,
+        description ?? "clothing item",
+        user_id
+      );
+      result = { photo_url };
     } else if (action === "generate_combos") {
       const { items } = body as { items: ItemLite[] };
       if (!items?.length) throw new Error("items required");

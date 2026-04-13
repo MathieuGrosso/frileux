@@ -21,6 +21,7 @@ import { decode } from "base64-arraybuffer";
 import { supabase } from "@/lib/supabase";
 import { analyzeClothingImage, analyzeClothingDescription } from "@/lib/gemini";
 import type { WardrobeItem, ClothingAnalysis, WardrobeItemType } from "@/lib/types";
+import RefineImageModal from "@/components/RefineImageModal";
 
 const MIN_ITEMS = 3;
 const TYPE_LABELS: Record<WardrobeItemType, string> = {
@@ -38,6 +39,7 @@ export default function OnboardingItems() {
   const [analyzing, setAnalyzing] = useState(false);
   const [textModal, setTextModal] = useState(false);
   const [textInput, setTextInput] = useState("");
+  const [refineItem, setRefineItem] = useState<WardrobeItem | null>(null);
 
   useEffect(() => {
     loadItems();
@@ -221,22 +223,34 @@ export default function OnboardingItems() {
           <View style={styles.grid}>
             {items.map((item) => (
               <View key={item.id} style={styles.gridItem}>
-                {item.photo_url ? (
-                  <Image source={{ uri: item.photo_url }} style={styles.thumb} />
-                ) : (
-                  <View style={[styles.thumb, styles.thumbPlaceholder]}>
-                    <Text style={styles.thumbPlaceholderText}>
-                      {item.color?.slice(0, 2).toUpperCase() ?? "—"}
-                    </Text>
-                  </View>
-                )}
+                <Pressable
+                  onPress={() => item.photo_url && setRefineItem(item)}
+                  disabled={!item.photo_url}
+                >
+                  {item.photo_url ? (
+                    <Image source={{ uri: item.photo_url }} style={styles.thumb} />
+                  ) : (
+                    <View style={[styles.thumb, styles.thumbPlaceholder]}>
+                      <Text style={styles.thumbPlaceholderText}>
+                        {item.color?.slice(0, 2).toUpperCase() ?? "—"}
+                      </Text>
+                    </View>
+                  )}
+                </Pressable>
                 <Text style={styles.itemType}>{TYPE_LABELS[item.type]}</Text>
                 <Text style={styles.itemDesc} numberOfLines={2}>
                   {item.description}
                 </Text>
-                <Pressable onPress={() => removeItem(item.id)} hitSlop={8}>
-                  <Text style={styles.removeText}>Retirer</Text>
-                </Pressable>
+                <View style={styles.itemActions}>
+                  {item.photo_url && (
+                    <Pressable onPress={() => setRefineItem(item)} hitSlop={8}>
+                      <Text style={styles.refineLink}>Raffiner</Text>
+                    </Pressable>
+                  )}
+                  <Pressable onPress={() => removeItem(item.id)} hitSlop={8}>
+                    <Text style={styles.removeText}>Retirer</Text>
+                  </Pressable>
+                </View>
               </View>
             ))}
           </View>
@@ -290,6 +304,17 @@ export default function OnboardingItems() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <RefineImageModal
+        visible={!!refineItem}
+        itemId={refineItem?.id ?? null}
+        initialPhotoUrl={refineItem?.photo_url ?? null}
+        description={refineItem?.description ?? ""}
+        onClose={() => setRefineItem(null)}
+        onSaved={(id, newUrl) =>
+          setItems((prev) => prev.map((i) => (i.id === id ? { ...i, photo_url: newUrl } : i)))
+        }
+      />
     </SafeAreaView>
   );
 }
@@ -384,11 +409,17 @@ const styles = StyleSheet.create({
     marginTop: 2,
     lineHeight: 17,
   },
+  itemActions: { flexDirection: "row", gap: 14, marginTop: 6 },
+  refineLink: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 11,
+    color: "#637D8E",
+    textDecorationLine: "underline",
+  },
   removeText: {
     fontFamily: "Jost_400Regular",
     fontSize: 11,
     color: "#A8A49F",
-    marginTop: 6,
     textDecorationLine: "underline",
   },
   bottomBar: {
