@@ -301,6 +301,9 @@ enabled = false
 # Obtain from https://clerk.com/setup/supabase
 # domain = "example.clerk.accounts.dev"
 
+[functions.get-weather]
+verify_jwt = true
+
 [functions.suggest-outfit]
 verify_jwt = true
 

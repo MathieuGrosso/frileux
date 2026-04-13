@@ -1,55 +1,16 @@
+import { supabase } from "./supabase";
 import type { WeatherData } from "./types";
-
-const API_KEY = process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY;
-const BASE_URL = "https://api.openweathermap.org/data/2.5";
-
-interface OpenWeatherResponse {
-  main: {
-    temp: number;
-    feels_like: number;
-    humidity: number;
-  };
-  wind: { speed: number };
-  weather: Array<{ description: string; icon: string; main: string }>;
-  rain?: { "1h"?: number };
-  snow?: { "1h"?: number };
-}
-
-interface UVResponse {
-  value: number;
-}
 
 export async function getWeather(
   lat: number,
   lon: number
 ): Promise<WeatherData> {
-  const [weatherRes, uvRes] = await Promise.all([
-    fetch(
-      `${BASE_URL}/weather?lat=${lat}&lon=${lon}&units=metric&lang=fr&appid=${API_KEY}`
-    ),
-    fetch(
-      `${BASE_URL}/uvi?lat=${lat}&lon=${lon}&appid=${API_KEY}`
-    ).catch(() => null),
-  ]);
-
-  if (!weatherRes.ok) {
-    throw new Error(`Erreur météo: ${weatherRes.status}`);
-  }
-
-  const weather: OpenWeatherResponse = await weatherRes.json();
-  const uv: UVResponse | null = uvRes?.ok ? await uvRes.json() : null;
-
-  return {
-    temp: Math.round(weather.main.temp),
-    feels_like: Math.round(weather.main.feels_like),
-    humidity: weather.main.humidity,
-    wind_speed: weather.wind.speed,
-    description: weather.weather[0]?.description ?? "",
-    icon: weather.weather[0]?.icon ?? "01d",
-    rain: !!weather.rain || weather.weather[0]?.main === "Rain",
-    snow: !!weather.snow || weather.weather[0]?.main === "Snow",
-    uv_index: uv?.value ?? 0,
-  };
+  const { data, error } = await supabase.functions.invoke("get-weather", {
+    body: { lat, lon },
+  });
+  if (error) throw new Error(`Erreur météo: ${error.message}`);
+  if (!data) throw new Error("Erreur météo: réponse vide");
+  return data as WeatherData;
 }
 
 /** Get a weather emoji from the icon code */
