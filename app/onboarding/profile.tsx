@@ -104,15 +104,16 @@ export default function OnboardingProfile() {
         <View style={styles.progressWrap}>
           <View style={[styles.progressDot, styles.progressDotActive]} />
           <View style={[styles.progressDot, styles.progressDotActive]} />
+          <View style={[styles.progressDot, styles.progressDotActive]} />
           <View style={styles.progressDot} />
         </View>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Text style={styles.backText}>← VESTIAIRE</Text>
+          <Text style={styles.backText}>← GOÛT</Text>
         </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.kicker}>ÉTAPE 02 / 03</Text>
+        <Text style={styles.kicker}>ÉTAPE 03 / 04</Text>
         <Text style={styles.title}>TOI</Text>
         <Text style={styles.subtitle}>
           Deux infos pour t'habiller juste : ton seuil de froid, et où tu vis.

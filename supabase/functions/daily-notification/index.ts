@@ -1,9 +1,15 @@
 // Supabase Edge Function: daily-notification
-// Called by pg_cron at 7:00 UTC (= 8h Paris)
-// For each user with a push token + stored location:
-//   1. Fetch today's weather (OpenWeatherMap)
-//   2. Generate outfit suggestion (Claude Haiku)
-//   3. Send push notification (Expo Push API)
+//
+// Modes (selected via ?mode=morning|evening, default = morning) :
+//   morning : called by pg_cron at 7:00 UTC (= 8h Paris)
+//             -> fetch today's weather, generate suggestion, push.
+//   evening : called by pg_cron at 20:00 UTC (= 21h Paris, in winter)
+//             -> fetch tomorrow's forecast (~9h slot), generate
+//                preparation suggestion ("Demain · 12° · ..."), push.
+//
+// Both modes :
+//   - iterate over profiles with push_token + stored location
+//   - call OpenWeatherMap, Claude Haiku, Expo Push API.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -58,9 +64,67 @@ async function fetchWeather(lat: number, lon: number): Promise<WeatherData> {
   };
 }
 
+interface ForecastEntry {
+  dt: number;
+  main: { temp: number; feels_like: number; humidity: number };
+  weather: Array<{ description: string; icon: string; main: string }>;
+  wind: { speed: number };
+  rain?: { "3h"?: number };
+  snow?: { "3h"?: number };
+}
+
+interface ForecastResponse {
+  list: ForecastEntry[];
+  city: { timezone: number };
+}
+
+/** Fetches tomorrow's ~9h local-time slot via /forecast (3h granularity). */
+async function fetchTomorrowMorning(
+  lat: number,
+  lon: number
+): Promise<WeatherData | null> {
+  const res = await fetch(
+    `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&lang=fr&appid=${OPENWEATHER_API_KEY}`
+  );
+  if (!res.ok) return null;
+  const data: ForecastResponse = await res.json();
+  const tzShift = data.city.timezone;
+  const tomorrowLocalDate = new Date(Date.now() + tzShift * 1000 + 86400 * 1000)
+    .toISOString()
+    .split("T")[0];
+
+  const slots = data.list
+    .map((entry) => {
+      const local = new Date((entry.dt + tzShift) * 1000);
+      return {
+        entry,
+        localDate: local.toISOString().split("T")[0],
+        localHour: local.getUTCHours(),
+      };
+    })
+    .filter((s) => s.localDate === tomorrowLocalDate);
+
+  if (slots.length === 0) return null;
+  const morning = slots.reduce((a, b) =>
+    Math.abs(a.localHour - 9) <= Math.abs(b.localHour - 9) ? a : b
+  );
+  const e = morning.entry;
+  return {
+    temp: Math.round(e.main.temp),
+    feels_like: Math.round(e.main.feels_like),
+    description: e.weather[0]?.description ?? "",
+    rain: !!e.rain || e.weather[0]?.main === "Rain",
+    snow: !!e.snow || e.weather[0]?.main === "Snow",
+    wind_speed: e.wind?.speed ?? 0,
+    humidity: e.main.humidity,
+    icon: e.weather[0]?.icon ?? "01d",
+  };
+}
+
 async function generateSuggestion(
   weather: WeatherData,
-  coldnessLevel: number
+  coldnessLevel: number,
+  forTomorrow = false
 ): Promise<string> {
   const coldnessDescriptions: Record<number, string> = {
     1: "légèrement frileuse",
@@ -70,11 +134,13 @@ async function generateSuggestion(
     5: "extrêmement frileuse, a froid même quand les autres ont chaud",
   };
 
+  const horizon = forTomorrow ? "Demain matin" : "Aujourd'hui";
+
   const prompt = `Tu es une styliste pour une personne ${coldnessDescriptions[coldnessLevel] ?? "très frileuse"}.
 
-Météo : ${weather.temp}°C (ressenti ${weather.feels_like}°C), ${weather.description}${weather.rain ? ", pluie" : ""}${weather.snow ? ", neige" : ""}, vent ${weather.wind_speed} m/s.
+${horizon} : ${weather.temp}°C (ressenti ${weather.feels_like}°C), ${weather.description}${weather.rain ? ", pluie" : ""}${weather.snow ? ", neige" : ""}, vent ${weather.wind_speed} m/s.
 
-Suggestion de tenue courte (2-3 phrases) adaptée au froid. Sois précise sur les matières et couches.`;
+Donne une suggestion de tenue ULTRA COURTE en français (1 phrase, 15 mots max). Liste 3 à 5 pièces séparées par des virgules. Pas de markdown, pas d'emoji, pas d'introduction. Format : "pull laine grise, jean droit, manteau noir, bottines cuir."`;
 
   const key = requireEnv("ANTHROPIC_API_KEY", ANTHROPIC_API_KEY);
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -134,6 +200,10 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  const url = new URL(req.url);
+  const mode = url.searchParams.get("mode") === "evening" ? "evening" : "morning";
+  const forTomorrow = mode === "evening";
+
   const supabase = createClient(
     requireEnv("SUPABASE_URL", SUPABASE_URL),
     requireEnv("SUPABASE_SERVICE_ROLE_KEY", SUPABASE_SERVICE_ROLE_KEY),
@@ -148,22 +218,27 @@ Deno.serve(async (req: Request) => {
     .not("last_longitude", "is", null);
 
   if (error || !profiles?.length) {
-    return new Response(JSON.stringify({ sent: 0, message: "No users to notify" }), {
+    return new Response(JSON.stringify({ mode, sent: 0, message: "No users to notify" }), {
       headers: { "Content-Type": "application/json" },
     });
   }
 
   const results = await Promise.allSettled(
     (profiles as Profile[]).map(async (profile) => {
-      const weather = await fetchWeather(profile.last_latitude, profile.last_longitude);
-      const suggestion = await generateSuggestion(weather, profile.coldness_level);
+      const weather = forTomorrow
+        ? await fetchTomorrowMorning(profile.last_latitude, profile.last_longitude)
+        : await fetchWeather(profile.last_latitude, profile.last_longitude);
+
+      if (!weather) throw new Error("weather unavailable");
+
+      const suggestion = await generateSuggestion(weather, profile.coldness_level, forTomorrow);
       const emoji = weatherEmoji(weather.temp, weather.rain, weather.snow);
 
-      await sendPushNotification(
-        profile.push_token,
-        `${emoji} ${weather.temp}°C — tenue du jour`,
-        suggestion
-      );
+      const title = forTomorrow
+        ? `${emoji} Demain · ${weather.temp}°`
+        : `${emoji} ${weather.temp}°C — tenue du jour`;
+
+      await sendPushNotification(profile.push_token, title, suggestion);
 
       return profile.id;
     })
@@ -174,7 +249,7 @@ Deno.serve(async (req: Request) => {
     .filter((r) => r.status === "rejected")
     .map((r) => (r as PromiseRejectedResult).reason?.message);
 
-  return new Response(JSON.stringify({ sent, errors }), {
+  return new Response(JSON.stringify({ mode, sent, errors }), {
     headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
   });
 });
