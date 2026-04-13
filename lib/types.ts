@@ -164,7 +164,17 @@ export interface CircleMember {
   circle_id: string;
   user_id: string;
   joined_at: string;
+  last_read_at?: string | null;
   profile?: Profile;
+}
+
+export interface CircleMessage {
+  id: string;
+  circle_id: string;
+  user_id: string;
+  body: string;
+  created_at: string;
+  profile?: Pick<Profile, "username" | "avatar_url">;
 }
 
 export interface OutfitWithProfile extends Outfit {
