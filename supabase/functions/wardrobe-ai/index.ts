@@ -10,7 +10,11 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 const MODEL = "gemini-2.5-flash";
+const IMAGE_MODEL = "gemini-2.5-flash-image";
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+const IMAGE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent`;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_JWT") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -84,6 +88,52 @@ const PIECES_SCHEMA = {
   },
   required: ["pieces"],
 };
+
+async function generateProductImage(description: string, userId: string): Promise<string | null> {
+  try {
+    const prompt = `Editorial fashion product photograph of: ${description}. Single clothing item centered on a clean light beige studio background. Soft diffused lighting, no model, no human, no text, no logo. Minimal Muji / Ssense product photography style. High detail fabric texture. Square composition.`;
+    const res = await fetch(`${IMAGE_ENDPOINT}?key=${GEMINI_API_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { responseModalities: ["IMAGE"] },
+      }),
+    });
+    if (!res.ok) {
+      console.error("Gemini image gen failed:", res.status, await res.text());
+      return null;
+    }
+    const data = await res.json();
+    const imagePart = data.candidates?.[0]?.content?.parts?.find((p: { inlineData?: { data?: string } }) => p.inlineData?.data);
+    const b64: string | undefined = imagePart?.inlineData?.data;
+    const mime: string = imagePart?.inlineData?.mimeType ?? "image/png";
+    if (!b64) return null;
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const ext = mime.split("/")[1] ?? "png";
+    const path = `${userId}/${Date.now()}-ai.${ext}`;
+    const uploadRes = await fetch(
+      `${SUPABASE_URL}/storage/v1/object/wardrobe/${path}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          "Content-Type": mime,
+          "x-upsert": "true",
+        },
+        body: bytes,
+      }
+    );
+    if (!uploadRes.ok) {
+      console.error("Storage upload failed:", uploadRes.status, await uploadRes.text());
+      return null;
+    }
+    return `${SUPABASE_URL}/storage/v1/object/public/wardrobe/${path}`;
+  } catch (e) {
+    console.error("generateProductImage exception:", e);
+    return null;
+  }
+}
 
 async function callGemini(parts: unknown[], responseSchema: unknown) {
   const res = await fetch(`${ENDPOINT}?key=${GEMINI_API_KEY}`, {
@@ -166,9 +216,12 @@ Deno.serve(async (req: Request) => {
       ];
       result = (await callGemini(parts, ANALYSIS_SCHEMA)) as ClothingAnalysis;
     } else if (action === "analyze_text") {
-      const { text } = body;
+      const { text, user_id } = body;
       if (!text) throw new Error("text required");
-      result = (await callGemini([{ text: analyzeTextPrompt(text) }], ANALYSIS_SCHEMA)) as ClothingAnalysis;
+      const analysis = (await callGemini([{ text: analyzeTextPrompt(text) }], ANALYSIS_SCHEMA)) as ClothingAnalysis;
+      let photo_url: string | null = null;
+      if (user_id) photo_url = await generateProductImage(analysis.description, user_id);
+      result = { ...analysis, photo_url };
     } else if (action === "generate_combos") {
       const { items } = body as { items: ItemLite[] };
       if (!items?.length) throw new Error("items required");

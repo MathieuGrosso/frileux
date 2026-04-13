@@ -101,7 +101,7 @@ export default function OnboardingItems() {
     setTextModal(false);
     try {
       const analysis = await analyzeClothingDescription(textInput.trim());
-      await insertItem({ ...analysis, photo_url: null });
+      await insertItem({ ...analysis, photo_url: analysis.photo_url ?? null });
       setTextInput("");
     } catch (e) {
       Alert.alert("Erreur", e instanceof Error ? e.message : "Analyse impossible.");

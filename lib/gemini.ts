@@ -28,7 +28,8 @@ export async function analyzeClothingImage(
 }
 
 export async function analyzeClothingDescription(text: string): Promise<ClothingAnalysis> {
-  return invoke<ClothingAnalysis>({ action: "analyze_text", text });
+  const { data: { user } } = await supabase.auth.getUser();
+  return invoke<ClothingAnalysis>({ action: "analyze_text", text, user_id: user?.id });
 }
 
 function liteItems(items: WardrobeItem[]) {
