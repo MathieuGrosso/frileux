@@ -5,6 +5,17 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 
+interface TasteBody {
+  gender_presentation?: "menswear" | "womenswear" | "both" | null;
+  style_universes?: string[];
+  favorite_brands?: string[];
+  avoid_tags?: string[];
+  fit_preference?: "relaxed" | "regular" | "slim" | null;
+  build?: "petite" | "slim" | "athletic" | "curvy" | "strong" | "tall" | null;
+  height_cm?: number | null;
+  shoe_size_eu?: number | null;
+}
+
 interface RequestBody {
   weather: {
     temp: number;
@@ -25,6 +36,36 @@ interface RequestBody {
     feels_like: number | null;
   }>;
   occasion?: string | null; // contexte demande pour aujourd'hui
+  taste?: TasteBody;
+}
+
+function buildTasteBlock(t?: TasteBody): string {
+  if (!t) return "";
+  const lines: string[] = [];
+  if (t.gender_presentation && t.gender_presentation !== "both") {
+    lines.push(`- Présentation : ${t.gender_presentation}`);
+  }
+  if (t.style_universes?.length) {
+    lines.push(`- Univers : ${t.style_universes.join(", ")}`);
+  }
+  if (t.favorite_brands?.length) {
+    lines.push(
+      `- Marques de référence (utilise leur vocabulaire et leurs silhouettes — ne les nomme PAS dans la réponse) : ${t.favorite_brands.join(", ")}`
+    );
+  }
+  if (t.fit_preference) {
+    lines.push(`- Coupe préférée : ${t.fit_preference}`);
+  }
+  if (t.avoid_tags?.length) {
+    lines.push(`- À éviter : ${t.avoid_tags.join(", ")}`);
+  }
+  const morpho: string[] = [];
+  if (t.build) morpho.push(`carrure ${t.build}`);
+  if (t.height_cm) morpho.push(`${t.height_cm} cm`);
+  if (t.shoe_size_eu) morpho.push(`pointure ${t.shoe_size_eu} EU`);
+  if (morpho.length) lines.push(`- Morphologie : ${morpho.join(", ")}`);
+  if (!lines.length) return "";
+  return `\n\nProfil stylistique :\n${lines.join("\n")}\n\nLe vocabulaire doit refléter ce niveau de goût (éditorial, précis). Évite "joli", "mignon", "sympa". Pense silhouette, matière, proportion.`;
 }
 
 Deno.serve(async (req: Request) => {
@@ -39,7 +80,8 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { weather, coldness_level, recent_worn, recent_feedback, occasion }: RequestBody = await req.json();
+    const { weather, coldness_level, recent_worn, recent_feedback, occasion, taste }: RequestBody = await req.json();
+    const tasteBlock = buildTasteBlock(taste);
 
     const coldnessDescriptions: Record<number, string> = {
       1: "légèrement frileuse",
@@ -79,7 +121,7 @@ Météo du jour :
 - Vent : ${weather.wind_speed} m/s
 - Humidité : ${weather.humidity}%
 ${weather.rain ? "- Il pleut" : ""}
-${weather.snow ? "- Il neige" : ""}${occasionBlock}${recentBlock}${feedbackBlock}
+${weather.snow ? "- Il neige" : ""}${occasionBlock}${tasteBlock}${recentBlock}${feedbackBlock}
 
 Donne une suggestion de tenue ULTRA COURTE en français (1 phrase, 20 mots max). Liste 4 à 6 pièces séparées par des virgules, dans l'ordre haut → bas (haut, bas, manteau si besoin, chaussures, accessoires). Sois spécifique sur les matières (ex: "pull laine épaisse" plutôt que "pull"). Adapte au fait que la personne est ${coldnessDescriptions[coldness_level]}.${recentBlock ? " Varie les matières, couleurs et coupes par rapport aux dernières tenues." : ""}
 

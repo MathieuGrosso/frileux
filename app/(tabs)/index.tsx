@@ -104,7 +104,11 @@ export default function TodayScreen() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const { data: profile } = user
-        ? await supabase.from("profiles").select("coldness_level").eq("id", user.id).maybeSingle()
+        ? await supabase
+            .from("profiles")
+            .select("coldness_level, gender_presentation, style_universes, favorite_brands, avoid_tags, fit_preference, build, height_cm, shoe_size_eu")
+            .eq("id", user.id)
+            .maybeSingle()
         : { data: null };
       const userColdness = (profile?.coldness_level ?? 3) as ColdnessLevel;
       setColdness(userColdness);
@@ -141,6 +145,19 @@ export default function TodayScreen() {
           }));
       }
 
+      const taste = profile
+        ? {
+            gender_presentation: profile.gender_presentation ?? null,
+            style_universes: profile.style_universes ?? [],
+            favorite_brands: profile.favorite_brands ?? [],
+            avoid_tags: profile.avoid_tags ?? [],
+            fit_preference: profile.fit_preference ?? null,
+            build: profile.build ?? null,
+            height_cm: profile.height_cm ?? null,
+            shoe_size_eu: profile.shoe_size_eu ?? null,
+          }
+        : undefined;
+
       const { data, error } = await supabase.functions.invoke("suggest-outfit", {
         body: {
           weather: weatherData,
@@ -148,6 +165,7 @@ export default function TodayScreen() {
           recent_worn,
           recent_feedback,
           occasion,
+          taste,
         },
       });
       if (error) {
