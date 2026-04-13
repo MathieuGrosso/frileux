@@ -26,10 +26,5 @@
   },
   "submit": {
     "production": {}
-  },
-  "deploy": {
-    "production": {
-      "alias": "frileuse"
-    }
   }
 }
