@@ -24,6 +24,7 @@ export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
+  const [tasteCompleted, setTasteCompleted] = useState<boolean | null>(null);
   const segments = useSegments();
   const router = useRouter();
 
@@ -52,6 +53,7 @@ export default function RootLayout() {
         });
       } else {
         setOnboardingCompleted(null);
+        setTasteCompleted(null);
       }
     });
 
@@ -62,10 +64,11 @@ export default function RootLayout() {
     if (!session) return;
     const { data } = await supabase
       .from("profiles")
-      .select("onboarding_completed")
+      .select("onboarding_completed, taste_completed")
       .eq("id", session.user.id)
       .single();
     setOnboardingCompleted(data?.onboarding_completed ?? false);
+    setTasteCompleted(data?.taste_completed ?? false);
   }, [session]);
 
   // Fetch onboarding flag whenever session changes.
@@ -89,11 +92,18 @@ export default function RootLayout() {
 
     if (!onboardingCompleted) {
       if (!inOnboarding) router.replace("/onboarding");
-    } else if (inAuthGroup || inOnboarding) {
+      return;
+    }
+    // Onboarding done but new "taste" step missing → push existing users into it.
+    if (tasteCompleted === false) {
+      if (!inOnboarding) router.replace("/onboarding/taste?upgrade=1");
+      return;
+    }
+    if (inAuthGroup || inOnboarding) {
       router.replace("/");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, loading, onboardingCompleted]);
+  }, [session, loading, onboardingCompleted, tasteCompleted]);
 
   if (loading || !fontsLoaded) {
     return (

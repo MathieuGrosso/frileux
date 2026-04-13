@@ -72,11 +72,29 @@ export default function SettingsScreen() {
     if (!user) return;
     await supabase
       .from("profiles")
-      .update({ onboarding_completed: false })
+      .update({ onboarding_completed: false, taste_completed: false })
       .eq("id", user.id);
     await AsyncStorage.removeItem("@onboarding/last-step");
     await refreshOnboarding();
     router.replace("/onboarding");
+  }
+
+  async function redoTaste() {
+    const confirmed =
+      Platform.OS === "web"
+        ? window.confirm("Refaire l'étape goût ? Tes autres réglages sont conservés.")
+        : await new Promise<boolean>((resolve) => {
+            Alert.alert(
+              "Refaire l'étape goût",
+              "On garde tout le reste — seulement les marques, univers et coupe.",
+              [
+                { text: "Annuler", style: "cancel", onPress: () => resolve(false) },
+                { text: "Refaire", onPress: () => resolve(true) },
+              ]
+            );
+          });
+    if (!confirmed) return;
+    router.push("/onboarding/taste?upgrade=1");
   }
 
   async function handleLogout() {
@@ -150,10 +168,13 @@ export default function SettingsScreen() {
 
         <View style={styles.divider} />
 
-        {/* Reset onboarding */}
+        {/* Personnalisation */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>DÉVELOPPEMENT</Text>
-          <Pressable onPress={resetOnboarding} style={styles.resetBtn}>
+          <Text style={styles.sectionLabel}>PERSONNALISATION</Text>
+          <Pressable onPress={redoTaste} style={styles.resetBtn}>
+            <Text style={styles.resetBtnText}>METTRE À JOUR MON GOÛT</Text>
+          </Pressable>
+          <Pressable onPress={resetOnboarding} style={[styles.resetBtn, { marginTop: 8 }]}>
             <Text style={styles.resetBtnText}>RECOMMENCER L'ONBOARDING</Text>
           </Pressable>
         </View>

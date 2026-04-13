@@ -63,6 +63,7 @@ export default function OnboardingItems() {
       const lastStep = await AsyncStorage.getItem("@onboarding/last-step");
       if (lastStep === "swipe") router.replace("/onboarding/swipe");
       else if (lastStep === "profile") router.replace("/onboarding/profile");
+      else if (lastStep === "taste") router.replace("/onboarding/taste");
     }
   }
 
@@ -165,9 +166,9 @@ export default function OnboardingItems() {
     router.replace("/(tabs)");
   }
 
-  async function goToProfile() {
-    await AsyncStorage.setItem("@onboarding/last-step", "profile");
-    router.push("/onboarding/profile");
+  async function goToTaste() {
+    await AsyncStorage.setItem("@onboarding/last-step", "taste");
+    router.push("/onboarding/taste");
   }
 
   if (loading) {
@@ -187,6 +188,7 @@ export default function OnboardingItems() {
           <View style={[styles.progressDot, styles.progressDotActive]} />
           <View style={styles.progressDot} />
           <View style={styles.progressDot} />
+          <View style={styles.progressDot} />
         </View>
         <Pressable onPress={skipOnboarding} hitSlop={12}>
           <Text style={styles.skipText}>PASSER</Text>
@@ -194,7 +196,7 @@ export default function OnboardingItems() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.kicker}>ÉTAPE 01 / 03</Text>
+        <Text style={styles.kicker}>ÉTAPE 01 / 04</Text>
         <Text style={styles.title}>VESTIAIRE</Text>
         <Text style={styles.subtitle}>
           Ajoute au moins {MIN_ITEMS} pièces. On apprend ton style à partir de ce que tu portes.
@@ -283,7 +285,7 @@ export default function OnboardingItems() {
       <View style={styles.bottomBar}>
         <Pressable
           style={[styles.continueBtn, !canContinue && styles.continueBtnDisabled]}
-          onPress={goToProfile}
+          onPress={goToTaste}
           disabled={!canContinue}
         >
           <Text style={[styles.continueText, !canContinue && styles.continueTextDisabled]}>

@@ -7,8 +7,33 @@ export interface Profile {
   last_latitude: number | null;
   last_longitude: number | null;
   onboarding_completed: boolean;
+  taste_completed: boolean;
+  gender_presentation: GenderPresentation | null;
+  style_universes: string[];
+  favorite_brands: string[];
+  avoid_tags: string[];
+  fit_preference: FitPreference | null;
   created_at: string;
   updated_at: string;
+}
+
+export type GenderPresentation = "menswear" | "womenswear" | "both";
+export type FitPreference = "relaxed" | "regular" | "slim";
+
+export interface Brand {
+  id: string;
+  name: string;
+  slug: string;
+  universe: string[];
+  tier: "luxury" | "designer" | "contemporary" | "street" | "technical" | "heritage" | null;
+}
+
+export interface TasteProfile {
+  gender_presentation: GenderPresentation | null;
+  style_universes: string[];
+  favorite_brands: string[];
+  avoid_tags: string[];
+  fit_preference: FitPreference | null;
 }
 
 export type WardrobeItemType = "top" | "bottom" | "outerwear" | "shoes" | "accessory";

@@ -11,7 +11,8 @@ alter table public.profiles
   add column if not exists favorite_brands text[] not null default '{}',
   add column if not exists avoid_tags text[] not null default '{}',
   add column if not exists fit_preference text
-    check (fit_preference in ('relaxed', 'regular', 'slim'));
+    check (fit_preference in ('relaxed', 'regular', 'slim')),
+  add column if not exists taste_completed boolean not null default false;
 
 -- ============================================
 -- BRANDS (seed catalog for autocomplete)
