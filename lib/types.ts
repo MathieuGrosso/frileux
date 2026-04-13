@@ -69,6 +69,14 @@ export const OUTFIT_OCCASIONS: { value: OutfitOccasion; label: string }[] = [
   { value: "repos", label: "Repos" },
 ];
 
+export type ThermalFeeling = "too_cold" | "just_right" | "too_warm";
+
+export const THERMAL_FEELINGS: { value: ThermalFeeling; label: string }[] = [
+  { value: "too_cold", label: "Trop froid" },
+  { value: "just_right", label: "Pile bien" },
+  { value: "too_warm", label: "Trop chaud" },
+];
+
 export interface Outfit {
   id: string;
   user_id: string;
@@ -80,6 +88,7 @@ export interface Outfit {
   ai_suggestion: string | null;
   worn_description: string | null;
   occasion: OutfitOccasion | null;
+  thermal_feeling: ThermalFeeling | null;
   created_at: string;
 }
 

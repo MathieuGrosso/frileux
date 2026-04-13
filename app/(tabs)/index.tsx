@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
@@ -16,8 +17,8 @@ import { supabase } from "@/lib/supabase";
 import { getDayForecast, getWeather, weatherEmoji } from "@/lib/weather";
 import { generateOutfitImage } from "@/lib/gemini";
 import { comfortVerdict } from "@/lib/comfort";
-import type { ColdnessLevel, DayForecast, OutfitOccasion, WeatherData } from "@/lib/types";
-import { OUTFIT_OCCASIONS } from "@/lib/types";
+import type { ColdnessLevel, DayForecast, OutfitOccasion, ThermalFeeling, WeatherData } from "@/lib/types";
+import { OUTFIT_OCCASIONS, THERMAL_FEELINGS } from "@/lib/types";
 import { RatingStars } from "@/components/RatingStars";
 import { useRouter } from "expo-router";
 
@@ -31,6 +32,8 @@ export default function TodayScreen() {
   const [rating, setRating] = useState(0);
   const [occasion, setOccasion] = useState<OutfitOccasion | null>(null);
   const [coldness, setColdness] = useState<ColdnessLevel | null>(null);
+  const [thermal, setThermal] = useState<ThermalFeeling | null>(null);
+  const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -219,6 +222,8 @@ export default function TodayScreen() {
         date: today.toISOString().split("T")[0], weather_data: weather,
         rating: rating || null, ai_suggestion: suggestion,
         worn_description, occasion,
+        thermal_feeling: thermal,
+        notes: notes.trim() || null,
       });
       if (insertError) throw insertError;
 
@@ -226,6 +231,8 @@ export default function TodayScreen() {
       setPhotoUri(null);
       setRating(0);
       setOccasion(null);
+      setThermal(null);
+      setNotes("");
       setTimeout(() => setSaved(false), 3000);
     } catch (e: any) {
       if (__DEV__) console.error("saveOutfit error:", e);
@@ -412,8 +419,36 @@ export default function TodayScreen() {
                   })}
                 </View>
 
+                <Text style={[styles.sectionLabel, { marginTop: 24 }]}>RESSENTI</Text>
+                <View style={styles.occasionRow}>
+                  {THERMAL_FEELINGS.map((opt) => {
+                    const active = thermal === opt.value;
+                    return (
+                      <Pressable
+                        key={opt.value}
+                        onPress={() => setThermal(active ? null : opt.value)}
+                        style={[styles.occasionChip, active && styles.occasionChipActive]}
+                      >
+                        <Text style={[styles.occasionChipText, active && styles.occasionChipTextActive]}>
+                          {opt.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
                 <Text style={[styles.sectionLabel, { marginTop: 24 }]}>NOTE</Text>
                 <RatingStars rating={rating} onRate={setRating} />
+
+                <Text style={[styles.sectionLabel, { marginTop: 24 }]}>COMMENTAIRE</Text>
+                <TextInput
+                  value={notes}
+                  onChangeText={setNotes}
+                  placeholder="Ce qui a marché, ce qui a manqué…"
+                  placeholderTextColor="#A8A49F"
+                  style={styles.notesInput}
+                  multiline
+                />
                 <Pressable
                   onPress={saveOutfit}
                   disabled={saving}
@@ -645,6 +680,18 @@ const styles = StyleSheet.create({
     color: "#0F0F0D",
   },
   occasionChipTextActive: { color: "#FAFAF8" },
+
+  notesInput: {
+    borderWidth: 1,
+    borderColor: "#E8E5DF",
+    backgroundColor: "#FFFFFF",
+    padding: 12,
+    minHeight: 70,
+    fontFamily: "Jost_400Regular",
+    fontSize: 13,
+    color: "#0F0F0D",
+    textAlignVertical: "top",
+  },
   saveBtn: {
     backgroundColor: "#0F0F0D",
     paddingVertical: 18,
