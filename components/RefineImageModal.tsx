@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
 import { refineClothingImage } from "@/lib/gemini";
 import { supabase } from "@/lib/supabase";
@@ -90,6 +91,10 @@ export default function RefineImageModal({
   const [freeText, setFreeText] = useState("");
   const [working, setWorking] = useState(false);
 
+  useEffect(() => {
+    if (visible) setCurrentUrl(initialPhotoUrl);
+  }, [visible, initialPhotoUrl]);
+
   function reset() {
     setSelected({ color: null, fit: null, material: null, style: null });
     setFreeText("");
@@ -108,16 +113,32 @@ export default function RefineImageModal({
   }
 
   async function handleRefine() {
-    if (!itemId || !currentUrl) return;
+    if (!itemId) {
+      Alert.alert("Impossible", "Pièce non identifiée.");
+      return;
+    }
+    if (!currentUrl) {
+      Alert.alert("Impossible", "Aucune image à raffiner.");
+      return;
+    }
     const prompt = buildRefinementPrompt();
-    if (!prompt) return;
+    if (!prompt) {
+      Alert.alert("Sélectionne au moins un raffinement", "Choisis une couleur, coupe, matière ou style avant de régénérer.");
+      return;
+    }
     setWorking(true);
     try {
       const newUrl = await refineClothingImage(currentUrl, prompt, description);
       if (newUrl) {
         setCurrentUrl(newUrl);
         reset();
+      } else {
+        Alert.alert("Régénération échouée", "Gemini n'a pas renvoyé d'image. Réessaye dans un instant.");
       }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Erreur inconnue";
+      if (__DEV__) console.error("refine_image error:", e);
+      Alert.alert("Régénération échouée", message);
     } finally {
       setWorking(false);
     }
@@ -128,14 +149,19 @@ export default function RefineImageModal({
     setWorking(true);
     try {
       if (currentUrl !== initialPhotoUrl) {
-        await supabase
+        const { error } = await supabase
           .from("wardrobe_items")
           .update({ photo_url: currentUrl })
           .eq("id", itemId);
+        if (error) throw error;
         onSaved(itemId, currentUrl);
       }
       onClose();
       reset();
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Erreur inconnue";
+      if (__DEV__) console.error("validate error:", e);
+      Alert.alert("Sauvegarde échouée", message);
     } finally {
       setWorking(false);
     }

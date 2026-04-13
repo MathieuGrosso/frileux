@@ -29,6 +29,13 @@ interface RequestBody {
   };
   coldness_level: number; // 1-5
   recent_worn?: string[]; // descriptions des tenues portees ces 7 derniers jours
+  recent_feedback?: Array<{
+    description: string;
+    thermal: "too_cold" | "just_right" | "too_warm" | null;
+    occasion: string | null;
+    feels_like: number | null;
+  }>;
+  occasion?: string | null; // contexte demande pour aujourd'hui
   taste?: TasteBody;
 }
 
@@ -73,7 +80,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { weather, coldness_level, recent_worn, taste }: RequestBody = await req.json();
+    const { weather, coldness_level, recent_worn, recent_feedback, occasion, taste }: RequestBody = await req.json();
     const tasteBlock = buildTasteBlock(taste);
 
     const coldnessDescriptions: Record<number, string> = {
@@ -88,6 +95,24 @@ Deno.serve(async (req: Request) => {
       ? `\n\nTenues portées ces 7 derniers jours (à NE PAS répéter — propose des pièces, couleurs et silhouettes différentes) :\n${recent_worn.map((w, i) => `${i + 1}. ${w}`).join("\n")}`
       : "";
 
+    const thermalLabel: Record<string, string> = {
+      too_cold: "elle a eu trop froid",
+      just_right: "le ressenti était pile bien",
+      too_warm: "elle a eu trop chaud",
+    };
+
+    const feedbackBlock = recent_feedback && recent_feedback.length > 0
+      ? `\n\nFeedback récent (à utiliser pour calibrer le niveau de chaleur) :\n${recent_feedback
+          .filter((f) => f.thermal)
+          .slice(0, 5)
+          .map((f) => `- ${f.description} (ressenti ${f.feels_like ?? "?"}°) → ${thermalLabel[f.thermal!] ?? "?"}`)
+          .join("\n")}`
+      : "";
+
+    const occasionBlock = occasion
+      ? `\n\nContexte demandé pour aujourd'hui : ${occasion}. Adapte le code vestimentaire (ex: travail = un cran plus formel, sortie = plus expressif, sport = technique).`
+      : "";
+
     const prompt = `Tu es une styliste personnelle pour une personne ${coldnessDescriptions[coldness_level] ?? "très frileuse"}.
 
 Météo du jour :
@@ -96,11 +121,18 @@ Météo du jour :
 - Vent : ${weather.wind_speed} m/s
 - Humidité : ${weather.humidity}%
 ${weather.rain ? "- Il pleut" : ""}
-${weather.snow ? "- Il neige" : ""}${tasteBlock}${recentBlock}
+${weather.snow ? "- Il neige" : ""}${occasionBlock}${tasteBlock}${recentBlock}${feedbackBlock}
 
-Donne une suggestion de tenue COURTE (3-4 phrases max) en français. Pense en couches. Sois spécifique sur les types de vêtements (ex: "pull en laine épaisse" plutôt que juste "pull"). Adapte tes suggestions au fait que cette personne est ${coldnessDescriptions[coldness_level]} — elle a besoin de plus de couches et de chaleur que la moyenne.${recentBlock ? " Évite de proposer les mêmes pièces clés que ces derniers jours — varie les matières, couleurs et coupes." : ""}
+Donne une suggestion de tenue ULTRA COURTE en français (1 phrase, 20 mots max). Liste 4 à 6 pièces séparées par des virgules, dans l'ordre haut → bas (haut, bas, manteau si besoin, chaussures, accessoires). Sois spécifique sur les matières (ex: "pull laine épaisse" plutôt que "pull"). Adapte au fait que la personne est ${coldnessDescriptions[coldness_level]}.${recentBlock ? " Varie les matières, couleurs et coupes par rapport aux dernières tenues." : ""}
 
-Réponds UNIQUEMENT avec la suggestion, sans introduction ni conclusion.`;
+Règles strictes :
+- AUCUN markdown (pas de **, pas d'astérisques, pas de tirets en début de ligne).
+- Texte plat brut.
+- Pas d'introduction ni conclusion.
+- Pas d'emoji.
+
+Exemple de format attendu :
+Pull col roulé laine grise, jean droit brut, manteau en laine noire, bottines en cuir, écharpe en cachemire camel.`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",

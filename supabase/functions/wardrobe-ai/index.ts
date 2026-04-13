@@ -153,6 +153,15 @@ async function generateProductImage(description: string, userId: string): Promis
   return callImageGen([{ text: prompt }], userId);
 }
 
+async function generateOutfitImage(suggestion: string, userId: string): Promise<string | null> {
+  const prompt = `Editorial fashion flatlay of a complete outfit corresponding to: "${suggestion}".
+Lay all garments flat on a clean off-white (#FAFAF8) studio surface, top to bottom following body silhouette: outerwear, top, bottom, shoes, then accessories beside.
+Style: Ssense / Muji / System magazine product photography. Soft diffused lighting, sharp fabric textures, restrained composition with generous negative space.
+Strict rules: no human, no model, no mannequin, no face, no body parts, no text, no logo, no watermark, no decorative props.
+Square composition, hyperrealistic.`;
+  return callImageGen([{ text: prompt }], userId);
+}
+
 async function refineProductImage(
   currentUrl: string,
   refinement: string,
@@ -300,6 +309,12 @@ Réponds UNIQUEMENT avec la description, sans introduction.`;
       const { items } = body as { items: ItemLite[] };
       if (!items?.length) throw new Error("items required");
       result = await callGemini([{ text: combosPrompt(items) }], COMBOS_SCHEMA);
+    } else if (action === "generate_outfit_image") {
+      const { suggestion, user_id } = body;
+      if (!user_id) throw new Error("user_id required");
+      if (!suggestion) throw new Error("suggestion required");
+      const photo_url = await generateOutfitImage(String(suggestion), user_id);
+      result = { photo_url };
     } else if (action === "generate_pieces") {
       const { items } = body as { items: ItemLite[] };
       if (!items?.length) throw new Error("items required");
