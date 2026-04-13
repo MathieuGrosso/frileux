@@ -17,6 +17,7 @@ interface RequestBody {
     uv_index: number;
   };
   coldness_level: number; // 1-5
+  recent_worn?: string[]; // descriptions des tenues portees ces 7 derniers jours
 }
 
 Deno.serve(async (req: Request) => {
@@ -31,7 +32,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { weather, coldness_level }: RequestBody = await req.json();
+    const { weather, coldness_level, recent_worn }: RequestBody = await req.json();
 
     const coldnessDescriptions: Record<number, string> = {
       1: "légèrement frileuse",
@@ -41,6 +42,10 @@ Deno.serve(async (req: Request) => {
       5: "extrêmement frileuse, a froid même quand les autres ont chaud",
     };
 
+    const recentBlock = recent_worn && recent_worn.length > 0
+      ? `\n\nTenues portées ces 7 derniers jours (à NE PAS répéter — propose des pièces, couleurs et silhouettes différentes) :\n${recent_worn.map((w, i) => `${i + 1}. ${w}`).join("\n")}`
+      : "";
+
     const prompt = `Tu es une styliste personnelle pour une personne ${coldnessDescriptions[coldness_level] ?? "très frileuse"}.
 
 Météo du jour :
@@ -49,9 +54,9 @@ Météo du jour :
 - Vent : ${weather.wind_speed} m/s
 - Humidité : ${weather.humidity}%
 ${weather.rain ? "- Il pleut" : ""}
-${weather.snow ? "- Il neige" : ""}
+${weather.snow ? "- Il neige" : ""}${recentBlock}
 
-Donne une suggestion de tenue COURTE (3-4 phrases max) en français. Pense en couches. Sois spécifique sur les types de vêtements (ex: "pull en laine épaisse" plutôt que juste "pull"). Adapte tes suggestions au fait que cette personne est ${coldnessDescriptions[coldness_level]} — elle a besoin de plus de couches et de chaleur que la moyenne.
+Donne une suggestion de tenue COURTE (3-4 phrases max) en français. Pense en couches. Sois spécifique sur les types de vêtements (ex: "pull en laine épaisse" plutôt que juste "pull"). Adapte tes suggestions au fait que cette personne est ${coldnessDescriptions[coldness_level]} — elle a besoin de plus de couches et de chaleur que la moyenne.${recentBlock ? " Évite de proposer les mêmes pièces clés que ces derniers jours — varie les matières, couleurs et coupes." : ""}
 
 Réponds UNIQUEMENT avec la suggestion, sans introduction ni conclusion.`;
 
