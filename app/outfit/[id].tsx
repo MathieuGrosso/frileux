@@ -17,6 +17,7 @@ import type { Outfit, OutfitOccasion, ThermalFeeling } from "@/lib/types";
 import { OUTFIT_OCCASIONS, THERMAL_FEELINGS } from "@/lib/types";
 import { weatherEmoji } from "@/lib/weather";
 import { RatingStars } from "@/components/RatingStars";
+import { OutfitNotes } from "@/components/circle/OutfitNotes";
 
 export default function OutfitDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -275,6 +276,8 @@ export default function OutfitDetailScreen() {
               )}
             </View>
             )}
+
+            {outfit && <OutfitNotes outfitId={outfit.id} />}
 
             <View style={{ height: 40 }} />
           </View>

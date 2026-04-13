@@ -169,6 +169,16 @@ export interface CircleMember {
 
 export interface OutfitWithProfile extends Outfit {
   profile: Pick<Profile, "username" | "avatar_url">;
+  notes_count?: number;
+}
+
+export interface OutfitComment {
+  id: string;
+  outfit_id: string;
+  user_id: string;
+  body: string;
+  created_at: string;
+  profile?: Pick<Profile, "username" | "avatar_url">;
 }
 
 export interface AISuggestion {

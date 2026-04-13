@@ -86,7 +86,25 @@ export function useCircle(): UseCircleResult {
     }
 
     const { data } = await query;
-    setOutfits((data as unknown as OutfitWithProfile[]) ?? []);
+    const list = (data as unknown as OutfitWithProfile[]) ?? [];
+
+    if (list.length === 0) {
+      setOutfits([]);
+      return;
+    }
+
+    const ids = list.map((o) => o.id);
+    const { data: comments } = await supabase
+      .from("outfit_comments")
+      .select("outfit_id")
+      .in("outfit_id", ids);
+    const counts = new Map<string, number>();
+    (comments ?? []).forEach((c) => {
+      const k = (c as { outfit_id: string }).outfit_id;
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    });
+
+    setOutfits(list.map((o) => ({ ...o, notes_count: counts.get(o.id) ?? 0 })));
   }, []);
 
   const reload = useCallback(async () => {

@@ -67,6 +67,14 @@ export function CircleOutfitCard({ outfit, isFirst = false }: Props) {
         style={{ width: "100%", height: 320 }}
         resizeMode="cover"
       />
+      {typeof outfit.notes_count === "number" && outfit.notes_count > 0 && (
+        <Text
+          className="font-body text-ink-300 text-[11px] mt-2"
+          style={{ letterSpacing: 0.5 }}
+        >
+          {outfit.notes_count} {outfit.notes_count > 1 ? "notes" : "note"}
+        </Text>
+      )}
     </Pressable>
   );
 }
