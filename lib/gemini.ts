@@ -38,12 +38,13 @@ export async function refineClothingImage(
   description: string
 ): Promise<string | null> {
   const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Non connecté");
   const res = await invoke<{ photo_url: string | null }>({
     action: "refine_image",
     current_photo_url: currentPhotoUrl,
     refinement,
     description,
-    user_id: user?.id,
+    user_id: user.id,
   });
   return res.photo_url;
 }
