@@ -5,8 +5,9 @@ import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import { useOnboardingFlag } from "@/lib/onboarding-context";
-import type { ColdnessLevel } from "@/lib/types";
+import type { ColdnessLevel, ThermalFeeling } from "@/lib/types";
 import { BrandLogo } from "@/components/BrandLogo";
+import { suggestColdnessAdjustment, type CalibrationSuggestion } from "@/lib/coldness-calibration";
 
 const COLDNESS_LABELS: Record<ColdnessLevel, string> = {
   1: "Un peu frileuse",
@@ -29,6 +30,7 @@ export default function SettingsScreen() {
   const { refresh: refreshOnboarding } = useOnboardingFlag();
   const [coldnessLevel, setColdnessLevel] = useState<ColdnessLevel>(3);
   const [username, setUsername] = useState("");
+  const [calibration, setCalibration] = useState<CalibrationSuggestion | null>(null);
 
   useEffect(() => {
     loadProfile();
@@ -43,7 +45,33 @@ export default function SettingsScreen() {
     if (data) {
       setColdnessLevel(data.coldness_level as ColdnessLevel);
       setUsername(data.username);
+      void loadCalibration(data.coldness_level as ColdnessLevel);
     }
+  }
+
+  async function loadCalibration(current: ColdnessLevel) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+    const { data } = await supabase
+      .from("outfits")
+      .select("thermal_feeling")
+      .eq("user_id", user.id)
+      .gte("date", fourteenDaysAgo.toISOString().split("T")[0])
+      .not("thermal_feeling", "is", null)
+      .order("date", { ascending: false })
+      .limit(10);
+    const feedback = (data ?? [])
+      .map((o) => ({ thermal: o.thermal_feeling as ThermalFeeling }))
+      .filter((f) => !!f.thermal);
+    setCalibration(suggestColdnessAdjustment(current, feedback));
+  }
+
+  async function acceptCalibration() {
+    if (!calibration) return;
+    await updateColdness(calibration.suggested);
+    setCalibration(null);
   }
 
   async function updateColdness(level: ColdnessLevel) {
@@ -143,6 +171,25 @@ export default function SettingsScreen() {
           <Text style={styles.sectionHint}>
             Les suggestions seront adaptées à ton niveau
           </Text>
+
+          {calibration && (
+            <View style={styles.calibrationBanner}>
+              <Text style={styles.calibrationLabel}>
+                {calibration.delta > 0 ? "PASSER AU NIVEAU SUPÉRIEUR ?" : "PASSER AU NIVEAU INFÉRIEUR ?"}
+              </Text>
+              <Text style={styles.calibrationReason}>{calibration.reason}</Text>
+              <View style={styles.calibrationActions}>
+                <Pressable onPress={acceptCalibration} style={styles.calibrationAccept}>
+                  <Text style={styles.calibrationAcceptText}>
+                    PASSER À {calibration.suggested}
+                  </Text>
+                </Pressable>
+                <Pressable onPress={() => setCalibration(null)} hitSlop={8}>
+                  <Text style={styles.calibrationDismiss}>IGNORER</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
 
           {([1, 2, 3, 4, 5] as ColdnessLevel[]).map((level) => (
             <Pressable
@@ -249,6 +296,52 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: "#E8E5DF", marginBottom: 28 },
 
   section: { marginBottom: 28 },
+
+  calibrationBanner: {
+    backgroundColor: "#E8F1F6",
+    padding: 14,
+    marginTop: 12,
+    marginBottom: 8,
+    borderLeftWidth: 2,
+    borderLeftColor: "#637D8E",
+  },
+  calibrationLabel: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 10,
+    letterSpacing: 1.6,
+    color: "#2C4A5C",
+    marginBottom: 6,
+  },
+  calibrationReason: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 13,
+    lineHeight: 18,
+    color: "#3A3836",
+    marginBottom: 12,
+  },
+  calibrationActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  calibrationAccept: {
+    backgroundColor: "#0F0F0D",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  calibrationAcceptText: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 10,
+    letterSpacing: 1.6,
+    color: "#FAFAF8",
+  },
+  calibrationDismiss: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 10,
+    letterSpacing: 1.6,
+    color: "#637D8E",
+    textDecorationLine: "underline",
+  },
   sectionLabel: {
     fontFamily: "Jost_500Medium",
     fontSize: 9,
