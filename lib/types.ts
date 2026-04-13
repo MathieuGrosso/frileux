@@ -52,6 +52,23 @@ export type SwipeCardPayload =
 export type ColdnessLevel = 1 | 2 | 3 | 4 | 5;
 // 1 = "un peu frileuse" → 5 = "je vis en doudoune"
 
+export type OutfitOccasion =
+  | "casual"
+  | "travail"
+  | "sortie"
+  | "soiree"
+  | "sport"
+  | "repos";
+
+export const OUTFIT_OCCASIONS: { value: OutfitOccasion; label: string }[] = [
+  { value: "casual", label: "Casual" },
+  { value: "travail", label: "Travail" },
+  { value: "sortie", label: "Sortie" },
+  { value: "soiree", label: "Soirée" },
+  { value: "sport", label: "Sport" },
+  { value: "repos", label: "Repos" },
+];
+
 export interface Outfit {
   id: string;
   user_id: string;
@@ -62,6 +79,7 @@ export interface Outfit {
   notes: string | null;
   ai_suggestion: string | null;
   worn_description: string | null;
+  occasion: OutfitOccasion | null;
   created_at: string;
 }
 
