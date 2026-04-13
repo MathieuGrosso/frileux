@@ -1,10 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
-import { View, Text, FlatList, Image, Pressable, StyleSheet } from "react-native";
+import { View, Text, FlatList, Image, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import type { Outfit } from "@/lib/types";
-import { weatherEmoji } from "@/lib/weather";
 import { RatingStars } from "@/components/RatingStars";
 import { EmptyState } from "@/components/EmptyState";
 
@@ -42,43 +41,38 @@ export default function HistoryScreen() {
     return (
       <Pressable
         onPress={() => router.push(`/outfit/${item.id}`)}
-        style={({ pressed }) => [styles.outfitCard, pressed && styles.outfitCardPressed]}
+        className="mb-9 active:opacity-70"
       >
         <Image
           source={{ uri: item.photo_url }}
-          style={styles.outfitPhoto}
+          className="w-full h-[280px]"
           resizeMode="cover"
         />
-        <View style={styles.outfitMeta}>
-          <View style={styles.outfitMetaRow}>
-            <Text style={styles.outfitDate}>
+        <View className="pt-3">
+          <View className="flex-row justify-between items-center mb-2.5">
+            <Text className="font-body-medium text-[10px] text-ink-300 tracking-[1.5px]">
               {new Date(item.date).toLocaleDateString("fr-FR", {
                 weekday: "short",
                 day: "numeric",
                 month: "short",
               }).toUpperCase()}
             </Text>
-            <View style={styles.outfitWeather}>
-              <Text style={{ fontSize: 14 }}>
-                {weatherEmoji(item.weather_data?.icon ?? "01d")}
-              </Text>
-              <Text style={styles.outfitTemp}>
-                {item.weather_data?.temp ?? "?"}°
-              </Text>
-            </View>
+            <Text className="font-body text-[13px] text-ink-500">
+              {item.weather_data?.temp ?? "?"}°
+            </Text>
           </View>
           {item.rating != null && item.rating > 0 && (
-            <View style={styles.outfitRating}>
+            <View className="mb-2">
               <RatingStars rating={item.rating} size="small" />
             </View>
           )}
           {item.occasion && (
-            <Text style={styles.outfitOccasion}>
+            <Text className="font-body-medium text-[9px] text-ice tracking-[1.6px] mt-1">
               {item.occasion.toUpperCase()}
             </Text>
           )}
           {item.notes ? (
-            <Text style={styles.outfitNotes} numberOfLines={2}>
+            <Text className="font-body text-[13px] text-ink-300 leading-5 mt-1" numberOfLines={2}>
               {item.notes}
             </Text>
           ) : null}
@@ -88,25 +82,31 @@ export default function HistoryScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>MES TENUES</Text>
-        <View style={styles.filters}>
-          <Pressable
-            onPress={() => setFilter("all")}
-            style={[styles.filterTab, filter === "all" && styles.filterTabActive]}
-          >
-            <Text style={[styles.filterText, filter === "all" && styles.filterTextActive]}>
-              Toutes
+    <SafeAreaView className="flex-1 bg-paper">
+      <View className="px-6 pt-2 pb-5 border-b border-paper-300 mb-2">
+        <Text className="font-display text-4xl text-ink-900 tracking-[1px] mb-5">
+          MES TENUES
+        </Text>
+        <View className="flex-row" style={{ gap: 24 }}>
+          <Pressable onPress={() => setFilter("all")} className="pb-1.5 relative">
+            <Text
+              className={`font-body-medium text-[11px] tracking-[2px] ${
+                filter === "all" ? "text-ink-900" : "text-ink-300"
+              }`}
+            >
+              TOUTES
             </Text>
+            {filter === "all" && <View className="absolute -bottom-px left-0 right-0 h-px bg-ink-900" />}
           </Pressable>
-          <Pressable
-            onPress={() => setFilter("top")}
-            style={[styles.filterTab, filter === "top" && styles.filterTabActive]}
-          >
-            <Text style={[styles.filterText, filter === "top" && styles.filterTextActive]}>
-              Top looks
+          <Pressable onPress={() => setFilter("top")} className="pb-1.5 relative">
+            <Text
+              className={`font-body-medium text-[11px] tracking-[2px] ${
+                filter === "top" ? "text-ink-900" : "text-ink-300"
+              }`}
+            >
+              FAVORIS
             </Text>
+            {filter === "top" && <View className="absolute -bottom-px left-0 right-0 h-px bg-ink-900" />}
           </Pressable>
         </View>
       </View>
@@ -115,7 +115,7 @@ export default function HistoryScreen() {
         data={outfits}
         renderItem={renderOutfit}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        contentContainerClassName="px-6 pb-6"
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           loading ? null : (
@@ -130,87 +130,3 @@ export default function HistoryScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FAFAF8" },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E8E5DF",
-    marginBottom: 8,
-  },
-  title: {
-    fontFamily: "BarlowCondensed_600SemiBold",
-    fontSize: 36,
-    color: "#0F0F0D",
-    letterSpacing: 1,
-    marginBottom: 20,
-  },
-  filters: { flexDirection: "row", gap: 8 },
-  filterTab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: "#E8E5DF",
-  },
-  filterTabActive: {
-    backgroundColor: "#E8F1F6",
-    borderColor: "#D5E4EE",
-  },
-  filterText: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 13,
-    color: "#9E9A96",
-  },
-  filterTextActive: {
-    fontFamily: "Jost_500Medium",
-    color: "#637D8E",
-  },
-  list: { paddingHorizontal: 24, paddingBottom: 24 },
-  outfitCard: { marginBottom: 36 },
-  outfitCardPressed: { opacity: 0.65 },
-  outfitPhoto: { width: "100%", height: 280 },
-  outfitMeta: { paddingTop: 12 },
-  outfitMetaRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  outfitDate: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 10,
-    color: "#9E9A96",
-    letterSpacing: 1.5,
-  },
-  outfitWeather: { flexDirection: "row", alignItems: "center", gap: 4 },
-  outfitTemp: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 13,
-    color: "#6B6A66",
-  },
-  outfitRating: { marginBottom: 8 },
-  outfitNotes: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 13,
-    color: "#9E9A96",
-    lineHeight: 20,
-  },
-  outfitOccasion: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 9,
-    color: "#637D8E",
-    letterSpacing: 1.6,
-    marginTop: 4,
-  },
-  empty: { alignItems: "center", paddingTop: 80 },
-  emptyText: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 14,
-    color: "#9E9A96",
-    textAlign: "center",
-    lineHeight: 24,
-  },
-});
