@@ -1,4 +1,4 @@
-import { View, Pressable, StyleSheet } from "react-native";
+import { View, Pressable } from "react-native";
 
 interface RatingStarsProps {
   rating: number;
@@ -7,35 +7,23 @@ interface RatingStarsProps {
 }
 
 export function RatingStars({ rating, onRate, size = "default" }: RatingStarsProps) {
-  const dotSize = size === "small" ? 7 : 11;
+  const dim = size === "small" ? "w-[7px] h-[7px]" : "w-[11px] h-[11px]";
   const gap = size === "small" ? 5 : 9;
 
   return (
-    <View style={[styles.row, { gap }]}>
-      {[1, 2, 3, 4, 5].map((dot) => (
-        <Pressable
-          key={dot}
-          onPress={() => onRate?.(dot)}
-          disabled={!onRate}
-          hitSlop={10}
-          style={[
-            styles.dot,
-            {
-              width: dotSize,
-              height: dotSize,
-              borderRadius: dotSize / 2,
-              backgroundColor: dot <= rating ? "#0F0F0D" : "transparent",
-              borderWidth: 1,
-              borderColor: dot <= rating ? "#0F0F0D" : "#C4C0BC",
-            },
-          ]}
-        />
-      ))}
+    <View className="flex-row items-center" style={{ gap }}>
+      {[1, 2, 3, 4, 5].map((dot) => {
+        const filled = dot <= rating;
+        return (
+          <Pressable
+            key={dot}
+            onPress={() => onRate?.(dot)}
+            disabled={!onRate}
+            hitSlop={10}
+            className={`${dim} border ${filled ? "bg-ink-900 border-ink-900" : "border-ink-200"}`}
+          />
+        );
+      })}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center" },
-  dot: {},
-});

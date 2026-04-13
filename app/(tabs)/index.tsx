@@ -7,14 +7,13 @@ import {
   Image,
   Alert,
   ActivityIndicator,
-  StyleSheet,
   TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/lib/supabase";
-import { getDayForecast, getWeather, weatherEmoji } from "@/lib/weather";
+import { getDayForecast, getWeather } from "@/lib/weather";
 import { generateOutfitImage } from "@/lib/gemini";
 import { comfortVerdict } from "@/lib/comfort";
 import type { ColdnessLevel, DayForecast, OutfitOccasion, ThermalFeeling, WeatherData } from "@/lib/types";
@@ -259,177 +258,197 @@ export default function TodayScreen() {
     finally { setSaving(false); }
   }
 
+  const verdict = weather && coldness ? comfortVerdict(weather.feels_like, coldness) : null;
+  const verdictToneClass =
+    verdict?.tone === "cold" ? "text-ice" : verdict?.tone === "warm" ? "text-warning" : "text-ink-700";
+
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safe}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+    <View className="flex-1 bg-paper">
+      <SafeAreaView className="flex-1">
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-6 pt-2 pb-10">
 
           {/* Header */}
-          <View style={styles.header}>
+          <View className="flex-row justify-between items-start mb-10">
             <View>
-              <Text style={styles.dayText}>{dayLabel.toUpperCase()}</Text>
-              <Text style={styles.dateText}>{dateLabel}</Text>
+              <Text className="font-body-medium text-[10px] text-ink-300 tracking-[2px]">
+                {dayLabel.toUpperCase()}
+              </Text>
+              <Text className="font-body text-base text-ink-900 mt-1">{dateLabel}</Text>
             </View>
             <Pressable onPress={() => router.push("/settings")} hitSlop={12}>
-              <Text style={styles.settingsIcon}>–</Text>
+              <Text className="font-body-medium text-[10px] text-ink-300 tracking-[2px]">
+                RÉGLAGES
+              </Text>
             </Pressable>
           </View>
 
           {/* Weather */}
-          <View style={styles.weatherSection}>
-            <View style={styles.weatherTopRow}>
-              <Text style={styles.weatherEmojiLabel}>
-                {loading ? "" : weather ? weatherEmoji(weather.icon) : ""}
-              </Text>
-              <Text style={styles.weatherCondition}>
-                {loading ? "CHARGEMENT" : weather?.description?.toUpperCase() ?? "INDISPONIBLE"}
-              </Text>
-            </View>
+          <View className="mb-10">
+            <Text className="font-body-medium text-[10px] text-ink-300 tracking-[2px] mb-2">
+              {loading ? "CHARGEMENT" : weather?.description?.toUpperCase() ?? "INDISPONIBLE"}
+            </Text>
             {loading ? (
-              <Skeleton style={styles.tempSkeleton} />
+              <Skeleton style={{ width: 140, height: 72, marginBottom: 12 }} />
             ) : (
-              <Text style={styles.tempDisplay}>
+              <Text
+                className="font-display text-[72px] text-ink-900 tracking-[-1px] mb-3"
+                style={{ lineHeight: 72 }}
+              >
                 {weather ? `${weather.temp}°` : "—"}
               </Text>
             )}
+
             {forecast && (forecast.morning || forecast.midday || forecast.evening) && (
-              <View style={styles.forecastRow}>
+              <View className="flex-row items-end mb-3" style={{ gap: 14 }}>
                 {forecast.morning && (
-                  <View style={styles.forecastSlot}>
-                    <Text style={styles.forecastLabel}>MATIN</Text>
-                    <Text style={styles.forecastTemp}>{forecast.morning.temp}°</Text>
+                  <View className="flex-col gap-0.5">
+                    <Text className="font-body-medium text-[9px] text-ice tracking-[1.8px]">MATIN</Text>
+                    <Text className="font-body-medium text-sm text-ink-700">{forecast.morning.temp}°</Text>
                   </View>
                 )}
                 {forecast.morning && (forecast.midday || forecast.evening) && (
-                  <Text style={styles.forecastSep}>—</Text>
+                  <Text className="font-body text-sm text-ink-200 pb-px">—</Text>
                 )}
                 {forecast.midday && (
-                  <View style={styles.forecastSlot}>
-                    <Text style={styles.forecastLabel}>MIDI</Text>
-                    <Text style={styles.forecastTemp}>{forecast.midday.temp}°</Text>
+                  <View className="flex-col gap-0.5">
+                    <Text className="font-body-medium text-[9px] text-ice tracking-[1.8px]">MIDI</Text>
+                    <Text className="font-body-medium text-sm text-ink-700">{forecast.midday.temp}°</Text>
                   </View>
                 )}
                 {forecast.midday && forecast.evening && (
-                  <Text style={styles.forecastSep}>—</Text>
+                  <Text className="font-body text-sm text-ink-200 pb-px">—</Text>
                 )}
                 {forecast.evening && (
-                  <View style={styles.forecastSlot}>
-                    <Text style={styles.forecastLabel}>SOIR</Text>
-                    <Text style={styles.forecastTemp}>{forecast.evening.temp}°</Text>
+                  <View className="flex-col gap-0.5">
+                    <Text className="font-body-medium text-[9px] text-ice tracking-[1.8px]">SOIR</Text>
+                    <Text className="font-body-medium text-sm text-ink-700">{forecast.evening.temp}°</Text>
                   </View>
                 )}
               </View>
             )}
-            {weather && coldness && (
-              <View style={styles.comfortRow}>
-                <Text style={[
-                  styles.comfortLabel,
-                  comfortVerdict(weather.feels_like, coldness).tone === "cold" && styles.comfortCold,
-                  comfortVerdict(weather.feels_like, coldness).tone === "warm" && styles.comfortWarm,
-                ]}>
-                  {comfortVerdict(weather.feels_like, coldness).label.toUpperCase()}
+
+            {verdict && (
+              <View className="mb-2.5">
+                <Text className={`font-body-medium text-[10px] tracking-[1.8px] ${verdictToneClass}`}>
+                  {verdict.label.toUpperCase()}
                 </Text>
               </View>
             )}
+
             {weather && (
-              <View style={styles.weatherMeta}>
-                <Text style={styles.weatherMetaText}>Ressenti {weather.feels_like}°</Text>
-                <Text style={styles.weatherMetaDot}>·</Text>
-                <Text style={styles.weatherMetaText}>Vent {weather.wind_speed} m/s</Text>
+              <View className="flex-row items-center flex-wrap" style={{ gap: 6 }}>
+                <Text className="font-body text-xs text-ink-500">Ressenti {weather.feels_like}°</Text>
+                <Text className="font-body text-xs text-ink-200">·</Text>
+                <Text className="font-body text-xs text-ink-500">Vent {weather.wind_speed} m/s</Text>
                 {weather.rain && (
                   <>
-                    <Text style={styles.weatherMetaDot}>·</Text>
-                    <Text style={[styles.weatherMetaText, styles.weatherAccent]}>Pluie</Text>
+                    <Text className="font-body text-xs text-ink-200">·</Text>
+                    <Text className="font-body text-xs text-ice">Pluie</Text>
                   </>
                 )}
                 {weather.snow && (
                   <>
-                    <Text style={styles.weatherMetaDot}>·</Text>
-                    <Text style={[styles.weatherMetaText, styles.weatherAccent]}>Neige</Text>
+                    <Text className="font-body text-xs text-ink-200">·</Text>
+                    <Text className="font-body text-xs text-ice">Neige</Text>
                   </>
                 )}
               </View>
             )}
           </View>
 
-          <View style={styles.divider} />
+          <View className="h-px bg-paper-300 mb-8" />
 
           {/* Suggestion */}
-          <View style={styles.suggestionSection}>
-            <Text style={styles.suggestionLabel}>SUGGESTION DU JOUR</Text>
+          <View className="mb-8">
+            <Text className="font-body-medium text-[9px] text-ice tracking-[2px] mb-3">
+              SUGGESTION DU JOUR
+            </Text>
 
-            <View style={styles.suggestionImageWrap}>
+            <View className="aspect-square bg-paper-200 mb-4 overflow-hidden">
               {suggestionImage ? (
                 <Image
                   source={{ uri: suggestionImage }}
-                  style={styles.suggestionImage}
+                  className="w-full h-full"
                   resizeMode="cover"
                 />
               ) : (
-                <Skeleton style={styles.suggestionImageSkeleton} />
+                <Skeleton style={{ width: "100%", height: "100%" }} />
               )}
             </View>
 
             {suggestion ? (
-              <Text style={styles.suggestionText}>{suggestion}</Text>
+              <Text className="font-body text-[15px] text-ink-700 leading-[25px]">
+                {suggestion}
+              </Text>
             ) : (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <View className="flex-row items-center" style={{ gap: 10 }}>
                 <ActivityIndicator size="small" color="#637D8E" />
-                <Text style={[styles.suggestionText, styles.suggestionMuted]}>
+                <Text className="font-body text-[15px] text-ink-300 leading-[25px]">
                   {loading ? "Récupération de la météo…" : "Génération en cours…"}
                 </Text>
               </View>
             )}
           </View>
 
-          <View style={styles.divider} />
+          <View className="h-px bg-paper-300 mb-8" />
 
           {/* Photo */}
-          <View style={styles.photoSection}>
-            <Text style={styles.sectionLabel}>TENUE DU JOUR</Text>
+          <View className="mb-6">
+            <Text className="font-body-medium text-[9px] text-ink-300 tracking-[2px] mb-4">
+              TENUE DU JOUR
+            </Text>
             {photoUri ? (
-              <View style={styles.photoContainer}>
-                <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" />
-                <Pressable onPress={() => setPhotoUri(null)} style={styles.changePhotoBtn}>
-                  <Text style={styles.changePhotoText}>CHANGER</Text>
+              <View className="h-[440px] relative overflow-hidden">
+                <Image source={{ uri: photoUri }} className="w-full h-full" resizeMode="cover" />
+                <Pressable
+                  onPress={() => setPhotoUri(null)}
+                  className="absolute bottom-4 right-4 bg-paper/95 px-3.5 py-2 border border-paper-300"
+                >
+                  <Text className="font-body-medium text-[10px] text-ink-900 tracking-[1.5px]">
+                    CHANGER
+                  </Text>
                 </Pressable>
               </View>
             ) : (
-              <View style={styles.photoButtons}>
+              <View className="flex-row" style={{ gap: 12 }}>
                 <Pressable
                   onPress={takePhoto}
-                  style={({ pressed }) => [styles.photoBtn, pressed && styles.photoBtnPressed]}
+                  className="flex-1 border border-paper-300 py-6 items-center bg-paper active:bg-paper-200"
                 >
-                  <Text style={styles.photoBtnIcon}>📷</Text>
-                  <Text style={styles.photoBtnText}>CAMÉRA</Text>
+                  <Text className="font-body-medium text-[10px] text-ink-500 tracking-[1.5px]">
+                    CAMÉRA
+                  </Text>
                 </Pressable>
                 <Pressable
                   onPress={pickPhoto}
-                  style={({ pressed }) => [styles.photoBtn, pressed && styles.photoBtnPressed]}
+                  className="flex-1 border border-paper-300 py-6 items-center bg-paper active:bg-paper-200"
                 >
-                  <Text style={styles.photoBtnIcon}>🖼</Text>
-                  <Text style={styles.photoBtnText}>GALERIE</Text>
+                  <Text className="font-body-medium text-[10px] text-ink-500 tracking-[1.5px]">
+                    GALERIE
+                  </Text>
                 </Pressable>
               </View>
             )}
           </View>
 
-          {/* Rating + Save */}
+          {/* Feedback + Save */}
           {photoUri && (
             <>
-              <View style={styles.divider} />
-              <View style={styles.ratingSection}>
-                <Text style={styles.sectionLabel}>OCCASION</Text>
-                <View style={styles.occasionRow}>
+              <View className="h-px bg-paper-300 mb-8" />
+              <View className="mb-4">
+                <Text className="font-body-medium text-[9px] text-ink-300 tracking-[2px] mb-4">
+                  OCCASION
+                </Text>
+                <View className="flex-row flex-wrap" style={{ gap: 6 }}>
                   {OUTFIT_OCCASIONS.map((opt) => {
                     const active = occasion === opt.value;
                     return (
                       <Pressable
                         key={opt.value}
                         onPress={() => setOccasion(active ? null : opt.value)}
-                        style={[styles.occasionChip, active && styles.occasionChipActive]}
+                        className={`py-2 px-3 border ${active ? "bg-ink-900 border-ink-900" : "bg-paper-50 border-paper-300"}`}
                       >
-                        <Text style={[styles.occasionChipText, active && styles.occasionChipTextActive]}>
+                        <Text className={`font-body text-xs ${active ? "text-paper" : "text-ink-900"}`}>
                           {opt.label}
                         </Text>
                       </Pressable>
@@ -437,17 +456,19 @@ export default function TodayScreen() {
                   })}
                 </View>
 
-                <Text style={[styles.sectionLabel, { marginTop: 24 }]}>RESSENTI</Text>
-                <View style={styles.occasionRow}>
+                <Text className="font-body-medium text-[9px] text-ink-300 tracking-[2px] mt-6 mb-4">
+                  RESSENTI
+                </Text>
+                <View className="flex-row flex-wrap" style={{ gap: 6 }}>
                   {THERMAL_FEELINGS.map((opt) => {
                     const active = thermal === opt.value;
                     return (
                       <Pressable
                         key={opt.value}
                         onPress={() => setThermal(active ? null : opt.value)}
-                        style={[styles.occasionChip, active && styles.occasionChipActive]}
+                        className={`py-2 px-3 border ${active ? "bg-ink-900 border-ink-900" : "bg-paper-50 border-paper-300"}`}
                       >
-                        <Text style={[styles.occasionChipText, active && styles.occasionChipTextActive]}>
+                        <Text className={`font-body text-xs ${active ? "text-paper" : "text-ink-900"}`}>
                           {opt.label}
                         </Text>
                       </Pressable>
@@ -455,28 +476,29 @@ export default function TodayScreen() {
                   })}
                 </View>
 
-                <Text style={[styles.sectionLabel, { marginTop: 24 }]}>NOTE</Text>
+                <Text className="font-body-medium text-[9px] text-ink-300 tracking-[2px] mt-6 mb-4">
+                  NOTE
+                </Text>
                 <RatingStars rating={rating} onRate={setRating} />
 
-                <Text style={[styles.sectionLabel, { marginTop: 24 }]}>COMMENTAIRE</Text>
+                <Text className="font-body-medium text-[9px] text-ink-300 tracking-[2px] mt-6 mb-4">
+                  COMMENTAIRE
+                </Text>
                 <TextInput
                   value={notes}
                   onChangeText={setNotes}
                   placeholder="Ce qui a marché, ce qui a manqué…"
-                  placeholderTextColor="#A8A49F"
-                  style={styles.notesInput}
+                  placeholderTextColor="#9E9A96"
+                  className="border border-paper-300 bg-paper-50 p-3 font-body text-[13px] text-ink-900"
+                  style={{ minHeight: 70, textAlignVertical: "top" }}
                   multiline
                 />
                 <Pressable
                   onPress={saveOutfit}
                   disabled={saving}
-                  style={({ pressed }) => [
-                    styles.saveBtn,
-                    pressed && styles.saveBtnPressed,
-                    saving && styles.saveBtnDisabled,
-                  ]}
+                  className={`py-[18px] items-center mt-6 ${saving ? "bg-ink-200" : "bg-ink-900 active:bg-ink-700"}`}
                 >
-                  <Text style={styles.saveBtnText}>
+                  <Text className="font-body-semibold text-[11px] text-paper tracking-[2.5px]">
                     {saving ? "SAUVEGARDE…" : "SAUVEGARDER"}
                   </Text>
                 </Pressable>
@@ -485,253 +507,14 @@ export default function TodayScreen() {
           )}
 
           {saved && (
-            <View style={styles.savedBanner}>
-              <Text style={styles.savedBannerText}>Sauvegardé</Text>
+            <View className="py-3 items-center mt-2 border-t border-b border-paper-300">
+              <Text className="font-body-medium text-[10px] text-ice tracking-[2px]">
+                SAUVEGARDÉ
+              </Text>
             </View>
           )}
-
-          <View style={{ height: 40 }} />
         </ScrollView>
       </SafeAreaView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FAFAF8" },
-  safe: { flex: 1 },
-  scroll: { paddingHorizontal: 24, paddingTop: 8 },
-
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 40,
-  },
-  dayText: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 10,
-    color: "#9E9A96",
-    letterSpacing: 2,
-  },
-  dateText: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 16,
-    color: "#0F0F0D",
-    marginTop: 3,
-  },
-  settingsIcon: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 24,
-    color: "#9E9A96",
-    lineHeight: 28,
-    marginTop: 4,
-  },
-
-  weatherSection: { marginBottom: 40 },
-  weatherTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 2,
-  },
-  weatherEmojiLabel: { fontSize: 18 },
-  weatherCondition: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 10,
-    color: "#9E9A96",
-    letterSpacing: 2,
-  },
-  tempDisplay: {
-    fontFamily: "BarlowCondensed_600SemiBold",
-    fontSize: 88,
-    color: "#0F0F0D",
-    lineHeight: 88,
-    letterSpacing: -2,
-    marginBottom: 14,
-  },
-  weatherMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    flexWrap: "wrap",
-  },
-  weatherMetaText: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 12,
-    color: "#6B6A66",
-  },
-  weatherMetaDot: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 12,
-    color: "#C4C0BC",
-  },
-  weatherAccent: { color: "#637D8E" },
-  tempSkeleton: { width: 140, height: 88, marginBottom: 14 },
-
-  comfortRow: { marginBottom: 10 },
-  comfortLabel: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 10,
-    letterSpacing: 1.8,
-    color: "#3A3836",
-  },
-  comfortCold: { color: "#637D8E" },
-  comfortWarm: { color: "#A36E3D" },
-
-  forecastRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 14,
-    marginBottom: 14,
-  },
-  forecastSlot: { flexDirection: "column", gap: 2 },
-  forecastLabel: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 9,
-    color: "#637D8E",
-    letterSpacing: 1.8,
-  },
-  forecastTemp: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 14,
-    color: "#3A3836",
-  },
-  forecastSep: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 14,
-    color: "#C4C0BC",
-    paddingBottom: 1,
-  },
-
-  divider: { height: 1, backgroundColor: "#E8E5DF", marginBottom: 32 },
-
-  suggestionSection: { marginBottom: 32 },
-  suggestionLabel: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 9,
-    color: "#637D8E",
-    letterSpacing: 2,
-    marginBottom: 12,
-  },
-  suggestionText: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 15,
-    color: "#3A3836",
-    lineHeight: 25,
-  },
-  suggestionMuted: { color: "#9E9A96" },
-
-  suggestionImageWrap: {
-    aspectRatio: 1,
-    backgroundColor: "#EFEBE5",
-    marginBottom: 16,
-    overflow: "hidden",
-  },
-  suggestionImage: { width: "100%", height: "100%" },
-  suggestionImageSkeleton: { width: "100%", height: "100%" },
-
-  photoSection: { marginBottom: 24 },
-  sectionLabel: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 9,
-    color: "#9E9A96",
-    letterSpacing: 2,
-    marginBottom: 16,
-  },
-  photoContainer: { height: 440, position: "relative", overflow: "hidden" },
-  photo: { width: "100%", height: "100%" },
-  changePhotoBtn: {
-    position: "absolute",
-    bottom: 16,
-    right: 16,
-    backgroundColor: "rgba(250,250,248,0.92)",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: "#E8E5DF",
-  },
-  changePhotoText: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 10,
-    color: "#0F0F0D",
-    letterSpacing: 1.5,
-  },
-  photoButtons: { flexDirection: "row", gap: 12 },
-  photoBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#E8E5DF",
-    paddingVertical: 36,
-    alignItems: "center",
-    backgroundColor: "#FAFAF8",
-  },
-  photoBtnPressed: { backgroundColor: "#F2F0EC" },
-  photoBtnIcon: { fontSize: 22, marginBottom: 10 },
-  photoBtnText: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 9,
-    color: "#9E9A96",
-    letterSpacing: 1.5,
-  },
-
-  ratingSection: { marginBottom: 16 },
-
-  occasionRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  occasionChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: "#E8E5DF",
-    backgroundColor: "#FFFFFF",
-  },
-  occasionChipActive: {
-    backgroundColor: "#0F0F0D",
-    borderColor: "#0F0F0D",
-  },
-  occasionChipText: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 12,
-    color: "#0F0F0D",
-  },
-  occasionChipTextActive: { color: "#FAFAF8" },
-
-  notesInput: {
-    borderWidth: 1,
-    borderColor: "#E8E5DF",
-    backgroundColor: "#FFFFFF",
-    padding: 12,
-    minHeight: 70,
-    fontFamily: "Jost_400Regular",
-    fontSize: 13,
-    color: "#0F0F0D",
-    textAlignVertical: "top",
-  },
-  saveBtn: {
-    backgroundColor: "#0F0F0D",
-    paddingVertical: 18,
-    alignItems: "center",
-    marginTop: 24,
-  },
-  saveBtnPressed: { backgroundColor: "#3A3836" },
-  saveBtnDisabled: { backgroundColor: "#C4C0BC" },
-  saveBtnText: {
-    fontFamily: "Jost_600SemiBold",
-    fontSize: 11,
-    color: "#FAFAF8",
-    letterSpacing: 2.5,
-  },
-
-  savedBanner: {
-    backgroundColor: "#E8F1F6",
-    paddingVertical: 12,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  savedBannerText: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 10,
-    color: "#637D8E",
-    letterSpacing: 2,
-  },
-});
