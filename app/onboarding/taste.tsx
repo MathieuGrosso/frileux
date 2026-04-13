@@ -125,7 +125,7 @@ export default function OnboardingTaste() {
 
   const toggleUniverse = (u: string) =>
     setUniverses((prev) =>
-      prev.includes(u) ? prev.filter((x) => x !== u) : prev.length >= 5 ? prev : [...prev, u]
+      prev.includes(u) ? prev.filter((x) => x !== u) : prev.length >= 8 ? prev : [...prev, u]
     );
 
   const toggleAvoid = (a: string) =>
@@ -165,7 +165,14 @@ export default function OnboardingTaste() {
           taste_completed: true,
         })
         .eq("id", user.id);
-      if (error) throw error;
+      if (error) {
+        if (__DEV__) console.error("[taste] save error", error);
+        const hint =
+          error.code === "PGRST204" || error.message?.includes("column")
+            ? "\n\nLa migration 009_taste_profile.sql n'est pas appliquée sur Supabase prod. Lancer : supabase db push"
+            : "";
+        throw new Error((error.message ?? "Sauvegarde échouée") + hint);
+      }
 
       if (isUpgrade) {
         router.replace("/(tabs)");
@@ -177,6 +184,40 @@ export default function OnboardingTaste() {
       Alert.alert("Erreur", e instanceof Error ? e.message : "Sauvegarde impossible.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function skipStep() {
+    const confirmed = await new Promise<boolean>((resolve) => {
+      Alert.alert(
+        isUpgrade ? "Passer l'amélioration ?" : "Passer cette étape ?",
+        isUpgrade
+          ? "Tu pourras la refaire depuis Réglages → Personnalisation."
+          : "On finit l'onboarding sans personnaliser ton goût. Tu pourras le refaire depuis Réglages.",
+        [
+          { text: "Annuler", style: "cancel", onPress: () => resolve(false) },
+          { text: "Passer", style: "destructive", onPress: () => resolve(true) },
+        ]
+      );
+    });
+    if (!confirmed) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Mark taste_completed even when skipped, so the gate doesn't loop.
+        await supabase
+          .from("profiles")
+          .update({ taste_completed: true })
+          .eq("id", user.id);
+      }
+    } catch (e) {
+      if (__DEV__) console.warn("[taste] skip update failed", e);
+    }
+    if (isUpgrade) {
+      router.replace("/(tabs)");
+    } else {
+      await AsyncStorage.setItem("@onboarding/last-step", "profile");
+      router.replace("/onboarding/profile");
     }
   }
 
@@ -200,11 +241,16 @@ export default function OnboardingTaste() {
             </>
           )}
         </View>
-        {!isUpgrade && (
-          <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Text style={styles.backText}>← VESTIAIRE</Text>
+        <View style={styles.topBarRight}>
+          {!isUpgrade && (
+            <Pressable onPress={() => router.back()} hitSlop={12}>
+              <Text style={styles.backText}>← VESTIAIRE</Text>
+            </Pressable>
+          )}
+          <Pressable onPress={skipStep} hitSlop={12}>
+            <Text style={styles.skipText}>PASSER</Text>
           </Pressable>
-        )}
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -245,7 +291,7 @@ export default function OnboardingTaste() {
         </View>
 
         <Text style={[styles.sectionLabel, styles.sectionGap]}>
-          UNIVERS · {universes.length}/5
+          UNIVERS · {universes.length}/8
         </Text>
         <View style={styles.tagsRow}>
           {STYLE_UNIVERSES.map((u) => {
@@ -422,6 +468,8 @@ const styles = StyleSheet.create({
   progressDot: { width: 24, height: 2, backgroundColor: "#E8E5DF" },
   progressDotActive: { backgroundColor: "#0F0F0D" },
   backText: { fontFamily: "Jost_500Medium", fontSize: 11, letterSpacing: 1.2, color: "#637D8E" },
+  skipText: { fontFamily: "Jost_500Medium", fontSize: 11, letterSpacing: 1.2, color: "#637D8E" },
+  topBarRight: { flexDirection: "row", alignItems: "center", gap: 14 },
   scroll: { paddingHorizontal: 24, paddingBottom: 32 },
   upgradeBanner: {
     backgroundColor: "#0F0F0D",
