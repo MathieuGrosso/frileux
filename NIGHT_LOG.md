@@ -59,7 +59,7 @@ Format par session :
 
 ### PRs ouvertes
 - #51 https://github.com/MathieuGrosso/frileux/pull/51 -- feat(today): hierarchie + tokens typo
-- (PR B a ouvrir apres commit)
+- #52 https://github.com/MathieuGrosso/frileux/pull/52 -- feat(wardrobe): ecran garde-robe grille 2 col + detail
 
 ---
 
