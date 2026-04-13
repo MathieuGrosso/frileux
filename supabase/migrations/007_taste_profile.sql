@@ -12,7 +12,11 @@ alter table public.profiles
   add column if not exists avoid_tags text[] not null default '{}',
   add column if not exists fit_preference text
     check (fit_preference in ('relaxed', 'regular', 'slim')),
-  add column if not exists taste_completed boolean not null default false;
+  add column if not exists taste_completed boolean not null default false,
+  add column if not exists height_cm smallint check (height_cm between 120 and 230),
+  add column if not exists build text
+    check (build in ('petite', 'slim', 'athletic', 'curvy', 'strong', 'tall')),
+  add column if not exists shoe_size_eu smallint check (shoe_size_eu between 30 and 50);
 
 -- ============================================
 -- BRANDS (seed catalog for autocomplete)

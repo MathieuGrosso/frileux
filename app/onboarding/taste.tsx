@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
-import type { Brand, FitPreference, GenderPresentation } from "@/lib/types";
+import type { Brand, Build, FitPreference, GenderPresentation } from "@/lib/types";
 
 const STYLE_UNIVERSES = [
   "minimal",
@@ -50,6 +50,15 @@ const FIT_OPTIONS: { value: FitPreference; label: string }[] = [
   { value: "slim", label: "SLIM" },
 ];
 
+const BUILD_OPTIONS: { value: Build; label: string; sub: string }[] = [
+  { value: "petite", label: "PETITE", sub: "Carrure fine, < 1m65" },
+  { value: "slim", label: "SLIM", sub: "Élancé, peu de masse" },
+  { value: "athletic", label: "ATHLÉTIQUE", sub: "Carrure travaillée" },
+  { value: "curvy", label: "CURVY", sub: "Silhouette en sablier" },
+  { value: "strong", label: "STRONG", sub: "Carrure marquée" },
+  { value: "tall", label: "TALL", sub: "Grand·e, > 1m85" },
+];
+
 export default function OnboardingTaste() {
   const router = useRouter();
   const params = useLocalSearchParams<{ upgrade?: string }>();
@@ -60,6 +69,9 @@ export default function OnboardingTaste() {
   const [brands, setBrands] = useState<string[]>([]);
   const [avoid, setAvoid] = useState<string[]>([]);
   const [fit, setFit] = useState<FitPreference | null>(null);
+  const [build, setBuild] = useState<Build | null>(null);
+  const [heightStr, setHeightStr] = useState("");
+  const [shoeStr, setShoeStr] = useState("");
 
   const [brandQuery, setBrandQuery] = useState("");
   const [brandResults, setBrandResults] = useState<Brand[]>([]);
@@ -70,7 +82,7 @@ export default function OnboardingTaste() {
     if (!isUpgrade) AsyncStorage.setItem("@onboarding/last-step", "taste");
     supabase
       .from("profiles")
-      .select("gender_presentation, style_universes, favorite_brands, avoid_tags, fit_preference")
+      .select("gender_presentation, style_universes, favorite_brands, avoid_tags, fit_preference, build, height_cm, shoe_size_eu")
       .single()
       .then(({ data }) => {
         if (!data) return;
@@ -79,6 +91,9 @@ export default function OnboardingTaste() {
         if (Array.isArray(data.favorite_brands)) setBrands(data.favorite_brands);
         if (Array.isArray(data.avoid_tags)) setAvoid(data.avoid_tags);
         if (data.fit_preference) setFit(data.fit_preference as FitPreference);
+        if (data.build) setBuild(data.build as Build);
+        if (data.height_cm) setHeightStr(String(data.height_cm));
+        if (data.shoe_size_eu) setShoeStr(String(data.shoe_size_eu));
       });
   }, [isUpgrade]);
 
@@ -134,6 +149,8 @@ export default function OnboardingTaste() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("not authenticated");
+      const heightNum = heightStr ? Math.round(Number(heightStr)) : null;
+      const shoeNum = shoeStr ? Math.round(Number(shoeStr)) : null;
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -142,6 +159,9 @@ export default function OnboardingTaste() {
           favorite_brands: brands,
           avoid_tags: avoid,
           fit_preference: fit,
+          build,
+          height_cm: heightNum && heightNum >= 120 && heightNum <= 230 ? heightNum : null,
+          shoe_size_eu: shoeNum && shoeNum >= 30 && shoeNum <= 50 ? shoeNum : null,
           taste_completed: true,
         })
         .eq("id", user.id);
@@ -314,6 +334,55 @@ export default function OnboardingTaste() {
               </Pressable>
             );
           })}
+        </View>
+
+        <Text style={[styles.sectionLabel, styles.sectionGap]}>MORPHOLOGIE</Text>
+        <Text style={styles.helper}>
+          Pour ajuster les coupes et proportions. Optionnel — modifiable plus tard.
+        </Text>
+        <View style={styles.tilesCol}>
+          {BUILD_OPTIONS.map((opt) => {
+            const active = build === opt.value;
+            return (
+              <Pressable
+                key={opt.value}
+                onPress={() => setBuild(active ? null : opt.value)}
+                style={[styles.tile, active && styles.tileActive]}
+              >
+                <Text style={[styles.tileLabel, active && styles.tileLabelActive]}>
+                  {opt.label}
+                </Text>
+                <Text style={[styles.tileSub, active && styles.tileSubActive]}>{opt.sub}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <View style={styles.measureRow}>
+          <View style={styles.measureCol}>
+            <Text style={styles.measureLabel}>TAILLE (CM)</Text>
+            <TextInput
+              value={heightStr}
+              onChangeText={(v) => setHeightStr(v.replace(/[^0-9]/g, "").slice(0, 3))}
+              keyboardType="number-pad"
+              placeholder="172"
+              placeholderTextColor="#A8A49F"
+              style={styles.measureInput}
+              maxLength={3}
+            />
+          </View>
+          <View style={styles.measureCol}>
+            <Text style={styles.measureLabel}>POINTURE (EU)</Text>
+            <TextInput
+              value={shoeStr}
+              onChangeText={(v) => setShoeStr(v.replace(/[^0-9]/g, "").slice(0, 2))}
+              keyboardType="number-pad"
+              placeholder="42"
+              placeholderTextColor="#A8A49F"
+              style={styles.measureInput}
+              maxLength={2}
+            />
+          </View>
         </View>
       </ScrollView>
 
@@ -501,6 +570,25 @@ const styles = StyleSheet.create({
     color: "#0F0F0D",
   },
   fitTextActive: { color: "#FAFAF8" },
+  measureRow: { flexDirection: "row", gap: 8, marginTop: 12 },
+  measureCol: { flex: 1 },
+  measureLabel: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 10,
+    letterSpacing: 1.4,
+    color: "#637D8E",
+    marginBottom: 6,
+  },
+  measureInput: {
+    borderWidth: 1,
+    borderColor: "#0F0F0D",
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    fontFamily: "BarlowCondensed_600SemiBold",
+    fontSize: 22,
+    color: "#0F0F0D",
+    backgroundColor: "#FFFFFF",
+  },
   bottomBar: {
     paddingHorizontal: 24,
     paddingTop: 12,

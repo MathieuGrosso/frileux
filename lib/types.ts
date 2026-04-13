@@ -13,12 +13,22 @@ export interface Profile {
   favorite_brands: string[];
   avoid_tags: string[];
   fit_preference: FitPreference | null;
+  height_cm: number | null;
+  build: Build | null;
+  shoe_size_eu: number | null;
   created_at: string;
   updated_at: string;
 }
 
 export type GenderPresentation = "menswear" | "womenswear" | "both";
 export type FitPreference = "relaxed" | "regular" | "slim";
+export type Build = "petite" | "slim" | "athletic" | "curvy" | "strong" | "tall";
+
+export interface Morphology {
+  height_cm: number | null;
+  build: Build | null;
+  shoe_size_eu: number | null;
+}
 
 export interface Brand {
   id: string;
