@@ -1,6 +1,7 @@
 import { View, Text, Pressable, Share } from "react-native";
 import { useRouter } from "expo-router";
 import type { Circle } from "@/lib/types";
+import { useCircleUnread } from "@/hooks/useCircleUnread";
 
 interface Props {
   circle: Circle;
@@ -8,6 +9,7 @@ interface Props {
 
 export function CircleFeedHeader({ circle }: Props) {
   const router = useRouter();
+  const { unread } = useCircleUnread(circle.id);
 
   function handleShare() {
     if (!circle.invite_code) return;
@@ -34,17 +36,38 @@ export function CircleFeedHeader({ circle }: Props) {
           </Text>
         </Pressable>
       </View>
-      <Pressable
-        onPress={() => router.push("/circle/settings")}
-        className="active:opacity-50 pb-1"
-      >
-        <Text
-          className="font-body-semibold text-ink-900 text-[11px]"
-          style={{ letterSpacing: 2 }}
+      <View className="flex-row items-end gap-4 pb-1">
+        <Pressable
+          onPress={() => router.push({ pathname: "/circle/chat", params: { id: circle.id } })}
+          className="active:opacity-50 flex-row items-center gap-1"
         >
-          RÉGLAGES
-        </Text>
-      </Pressable>
+          <Text
+            className="font-body-semibold text-ink-900 text-[11px]"
+            style={{ letterSpacing: 2 }}
+          >
+            CHAT
+          </Text>
+          {unread > 0 && (
+            <Text
+              className="font-body-semibold text-ice text-[10px]"
+              style={{ letterSpacing: 1 }}
+            >
+              · {unread > 99 ? "99+" : unread}
+            </Text>
+          )}
+        </Pressable>
+        <Pressable
+          onPress={() => router.push("/circle/settings")}
+          className="active:opacity-50"
+        >
+          <Text
+            className="font-body-semibold text-ink-900 text-[11px]"
+            style={{ letterSpacing: 2 }}
+          >
+            RÉGLAGES
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
