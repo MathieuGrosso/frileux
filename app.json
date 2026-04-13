@@ -19,7 +19,8 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Frileuse a besoin de la caméra pour photographier ta tenue du jour.",
         "NSPhotoLibraryUsageDescription": "Frileuse a besoin d'accéder à tes photos pour choisir une photo de tenue.",
-        "NSLocationWhenInUseUsageDescription": "Frileuse utilise ta position pour te donner la météo locale."
+        "NSLocationWhenInUseUsageDescription": "Frileuse utilise ta position pour te donner la météo locale.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
