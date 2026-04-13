@@ -1,13 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import type { Circle, OutfitWithProfile } from "@/lib/types";
 
+const ACTIVE_CIRCLE_KEY = "frileux.circle.active";
+
 export interface UseCircleResult {
+  circles: Circle[];
   circle: Circle | null;
   outfits: OutfitWithProfile[];
   loading: boolean;
   refreshing: boolean;
   userId: string | null;
+  setActiveCircleId: (id: string) => Promise<void>;
   reload: () => Promise<void>;
   refresh: () => Promise<void>;
   createCircle: () => Promise<Circle | null>;
@@ -23,11 +28,14 @@ function todayIso(): string {
 }
 
 export function useCircle(): UseCircleResult {
-  const [circle, setCircle] = useState<Circle | null>(null);
+  const [circles, setCircles] = useState<Circle[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [outfits, setOutfits] = useState<OutfitWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+
+  const circle = circles.find((c) => c.id === activeId) ?? null;
 
   const loadOutfits = useCallback(async (circleId: string, currentUserId: string) => {
     const { data: members } = await supabase
@@ -67,21 +75,30 @@ export function useCircle(): UseCircleResult {
     }
     setUserId(user.id);
 
-    const { data: membership } = await supabase
+    const { data: memberships } = await supabase
       .from("circle_members")
-      .select("circle_id, circles(*)")
-      .eq("user_id", user.id)
-      .limit(1)
-      .single();
+      .select("circles(*)")
+      .eq("user_id", user.id);
 
-    if (membership?.circles) {
-      const c = membership.circles as unknown as Circle;
-      setCircle(c);
-      await loadOutfits(c.id, user.id);
-    } else {
-      setCircle(null);
+    const list: Circle[] = (memberships ?? [])
+      .map((m) => m.circles as unknown as Circle)
+      .filter((c): c is Circle => !!c);
+    setCircles(list);
+
+    if (list.length === 0) {
+      setActiveId(null);
       setOutfits([]);
+      setLoading(false);
+      setRefreshing(false);
+      return;
     }
+
+    const stored = await AsyncStorage.getItem(ACTIVE_CIRCLE_KEY);
+    const nextId =
+      stored && list.some((c) => c.id === stored) ? stored : list[0].id;
+    setActiveId(nextId);
+    await loadOutfits(nextId, user.id);
+
     setLoading(false);
     setRefreshing(false);
   }, [loadOutfits]);
@@ -90,7 +107,6 @@ export function useCircle(): UseCircleResult {
     void reload();
   }, [reload]);
 
-  // Realtime: new outfits from circle members for today
   useEffect(() => {
     if (!circle || !userId) return;
     const today = todayIso();
@@ -132,6 +148,14 @@ export function useCircle(): UseCircleResult {
     };
   }, [circle, userId]);
 
+  const setActiveCircleId = useCallback(async (id: string) => {
+    if (!userId) return;
+    setActiveId(id);
+    setOutfits([]);
+    await AsyncStorage.setItem(ACTIVE_CIRCLE_KEY, id);
+    await loadOutfits(id, userId);
+  }, [userId, loadOutfits]);
+
   const refresh = useCallback(async () => {
     setRefreshing(true);
     await reload();
@@ -152,7 +176,9 @@ export function useCircle(): UseCircleResult {
 
     await supabase.from("circle_members").insert({ circle_id: data.id, user_id: user.id });
     const created = data as Circle;
-    setCircle(created);
+    setCircles((prev) => [...prev, created]);
+    setActiveId(created.id);
+    await AsyncStorage.setItem(ACTIVE_CIRCLE_KEY, created.id);
     return created;
   }, []);
 
@@ -178,17 +204,21 @@ export function useCircle(): UseCircleResult {
     if (error) return null;
 
     const joined = circleData as Circle;
-    setCircle(joined);
+    setCircles((prev) => (prev.some((c) => c.id === joined.id) ? prev : [...prev, joined]));
+    setActiveId(joined.id);
+    await AsyncStorage.setItem(ACTIVE_CIRCLE_KEY, joined.id);
     await loadOutfits(joined.id, user.id);
     return joined;
   }, [loadOutfits]);
 
   return {
+    circles,
     circle,
     outfits,
     loading,
     refreshing,
     userId,
+    setActiveCircleId,
     reload,
     refresh,
     createCircle,
