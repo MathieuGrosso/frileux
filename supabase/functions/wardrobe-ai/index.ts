@@ -274,6 +274,28 @@ Deno.serve(async (req: Request) => {
         user_id
       );
       result = { photo_url };
+    } else if (action === "describe_worn") {
+      const { image_base64, mime_type, suggestion } = body;
+      if (!image_base64) throw new Error("image_base64 required");
+      const prompt = `Tu regardes la photo d'une personne qui porte sa tenue du jour.
+${suggestion ? `Ce matin, la styliste IA lui avait suggéré ceci :\n"${suggestion}"\n\n` : ""}Décris en français, en 2-3 phrases COURTES et éditoriales (ton Ssense/Muji, pas d'emoji, pas de jugement), ce qu'elle porte réellement sur la photo. Sois spécifique (matières, couleurs, type de pièce, silhouette).${suggestion ? " Si la tenue diffère nettement de la suggestion, termine par une phrase courte notant l'écart." : ""}
+Réponds UNIQUEMENT avec la description, sans introduction.`;
+      const parts = [
+        { text: prompt },
+        { inlineData: { mimeType: mime_type ?? "image/jpeg", data: image_base64 } },
+      ];
+      const res = await fetch(`${ENDPOINT}?key=${GEMINI_API_KEY}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts }],
+          generationConfig: { temperature: 0.6 },
+        }),
+      });
+      if (!res.ok) throw new Error(`Gemini error ${res.status}: ${await res.text()}`);
+      const data = await res.json();
+      const worn_description = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? null;
+      result = { worn_description };
     } else if (action === "generate_combos") {
       const { items } = body as { items: ItemLite[] };
       if (!items?.length) throw new Error("items required");
