@@ -14,6 +14,7 @@ import { Link } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";
 import { supabase } from "@/lib/supabase";
+import { BrandLogo } from "@/components/BrandLogo";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -81,7 +82,7 @@ export default function LoginScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.brand}>
-          <Text style={styles.logo}>frileux</Text>
+          <BrandLogo size="lg" />
           <Text style={styles.tagline}>habille-toi pour le froid</Text>
         </View>
 
@@ -163,13 +164,6 @@ const styles = StyleSheet.create({
   },
 
   brand: { alignItems: "flex-start" },
-  logo: {
-    fontFamily: "BarlowCondensed_600SemiBold",
-    fontSize: 56,
-    color: "#0F0F0D",
-    letterSpacing: -1,
-    lineHeight: 56,
-  },
   tagline: {
     fontFamily: "Jost_400Regular",
     fontSize: 13,
