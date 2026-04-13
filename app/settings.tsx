@@ -6,6 +6,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import { useOnboardingFlag } from "@/lib/onboarding-context";
 import type { ColdnessLevel } from "@/lib/types";
+import { BrandLogo } from "@/components/BrandLogo";
 
 const COLDNESS_LABELS: Record<ColdnessLevel, string> = {
   1: "Un peu frileuse",
@@ -167,6 +168,10 @@ export default function SettingsScreen() {
         >
           <Text style={styles.logoutText}>Se déconnecter</Text>
         </Pressable>
+
+        <View style={styles.brandFooter}>
+          <BrandLogo size="sm" />
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -295,5 +300,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#C0392B",
     letterSpacing: 0.5,
+  },
+  brandFooter: {
+    alignItems: "center",
+    marginTop: 48,
+    marginBottom: 16,
+    opacity: 0.4,
   },
 });

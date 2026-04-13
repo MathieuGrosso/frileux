@@ -5,11 +5,8 @@ type Size = "sm" | "md" | "lg";
 const SCALE: Record<Size, number> = { sm: 0.6, md: 1, lg: 1.4 };
 const INK = "#0F0F0D";
 
-// V-mark geometry (apex top, in a 32×36 box):
-//   left foot (0,36) → apex (16,0) → right foot (32,36)
-// Each segment: dx=16, dy=36, length = √(16²+36²) ≈ 39.40, angle = atan(16/36) from vertical
 const SEG_LEN = Math.sqrt(16 * 16 + 36 * 36);
-const SEG_ANGLE_DEG = (Math.atan2(36, 16) * 180) / Math.PI; // ≈ 66.04°, from +x axis
+const SEG_ANGLE_DEG = (Math.atan2(36, 16) * 180) / Math.PI;
 
 interface Props {
   size?: Size;
