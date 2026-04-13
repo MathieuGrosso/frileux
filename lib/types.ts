@@ -31,6 +31,7 @@ export interface ClothingAnalysis {
   material: string | null;
   style_tags: string[];
   description: string;
+  photo_url?: string | null;
 }
 
 export interface OutfitCombo {
@@ -60,6 +61,7 @@ export interface Outfit {
   rating: number | null; // 1-5
   notes: string | null;
   ai_suggestion: string | null;
+  worn_description: string | null;
   created_at: string;
 }
 

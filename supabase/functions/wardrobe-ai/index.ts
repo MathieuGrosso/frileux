@@ -9,8 +9,12 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-const MODEL = "gemini-1.5-flash";
+const MODEL = "gemini-2.5-flash";
+const IMAGE_MODEL = "gemini-2.5-flash-image";
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+const IMAGE_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent`;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SERVICE_ROLE_JWT") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -84,6 +88,92 @@ const PIECES_SCHEMA = {
   },
   required: ["pieces"],
 };
+
+async function callImageGen(parts: unknown[], userId: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${IMAGE_ENDPOINT}?key=${GEMINI_API_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts }],
+        generationConfig: { responseModalities: ["IMAGE"] },
+      }),
+    });
+    if (!res.ok) {
+      console.error("Gemini image gen failed:", res.status, await res.text());
+      return null;
+    }
+    const data = await res.json();
+    const imagePart = data.candidates?.[0]?.content?.parts?.find((p: { inlineData?: { data?: string } }) => p.inlineData?.data);
+    const b64: string | undefined = imagePart?.inlineData?.data;
+    const mime: string = imagePart?.inlineData?.mimeType ?? "image/png";
+    if (!b64) return null;
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const ext = mime.split("/")[1] ?? "png";
+    const path = `${userId}/${Date.now()}-ai.${ext}`;
+    const uploadRes = await fetch(
+      `${SUPABASE_URL}/storage/v1/object/wardrobe/${path}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          "Content-Type": mime,
+          "x-upsert": "true",
+        },
+        body: bytes,
+      }
+    );
+    if (!uploadRes.ok) {
+      console.error("Storage upload failed:", uploadRes.status, await uploadRes.text());
+      return null;
+    }
+    return `${SUPABASE_URL}/storage/v1/object/public/wardrobe/${path}`;
+  } catch (e) {
+    console.error("callImageGen exception:", e);
+    return null;
+  }
+}
+
+async function fetchImageAsBase64(url: string): Promise<{ data: string; mime: string } | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const mime = res.headers.get("content-type") ?? "image/png";
+    const buf = new Uint8Array(await res.arrayBuffer());
+    let binary = "";
+    for (let i = 0; i < buf.length; i++) binary += String.fromCharCode(buf[i]);
+    return { data: btoa(binary), mime };
+  } catch {
+    return null;
+  }
+}
+
+async function generateProductImage(description: string, userId: string): Promise<string | null> {
+  const prompt = `Editorial fashion product photograph of: ${description}. Single clothing item centered on a clean light beige studio background. Soft diffused lighting, no model, no human, no text, no logo. Minimal Muji / Ssense product photography style. High detail fabric texture. Square composition.`;
+  return callImageGen([{ text: prompt }], userId);
+}
+
+async function refineProductImage(
+  currentUrl: string,
+  refinement: string,
+  description: string,
+  userId: string
+): Promise<string | null> {
+  const img = await fetchImageAsBase64(currentUrl);
+  if (!img) {
+    console.error("Could not fetch current image for refinement");
+    return generateProductImage(`${description}. ${refinement}`, userId);
+  }
+  const prompt = `Refine this product photograph of "${description}". Apply these adjustments: ${refinement}.
+Keep the editorial product photography style: single clothing item, clean light beige studio background, soft diffused lighting, no model, no human, no text, no logo. Muji / Ssense aesthetic. Square composition. High detail fabric texture.`;
+  return callImageGen(
+    [
+      { text: prompt },
+      { inlineData: { mimeType: img.mime, data: img.data } },
+    ],
+    userId
+  );
+}
 
 async function callGemini(parts: unknown[], responseSchema: unknown) {
   const res = await fetch(`${ENDPOINT}?key=${GEMINI_API_KEY}`, {
@@ -166,9 +256,46 @@ Deno.serve(async (req: Request) => {
       ];
       result = (await callGemini(parts, ANALYSIS_SCHEMA)) as ClothingAnalysis;
     } else if (action === "analyze_text") {
-      const { text } = body;
+      const { text, user_id } = body;
       if (!text) throw new Error("text required");
-      result = (await callGemini([{ text: analyzeTextPrompt(text) }], ANALYSIS_SCHEMA)) as ClothingAnalysis;
+      const analysis = (await callGemini([{ text: analyzeTextPrompt(text) }], ANALYSIS_SCHEMA)) as ClothingAnalysis;
+      let photo_url: string | null = null;
+      if (user_id) photo_url = await generateProductImage(analysis.description, user_id);
+      result = { ...analysis, photo_url };
+    } else if (action === "refine_image") {
+      const { current_photo_url, refinement, description, user_id } = body;
+      if (!user_id) throw new Error("user_id required");
+      if (!current_photo_url) throw new Error("current_photo_url required");
+      if (!refinement) throw new Error("refinement required");
+      const photo_url = await refineProductImage(
+        current_photo_url,
+        refinement,
+        description ?? "clothing item",
+        user_id
+      );
+      result = { photo_url };
+    } else if (action === "describe_worn") {
+      const { image_base64, mime_type, suggestion } = body;
+      if (!image_base64) throw new Error("image_base64 required");
+      const prompt = `Tu regardes la photo d'une personne qui porte sa tenue du jour.
+${suggestion ? `Ce matin, la styliste IA lui avait suggéré ceci :\n"${suggestion}"\n\n` : ""}Décris en français, en 2-3 phrases COURTES et éditoriales (ton Ssense/Muji, pas d'emoji, pas de jugement), ce qu'elle porte réellement sur la photo. Sois spécifique (matières, couleurs, type de pièce, silhouette).${suggestion ? " Si la tenue diffère nettement de la suggestion, termine par une phrase courte notant l'écart." : ""}
+Réponds UNIQUEMENT avec la description, sans introduction.`;
+      const parts = [
+        { text: prompt },
+        { inlineData: { mimeType: mime_type ?? "image/jpeg", data: image_base64 } },
+      ];
+      const res = await fetch(`${ENDPOINT}?key=${GEMINI_API_KEY}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts }],
+          generationConfig: { temperature: 0.6 },
+        }),
+      });
+      if (!res.ok) throw new Error(`Gemini error ${res.status}: ${await res.text()}`);
+      const data = await res.json();
+      const worn_description = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? null;
+      result = { worn_description };
     } else if (action === "generate_combos") {
       const { items } = body as { items: ItemLite[] };
       if (!items?.length) throw new Error("items required");

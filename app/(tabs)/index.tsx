@@ -11,8 +11,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system";
-import { decode } from "base64-arraybuffer";
 import { supabase } from "@/lib/supabase";
 import { getWeather, weatherEmoji } from "@/lib/weather";
 import type { WeatherData } from "@/lib/types";
@@ -37,27 +35,70 @@ export default function TodayScreen() {
 
   async function loadWeather() {
     try {
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      let fromGeoloc = false;
+
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") { setLoading(false); return; }
-      const location = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = location.coords;
+      if (status === "granted") {
+        try {
+          const location = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          latitude = location.coords.latitude;
+          longitude = location.coords.longitude;
+          fromGeoloc = true;
+        } catch (geoErr) {
+          console.warn("Géoloc indisponible, fallback profil/Paris:", geoErr);
+        }
+      }
+
+      if (latitude === null || longitude === null) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("last_latitude, last_longitude")
+          .single();
+        if (profile?.last_latitude && profile?.last_longitude) {
+          latitude = profile.last_latitude;
+          longitude = profile.last_longitude;
+        } else {
+          latitude = 48.8566;
+          longitude = 2.3522;
+        }
+      }
+
       const data = await getWeather(latitude, longitude);
       setWeather(data);
       fetchSuggestion(data);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) supabase.from("profiles").update({ last_latitude: latitude, last_longitude: longitude }).eq("id", user.id);
+
+      if (fromGeoloc) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) supabase.from("profiles").update({ last_latitude: latitude, last_longitude: longitude }).eq("id", user.id);
+      }
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }
 
   async function fetchSuggestion(weatherData: WeatherData) {
     try {
-      const { data: profile } = await supabase.from("profiles").select("coldness_level").single();
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = user
+        ? await supabase.from("profiles").select("coldness_level").eq("id", user.id).maybeSingle()
+        : { data: null };
       const { data, error } = await supabase.functions.invoke("suggest-outfit", {
         body: { weather: weatherData, coldness_level: profile?.coldness_level ?? 3 },
       });
-      if (!error && data?.suggestion) setSuggestion(data.suggestion);
-    } catch {}
+      if (error) {
+        console.error("suggest-outfit error:", error);
+        setSuggestion("Suggestion indisponible.");
+        return;
+      }
+      if (data?.suggestion) setSuggestion(data.suggestion);
+      else setSuggestion("Suggestion indisponible.");
+    } catch (e) {
+      console.error("fetchSuggestion exception:", e);
+      setSuggestion("Suggestion indisponible.");
+    }
   }
 
   async function takePhoto() {
@@ -73,25 +114,61 @@ export default function TodayScreen() {
   }
 
   async function saveOutfit() {
-    if (!photoUri || !weather) return;
+    if (!photoUri) { Alert.alert("Erreur", "Aucune photo."); return; }
+    if (!weather) { Alert.alert("Erreur", "Météo non chargée."); return; }
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setSaving(false); return; }
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      if (!user) { Alert.alert("Erreur", "Non connecté."); setSaving(false); return; }
+
       const fileName = `${user.id}/${Date.now()}.jpg`;
-      const base64 = await FileSystem.readAsStringAsync(photoUri, { encoding: FileSystem.EncodingType.Base64 });
-      await supabase.storage.from("outfits").upload(fileName, decode(base64), { contentType: "image/jpeg" });
+      const response = await fetch(photoUri);
+      const blob = await response.blob();
+      const mimeType = blob.type || "image/jpeg";
+
+      const { error: uploadError } = await supabase.storage
+        .from("outfits")
+        .upload(fileName, blob, { contentType: mimeType });
+      if (uploadError) throw uploadError;
+
       const { data: urlData } = supabase.storage.from("outfits").getPublicUrl(fileName);
-      await supabase.from("outfits").insert({
+
+      let worn_description: string | null = null;
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const result = reader.result as string;
+            const comma = result.indexOf(",");
+            resolve(comma >= 0 ? result.slice(comma + 1) : result);
+          };
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(blob);
+        });
+        const { data: wornData, error: wornError } = await supabase.functions.invoke("wardrobe-ai", {
+          body: { action: "describe_worn", image_base64: base64, mime_type: mimeType, suggestion },
+        });
+        if (wornError) console.warn("describe_worn failed:", wornError);
+        else worn_description = wornData?.worn_description ?? null;
+      } catch (e) { console.warn("worn_description analysis skipped:", e); }
+
+      const { error: insertError } = await supabase.from("outfits").insert({
         user_id: user.id, photo_url: urlData.publicUrl,
         date: today.toISOString().split("T")[0], weather_data: weather,
         rating: rating || null, ai_suggestion: suggestion,
+        worn_description,
       });
+      if (insertError) throw insertError;
+
       setSaved(true);
       setPhotoUri(null);
       setRating(0);
       setTimeout(() => setSaved(false), 3000);
-    } catch { Alert.alert("Erreur", "Impossible de sauvegarder."); }
+    } catch (e: any) {
+      console.error("saveOutfit error:", e);
+      Alert.alert("Impossible de sauvegarder", e?.message ?? "Erreur inconnue");
+    }
     finally { setSaving(false); }
   }
 

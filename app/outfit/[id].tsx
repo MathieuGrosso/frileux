@@ -120,15 +120,23 @@ export default function OutfitDetailScreen() {
 
             <View style={styles.divider} />
 
-            {/* AI Suggestion */}
+            {/* AI Suggestion (what was suggested this morning) */}
             {outfit.ai_suggestion && (
               <View style={styles.suggestionSection}>
-                <Text style={styles.suggestionLabel}>SUGGESTION IA</Text>
+                <Text style={styles.suggestionLabel}>SUGGESTION DU MATIN</Text>
                 <Text style={styles.suggestionText}>{outfit.ai_suggestion}</Text>
               </View>
             )}
 
-            {outfit.ai_suggestion && <View style={styles.divider} />}
+            {/* Worn description (what was actually worn, from photo analysis) */}
+            {outfit.worn_description && (
+              <View style={styles.suggestionSection}>
+                <Text style={[styles.suggestionLabel, styles.wornLabel]}>CE QUE TU AS PORTÉ</Text>
+                <Text style={styles.suggestionText}>{outfit.worn_description}</Text>
+              </View>
+            )}
+
+            {(outfit.ai_suggestion || outfit.worn_description) && <View style={styles.divider} />}
 
             {/* Rating */}
             <View style={styles.section}>
@@ -307,6 +315,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginBottom: 12,
   },
+  wornLabel: { color: "#0F0F0D" },
   suggestionText: {
     fontFamily: "Jost_400Regular",
     fontSize: 14,
