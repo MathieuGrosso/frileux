@@ -20,6 +20,7 @@ import { comfortVerdict } from "@/lib/comfort";
 import type { ColdnessLevel, DayForecast, OutfitOccasion, ThermalFeeling, WeatherData } from "@/lib/types";
 import { OUTFIT_OCCASIONS, THERMAL_FEELINGS } from "@/lib/types";
 import { RatingStars } from "@/components/RatingStars";
+import { Skeleton } from "@/components/Skeleton";
 import { useRouter } from "expo-router";
 
 export default function TodayScreen() {
@@ -284,9 +285,13 @@ export default function TodayScreen() {
                 {loading ? "CHARGEMENT" : weather?.description?.toUpperCase() ?? "INDISPONIBLE"}
               </Text>
             </View>
-            <Text style={styles.tempDisplay}>
-              {loading ? "—" : weather ? `${weather.temp}°` : "—"}
-            </Text>
+            {loading ? (
+              <Skeleton style={styles.tempSkeleton} />
+            ) : (
+              <Text style={styles.tempDisplay}>
+                {weather ? `${weather.temp}°` : "—"}
+              </Text>
+            )}
             {forecast && (forecast.morning || forecast.midday || forecast.evening) && (
               <View style={styles.forecastRow}>
                 {forecast.morning && (
@@ -361,11 +366,7 @@ export default function TodayScreen() {
                   resizeMode="cover"
                 />
               ) : (
-                <View style={styles.suggestionImagePlaceholder}>
-                  {(imageLoading || (suggestion && !suggestionImage)) && (
-                    <ActivityIndicator size="small" color="#637D8E" />
-                  )}
-                </View>
+                <Skeleton style={styles.suggestionImageSkeleton} />
               )}
             </View>
 
@@ -566,6 +567,7 @@ const styles = StyleSheet.create({
     color: "#C4C0BC",
   },
   weatherAccent: { color: "#637D8E" },
+  tempSkeleton: { width: 140, height: 88, marginBottom: 14 },
 
   comfortRow: { marginBottom: 10 },
   comfortLabel: {
@@ -627,11 +629,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   suggestionImage: { width: "100%", height: "100%" },
-  suggestionImagePlaceholder: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  suggestionImageSkeleton: { width: "100%", height: "100%" },
 
   photoSection: { marginBottom: 24 },
   sectionLabel: {
