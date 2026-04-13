@@ -17,6 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { decode } from "base64-arraybuffer";
 import { supabase } from "@/lib/supabase";
 import { analyzeClothingImage, analyzeClothingDescription } from "@/lib/gemini";
@@ -53,8 +54,16 @@ export default function OnboardingItems() {
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
-    setItems((data as WardrobeItem[]) ?? []);
+    const fetched = (data as WardrobeItem[]) ?? [];
+    setItems(fetched);
     setLoading(false);
+
+    // Resume to last step if user already progressed past étape 01
+    if (fetched.length >= MIN_ITEMS) {
+      const lastStep = await AsyncStorage.getItem("@onboarding/last-step");
+      if (lastStep === "swipe") router.replace("/onboarding/swipe");
+      else if (lastStep === "profile") router.replace("/onboarding/profile");
+    }
   }
 
   async function handlePhoto(fromCamera: boolean) {
@@ -138,14 +147,27 @@ export default function OnboardingItems() {
   }
 
   async function skipOnboarding() {
+    const confirmed = await new Promise<boolean>((resolve) => {
+      Alert.alert(
+        "Passer l'onboarding ?",
+        "On ne pourra pas personnaliser tes suggestions. Tu pourras le refaire depuis Réglages.",
+        [
+          { text: "Annuler", style: "cancel", onPress: () => resolve(false) },
+          { text: "Passer quand même", style: "destructive", onPress: () => resolve(true) },
+        ]
+      );
+    });
+    if (!confirmed) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     await supabase.from("profiles").update({ onboarding_completed: true }).eq("id", user.id);
+    await AsyncStorage.removeItem("@onboarding/last-step");
     router.replace("/(tabs)");
   }
 
-  function goToSwipe() {
-    router.push("/onboarding/swipe");
+  async function goToProfile() {
+    await AsyncStorage.setItem("@onboarding/last-step", "profile");
+    router.push("/onboarding/profile");
   }
 
   if (loading) {
@@ -164,6 +186,7 @@ export default function OnboardingItems() {
         <View style={styles.progressWrap}>
           <View style={[styles.progressDot, styles.progressDotActive]} />
           <View style={styles.progressDot} />
+          <View style={styles.progressDot} />
         </View>
         <Pressable onPress={skipOnboarding} hitSlop={12}>
           <Text style={styles.skipText}>PASSER</Text>
@@ -171,7 +194,7 @@ export default function OnboardingItems() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.kicker}>ÉTAPE 01 / 02</Text>
+        <Text style={styles.kicker}>ÉTAPE 01 / 03</Text>
         <Text style={styles.title}>VESTIAIRE</Text>
         <Text style={styles.subtitle}>
           Ajoute au moins {MIN_ITEMS} pièces. On apprend ton style à partir de ce que tu portes.
@@ -260,7 +283,7 @@ export default function OnboardingItems() {
       <View style={styles.bottomBar}>
         <Pressable
           style={[styles.continueBtn, !canContinue && styles.continueBtnDisabled]}
-          onPress={goToSwipe}
+          onPress={goToProfile}
           disabled={!canContinue}
         >
           <Text style={[styles.continueText, !canContinue && styles.continueTextDisabled]}>

@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { View, Text, Pressable, Alert, Platform, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
+import { useOnboardingFlag } from "@/lib/onboarding-context";
 import type { ColdnessLevel } from "@/lib/types";
 
 const COLDNESS_LABELS: Record<ColdnessLevel, string> = {
@@ -23,6 +25,7 @@ const COLDNESS_EMOJIS: Record<ColdnessLevel, string> = {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { refresh: refreshOnboarding } = useOnboardingFlag();
   const [coldnessLevel, setColdnessLevel] = useState<ColdnessLevel>(3);
   const [username, setUsername] = useState("");
 
@@ -48,6 +51,32 @@ export default function SettingsScreen() {
       .from("profiles")
       .update({ coldness_level: level })
       .eq("id", (await supabase.auth.getUser()).data.user?.id);
+  }
+
+  async function resetOnboarding() {
+    const confirmed =
+      Platform.OS === "web"
+        ? window.confirm("Recommencer l'onboarding ? Tes pièces et préférences sont conservées.")
+        : await new Promise<boolean>((resolve) => {
+            Alert.alert(
+              "Recommencer l'onboarding",
+              "Tes pièces et préférences sont conservées.",
+              [
+                { text: "Annuler", style: "cancel", onPress: () => resolve(false) },
+                { text: "Recommencer", onPress: () => resolve(true) },
+              ]
+            );
+          });
+    if (!confirmed) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase
+      .from("profiles")
+      .update({ onboarding_completed: false })
+      .eq("id", user.id);
+    await AsyncStorage.removeItem("@onboarding/last-step");
+    await refreshOnboarding();
+    router.replace("/onboarding");
   }
 
   async function handleLogout() {
@@ -117,6 +146,16 @@ export default function SettingsScreen() {
               )}
             </Pressable>
           ))}
+        </View>
+
+        <View style={styles.divider} />
+
+        {/* Reset onboarding */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>DÉVELOPPEMENT</Text>
+          <Pressable onPress={resetOnboarding} style={styles.resetBtn}>
+            <Text style={styles.resetBtnText}>RECOMMENCER L'ONBOARDING</Text>
+          </Pressable>
         </View>
 
         <View style={styles.divider} />
@@ -228,6 +267,20 @@ const styles = StyleSheet.create({
     fontFamily: "Jost_500Medium",
     fontSize: 14,
     color: "#637D8E",
+  },
+
+  resetBtn: {
+    borderWidth: 1,
+    borderColor: "#0F0F0D",
+    paddingVertical: 16,
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+  },
+  resetBtnText: {
+    fontFamily: "BarlowCondensed_600SemiBold",
+    fontSize: 13,
+    letterSpacing: 1.4,
+    color: "#0F0F0D",
   },
 
   logoutBtn: {

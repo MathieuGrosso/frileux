@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import { generateOutfitCombos, generateMissingPieces } from "@/lib/gemini";
 import { SwipeCard } from "@/components/SwipeCard";
@@ -33,12 +34,17 @@ export default function OnboardingSwipe() {
   const [cursor, setCursor] = useState(0);
   const [loading, setLoading] = useState(true);
   const [finishing, setFinishing] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [prefsCount, setPrefsCount] = useState(0);
 
   useEffect(() => {
+    AsyncStorage.setItem("@onboarding/last-step", "swipe");
     load();
   }, []);
 
   async function load() {
+    setLoading(true);
+    setLoadFailed(false);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -68,7 +74,9 @@ export default function OnboardingSwipe() {
 
       const mixed = interleave(comboCards, pieceCards);
       setCards(mixed);
+      if (mixed.length === 0) setLoadFailed(true);
     } catch (e) {
+      setLoadFailed(true);
       Alert.alert("Erreur", e instanceof Error ? e.message : "Impossible de charger.");
     } finally {
       setLoading(false);
@@ -88,23 +96,36 @@ export default function OnboardingSwipe() {
   async function handleSwipe(accepted: boolean) {
     const card = cards[cursor];
     if (!card) return;
+    setCursor((c) => c + 1);
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      supabase
-        .from("outfit_preferences")
-        .insert({
-          user_id: user.id,
-          kind: card.kind,
-          payload: card.kind === "combo" ? card.combo : card.suggestion,
-          accepted,
-        })
-        .then(() => {});
+    if (!user) return;
+    try {
+      const { error } = await supabase.from("outfit_preferences").insert({
+        user_id: user.id,
+        kind: card.kind,
+        payload: card.kind === "combo" ? card.combo : card.suggestion,
+        accepted,
+      });
+      if (error) throw error;
+      setPrefsCount((c) => c + 1);
+    } catch {
+      Alert.alert("Hors-ligne", "Cette préférence n'a pas pu être enregistrée.");
     }
-    setCursor((c) => c + 1);
   }
 
-  async function finish() {
+  async function finish(force = false) {
+    if (!force && prefsCount === 0) {
+      Alert.alert(
+        "Aucune préférence enregistrée",
+        "On n'a rien appris sur ton goût. Essaye de swiper, ou force le passage.",
+        [
+          { text: "Continuer à swiper", style: "cancel" },
+          { text: "Forcer le passage", style: "destructive", onPress: () => finish(true) },
+        ]
+      );
+      return;
+    }
     setFinishing(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
@@ -113,7 +134,13 @@ export default function OnboardingSwipe() {
         .update({ onboarding_completed: true })
         .eq("id", user.id);
     }
+    await AsyncStorage.removeItem("@onboarding/last-step");
     router.replace("/(tabs)");
+  }
+
+  async function backToVestiaire() {
+    await AsyncStorage.setItem("@onboarding/last-step", "profile");
+    router.replace("/onboarding");
   }
 
   if (loading) {
@@ -122,6 +149,36 @@ export default function OnboardingSwipe() {
         <View style={styles.centered}>
           <ActivityIndicator color="#637D8E" />
           <Text style={styles.loadingText}>Gemini compose tes tenues…</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+        <View style={styles.topBar}>
+          <View style={styles.progressWrap}>
+            <View style={[styles.progressDot, styles.progressDotActive]} />
+            <View style={[styles.progressDot, styles.progressDotActive]} />
+            <View style={[styles.progressDot, styles.progressDotActive]} />
+          </View>
+          <Pressable onPress={backToVestiaire} hitSlop={12}>
+            <Text style={styles.backText}>← VESTIAIRE</Text>
+          </Pressable>
+        </View>
+        <View style={styles.failedWrap}>
+          <Text style={styles.kicker}>PROBLÈME</Text>
+          <Text style={styles.failedTitle}>ON N'A PAS PU GÉNÉRER TES SUGGESTIONS.</Text>
+          <Text style={styles.failedBody}>
+            Réseau ou IA indispo. Réessaye, ou entre quand même — tu pourras affiner plus tard.
+          </Text>
+          <Pressable style={styles.retryBtn} onPress={load}>
+            <Text style={styles.retryText}>RÉESSAYER</Text>
+          </Pressable>
+          <Pressable style={styles.skipBtn} onPress={() => finish(true)}>
+            <Text style={styles.skipBtnText}>ENTRER QUAND MÊME</Text>
+          </Pressable>
         </View>
       </SafeAreaView>
     );
@@ -136,14 +193,20 @@ export default function OnboardingSwipe() {
         <View style={styles.progressWrap}>
           <View style={[styles.progressDot, styles.progressDotActive]} />
           <View style={[styles.progressDot, styles.progressDotActive]} />
+          <View style={[styles.progressDot, styles.progressDotActive]} />
         </View>
-        <Text style={styles.counter}>
-          {Math.min(cursor + 1, cards.length)} / {cards.length}
-        </Text>
+        <View style={styles.topBarRight}>
+          <Pressable onPress={backToVestiaire} hitSlop={12}>
+            <Text style={styles.backText}>← AJOUTER</Text>
+          </Pressable>
+          <Text style={styles.counter}>
+            {Math.min(cursor + 1, cards.length)} / {cards.length}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.header}>
-        <Text style={styles.kicker}>ÉTAPE 02 / 02</Text>
+        <Text style={styles.kicker}>ÉTAPE 03 / 03</Text>
         <Text style={styles.title}>TON ŒIL</Text>
         <Text style={styles.subtitle}>
           Swipe → garder · Swipe ← passer. On affine les suggestions à ton goût.
@@ -180,7 +243,7 @@ export default function OnboardingSwipe() {
 
       <View style={styles.bottomBar}>
         {done ? (
-          <Pressable style={styles.finishBtn} onPress={finish} disabled={finishing}>
+          <Pressable style={styles.finishBtn} onPress={() => finish()} disabled={finishing}>
             <Text style={styles.finishText}>
               {finishing ? "…" : "ENTRER DANS L'APP →"}
             </Text>
@@ -260,6 +323,60 @@ const styles = StyleSheet.create({
   progressDot: { width: 24, height: 2, backgroundColor: "#E8E5DF" },
   progressDotActive: { backgroundColor: "#0F0F0D" },
   counter: { fontFamily: "Jost_500Medium", fontSize: 11, letterSpacing: 1.2, color: "#637D8E" },
+  topBarRight: { flexDirection: "row", alignItems: "center", gap: 14 },
+  backText: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 11,
+    letterSpacing: 1.2,
+    color: "#637D8E",
+  },
+  failedWrap: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    justifyContent: "center",
+  },
+  failedTitle: {
+    fontFamily: "BarlowCondensed_600SemiBold",
+    fontSize: 36,
+    letterSpacing: -0.5,
+    color: "#0F0F0D",
+    lineHeight: 40,
+    marginTop: 8,
+  },
+  failedBody: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 14,
+    lineHeight: 20,
+    color: "#0F0F0D",
+    marginTop: 16,
+    marginBottom: 28,
+  },
+  retryBtn: {
+    paddingVertical: 18,
+    alignItems: "center",
+    backgroundColor: "#0F0F0D",
+    marginBottom: 8,
+  },
+  retryText: {
+    fontFamily: "BarlowCondensed_600SemiBold",
+    fontSize: 16,
+    letterSpacing: 1.4,
+    color: "#FAFAF8",
+  },
+  skipBtn: {
+    paddingVertical: 16,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#0F0F0D",
+    backgroundColor: "#FFFFFF",
+  },
+  skipBtnText: {
+    fontFamily: "BarlowCondensed_500Medium",
+    fontSize: 13,
+    letterSpacing: 1.2,
+    color: "#0F0F0D",
+  },
   header: { paddingHorizontal: 24, paddingBottom: 16 },
   kicker: {
     fontFamily: "Jost_500Medium",
