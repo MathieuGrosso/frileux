@@ -8,21 +8,32 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/lib/supabase";
-import { getWeather, weatherEmoji } from "@/lib/weather";
-import type { WeatherData } from "@/lib/types";
+import { getDayForecast, getWeather, weatherEmoji } from "@/lib/weather";
+import { generateOutfitImage } from "@/lib/gemini";
+import { comfortVerdict } from "@/lib/comfort";
+import type { ColdnessLevel, DayForecast, OutfitOccasion, ThermalFeeling, WeatherData } from "@/lib/types";
+import { OUTFIT_OCCASIONS, THERMAL_FEELINGS } from "@/lib/types";
 import { RatingStars } from "@/components/RatingStars";
 import { useRouter } from "expo-router";
 
 export default function TodayScreen() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [forecast, setForecast] = useState<DayForecast | null>(null);
   const [suggestion, setSuggestion] = useState<string | null>(null);
+  const [suggestionImage, setSuggestionImage] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [rating, setRating] = useState(0);
+  const [occasion, setOccasion] = useState<OutfitOccasion | null>(null);
+  const [coldness, setColdness] = useState<ColdnessLevel | null>(null);
+  const [thermal, setThermal] = useState<ThermalFeeling | null>(null);
+  const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -68,9 +79,17 @@ export default function TodayScreen() {
         }
       }
 
-      const data = await getWeather(latitude, longitude);
+      if (latitude === null || longitude === null) return;
+      const lat = latitude;
+      const lon = longitude;
+
+      const data = await getWeather(lat, lon);
       setWeather(data);
       fetchSuggestion(data);
+
+      getDayForecast(lat, lon)
+        .then(setForecast)
+        .catch((err) => { if (__DEV__) console.warn("forecast failed:", err); });
 
       if (fromGeoloc) {
         const { data: { user } } = await supabase.auth.getUser();
@@ -92,6 +111,8 @@ export default function TodayScreen() {
       const { data: profile } = user
         ? await supabase.from("profiles").select("coldness_level").eq("id", user.id).maybeSingle()
         : { data: null };
+      const userColdness = (profile?.coldness_level ?? 3) as ColdnessLevel;
+      setColdness(userColdness);
 
       let recent_worn: string[] = [];
       if (user) {
@@ -113,7 +134,7 @@ export default function TodayScreen() {
       const { data, error } = await supabase.functions.invoke("suggest-outfit", {
         body: {
           weather: weatherData,
-          coldness_level: profile?.coldness_level ?? 3,
+          coldness_level: userColdness,
           recent_worn,
         },
       });
@@ -122,12 +143,28 @@ export default function TodayScreen() {
         setSuggestion("Suggestion indisponible.");
         return;
       }
-      if (data?.suggestion) setSuggestion(data.suggestion);
-      else setSuggestion("Suggestion indisponible.");
+      if (data?.suggestion) {
+        const cleaned = stripMarkdown(data.suggestion);
+        setSuggestion(cleaned);
+        setImageLoading(true);
+        generateOutfitImage(cleaned)
+          .then((url) => setSuggestionImage(url))
+          .catch((err) => { if (__DEV__) console.warn("outfit image failed:", err); })
+          .finally(() => setImageLoading(false));
+      } else setSuggestion("Suggestion indisponible.");
     } catch (e) {
       if (__DEV__) console.error("fetchSuggestion exception:", e);
       setSuggestion("Suggestion indisponible.");
     }
+  }
+
+  function stripMarkdown(text: string): string {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/\*(.*?)\*/g, "$1")
+      .replace(/^[-•]\s+/gm, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
   }
 
   async function takePhoto() {
@@ -190,13 +227,18 @@ export default function TodayScreen() {
         user_id: user.id, photo_url: urlData.publicUrl,
         date: today.toISOString().split("T")[0], weather_data: weather,
         rating: rating || null, ai_suggestion: suggestion,
-        worn_description,
+        worn_description, occasion,
+        thermal_feeling: thermal,
+        notes: notes.trim() || null,
       });
       if (insertError) throw insertError;
 
       setSaved(true);
       setPhotoUri(null);
       setRating(0);
+      setOccasion(null);
+      setThermal(null);
+      setNotes("");
       setTimeout(() => setSaved(false), 3000);
     } catch (e: any) {
       if (__DEV__) console.error("saveOutfit error:", e);
@@ -234,6 +276,45 @@ export default function TodayScreen() {
             <Text style={styles.tempDisplay}>
               {loading ? "—" : weather ? `${weather.temp}°` : "—"}
             </Text>
+            {forecast && (forecast.morning || forecast.midday || forecast.evening) && (
+              <View style={styles.forecastRow}>
+                {forecast.morning && (
+                  <View style={styles.forecastSlot}>
+                    <Text style={styles.forecastLabel}>MATIN</Text>
+                    <Text style={styles.forecastTemp}>{forecast.morning.temp}°</Text>
+                  </View>
+                )}
+                {forecast.morning && (forecast.midday || forecast.evening) && (
+                  <Text style={styles.forecastSep}>—</Text>
+                )}
+                {forecast.midday && (
+                  <View style={styles.forecastSlot}>
+                    <Text style={styles.forecastLabel}>MIDI</Text>
+                    <Text style={styles.forecastTemp}>{forecast.midday.temp}°</Text>
+                  </View>
+                )}
+                {forecast.midday && forecast.evening && (
+                  <Text style={styles.forecastSep}>—</Text>
+                )}
+                {forecast.evening && (
+                  <View style={styles.forecastSlot}>
+                    <Text style={styles.forecastLabel}>SOIR</Text>
+                    <Text style={styles.forecastTemp}>{forecast.evening.temp}°</Text>
+                  </View>
+                )}
+              </View>
+            )}
+            {weather && coldness && (
+              <View style={styles.comfortRow}>
+                <Text style={[
+                  styles.comfortLabel,
+                  comfortVerdict(weather.feels_like, coldness).tone === "cold" && styles.comfortCold,
+                  comfortVerdict(weather.feels_like, coldness).tone === "warm" && styles.comfortWarm,
+                ]}>
+                  {comfortVerdict(weather.feels_like, coldness).label.toUpperCase()}
+                </Text>
+              </View>
+            )}
             {weather && (
               <View style={styles.weatherMeta}>
                 <Text style={styles.weatherMetaText}>Ressenti {weather.feels_like}°</Text>
@@ -260,6 +341,23 @@ export default function TodayScreen() {
           {/* Suggestion */}
           <View style={styles.suggestionSection}>
             <Text style={styles.suggestionLabel}>SUGGESTION DU JOUR</Text>
+
+            <View style={styles.suggestionImageWrap}>
+              {suggestionImage ? (
+                <Image
+                  source={{ uri: suggestionImage }}
+                  style={styles.suggestionImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.suggestionImagePlaceholder}>
+                  {(imageLoading || (suggestion && !suggestionImage)) && (
+                    <ActivityIndicator size="small" color="#637D8E" />
+                  )}
+                </View>
+              )}
+            </View>
+
             {suggestion ? (
               <Text style={styles.suggestionText}>{suggestion}</Text>
             ) : (
@@ -309,8 +407,54 @@ export default function TodayScreen() {
             <>
               <View style={styles.divider} />
               <View style={styles.ratingSection}>
-                <Text style={styles.sectionLabel}>NOTE</Text>
+                <Text style={styles.sectionLabel}>OCCASION</Text>
+                <View style={styles.occasionRow}>
+                  {OUTFIT_OCCASIONS.map((opt) => {
+                    const active = occasion === opt.value;
+                    return (
+                      <Pressable
+                        key={opt.value}
+                        onPress={() => setOccasion(active ? null : opt.value)}
+                        style={[styles.occasionChip, active && styles.occasionChipActive]}
+                      >
+                        <Text style={[styles.occasionChipText, active && styles.occasionChipTextActive]}>
+                          {opt.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                <Text style={[styles.sectionLabel, { marginTop: 24 }]}>RESSENTI</Text>
+                <View style={styles.occasionRow}>
+                  {THERMAL_FEELINGS.map((opt) => {
+                    const active = thermal === opt.value;
+                    return (
+                      <Pressable
+                        key={opt.value}
+                        onPress={() => setThermal(active ? null : opt.value)}
+                        style={[styles.occasionChip, active && styles.occasionChipActive]}
+                      >
+                        <Text style={[styles.occasionChipText, active && styles.occasionChipTextActive]}>
+                          {opt.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                <Text style={[styles.sectionLabel, { marginTop: 24 }]}>NOTE</Text>
                 <RatingStars rating={rating} onRate={setRating} />
+
+                <Text style={[styles.sectionLabel, { marginTop: 24 }]}>COMMENTAIRE</Text>
+                <TextInput
+                  value={notes}
+                  onChangeText={setNotes}
+                  placeholder="Ce qui a marché, ce qui a manqué…"
+                  placeholderTextColor="#A8A49F"
+                  style={styles.notesInput}
+                  multiline
+                />
                 <Pressable
                   onPress={saveOutfit}
                   disabled={saving}
@@ -412,6 +556,41 @@ const styles = StyleSheet.create({
   },
   weatherAccent: { color: "#637D8E" },
 
+  comfortRow: { marginBottom: 10 },
+  comfortLabel: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 10,
+    letterSpacing: 1.8,
+    color: "#3A3836",
+  },
+  comfortCold: { color: "#637D8E" },
+  comfortWarm: { color: "#A36E3D" },
+
+  forecastRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 14,
+    marginBottom: 14,
+  },
+  forecastSlot: { flexDirection: "column", gap: 2 },
+  forecastLabel: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 9,
+    color: "#637D8E",
+    letterSpacing: 1.8,
+  },
+  forecastTemp: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 14,
+    color: "#3A3836",
+  },
+  forecastSep: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 14,
+    color: "#C4C0BC",
+    paddingBottom: 1,
+  },
+
   divider: { height: 1, backgroundColor: "#E8E5DF", marginBottom: 32 },
 
   suggestionSection: { marginBottom: 32 },
@@ -429,6 +608,19 @@ const styles = StyleSheet.create({
     lineHeight: 25,
   },
   suggestionMuted: { color: "#9E9A96" },
+
+  suggestionImageWrap: {
+    aspectRatio: 1,
+    backgroundColor: "#EFEBE5",
+    marginBottom: 16,
+    overflow: "hidden",
+  },
+  suggestionImage: { width: "100%", height: "100%" },
+  suggestionImagePlaceholder: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
   photoSection: { marginBottom: 24 },
   sectionLabel: {
@@ -475,6 +667,37 @@ const styles = StyleSheet.create({
   },
 
   ratingSection: { marginBottom: 16 },
+
+  occasionRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  occasionChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#E8E5DF",
+    backgroundColor: "#FFFFFF",
+  },
+  occasionChipActive: {
+    backgroundColor: "#0F0F0D",
+    borderColor: "#0F0F0D",
+  },
+  occasionChipText: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 12,
+    color: "#0F0F0D",
+  },
+  occasionChipTextActive: { color: "#FAFAF8" },
+
+  notesInput: {
+    borderWidth: 1,
+    borderColor: "#E8E5DF",
+    backgroundColor: "#FFFFFF",
+    padding: 12,
+    minHeight: 70,
+    fontFamily: "Jost_400Regular",
+    fontSize: 13,
+    color: "#0F0F0D",
+    textAlignVertical: "top",
+  },
   saveBtn: {
     backgroundColor: "#0F0F0D",
     paddingVertical: 18,

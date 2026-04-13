@@ -1,5 +1,8 @@
 import { supabase } from "./supabase";
-import type { WeatherData } from "./types";
+import type { DayForecast, DayForecastSlot, WeatherData } from "./types";
+
+const API_KEY = process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY;
+const BASE_URL = "https://api.openweathermap.org/data/2.5";
 
 export async function getWeather(
   lat: number,
@@ -11,6 +14,71 @@ export async function getWeather(
   if (error) throw new Error(`Erreur météo: ${error.message}`);
   if (!data) throw new Error("Erreur météo: réponse vide");
   return data as WeatherData;
+}
+
+interface ForecastEntry {
+  dt: number;
+  main: { temp: number };
+  weather: Array<{ icon: string; main: string }>;
+  rain?: { "3h"?: number };
+}
+
+interface ForecastResponse {
+  list: ForecastEntry[];
+  city: { timezone: number };
+}
+
+/**
+ * Fenetre meteo de la journee : matin (~9h), midi (~13h), soir (~19h)
+ * en heure locale du lieu. Granularite 3h via /forecast.
+ */
+export async function getDayForecast(
+  lat: number,
+  lon: number
+): Promise<DayForecast> {
+  const res = await fetch(
+    `${BASE_URL}/forecast?lat=${lat}&lon=${lon}&units=metric&lang=fr&appid=${API_KEY}`
+  );
+  if (!res.ok) throw new Error(`Erreur forecast: ${res.status}`);
+  const data: ForecastResponse = await res.json();
+  const tzShift = data.city.timezone;
+
+  const todayLocalDate = new Date(Date.now() + tzShift * 1000)
+    .toISOString()
+    .split("T")[0];
+
+  const todaySlots = data.list
+    .map((entry) => {
+      const local = new Date((entry.dt + tzShift) * 1000);
+      return {
+        entry,
+        localDate: local.toISOString().split("T")[0],
+        localHour: local.getUTCHours(),
+      };
+    })
+    .filter((s) => s.localDate === todayLocalDate);
+
+  function pickClosest(targetHour: number): DayForecastSlot | null {
+    if (todaySlots.length === 0) return null;
+    const best = todaySlots.reduce((a, b) =>
+      Math.abs(a.localHour - targetHour) <= Math.abs(b.localHour - targetHour)
+        ? a
+        : b
+    );
+    return {
+      hour: best.localHour,
+      temp: Math.round(best.entry.main.temp),
+      icon: best.entry.weather[0]?.icon ?? "01d",
+      rain:
+        !!best.entry.rain || best.entry.weather[0]?.main === "Rain",
+    };
+  }
+
+  return {
+    morning: pickClosest(9),
+    midday: pickClosest(13),
+    evening: pickClosest(19),
+  };
 }
 
 /** Get a weather emoji from the icon code */

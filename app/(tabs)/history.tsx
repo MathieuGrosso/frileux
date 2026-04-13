@@ -71,6 +71,11 @@ export default function HistoryScreen() {
               <RatingStars rating={item.rating} size="small" />
             </View>
           )}
+          {item.occasion && (
+            <Text style={styles.outfitOccasion}>
+              {item.occasion.toUpperCase()}
+            </Text>
+          )}
           {item.notes ? (
             <Text style={styles.outfitNotes} numberOfLines={2}>
               {item.notes}
@@ -189,6 +194,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#9E9A96",
     lineHeight: 20,
+  },
+  outfitOccasion: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 9,
+    color: "#637D8E",
+    letterSpacing: 1.6,
+    marginTop: 4,
   },
   empty: { alignItems: "center", paddingTop: 80 },
   emptyText: {

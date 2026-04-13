@@ -91,9 +91,16 @@ Météo du jour :
 ${weather.rain ? "- Il pleut" : ""}
 ${weather.snow ? "- Il neige" : ""}${recentBlock}
 
-Donne une suggestion de tenue COURTE (3-4 phrases max) en français. Pense en couches. Sois spécifique sur les types de vêtements (ex: "pull en laine épaisse" plutôt que juste "pull"). Adapte tes suggestions au fait que cette personne est ${coldnessDescriptions[coldness_level]} — elle a besoin de plus de couches et de chaleur que la moyenne.${recentBlock ? " Évite de proposer les mêmes pièces clés que ces derniers jours — varie les matières, couleurs et coupes." : ""}
+Donne une suggestion de tenue ULTRA COURTE en français (1 phrase, 20 mots max). Liste 4 à 6 pièces séparées par des virgules, dans l'ordre haut → bas (haut, bas, manteau si besoin, chaussures, accessoires). Sois spécifique sur les matières (ex: "pull laine épaisse" plutôt que "pull"). Adapte au fait que la personne est ${coldnessDescriptions[coldness_level]}.${recentBlock ? " Varie les matières, couleurs et coupes par rapport aux dernières tenues." : ""}
 
-Réponds UNIQUEMENT avec la suggestion, sans introduction ni conclusion.`;
+Règles strictes :
+- AUCUN markdown (pas de **, pas d'astérisques, pas de tirets en début de ligne).
+- Texte plat brut.
+- Pas d'introduction ni conclusion.
+- Pas d'emoji.
+
+Exemple de format attendu :
+Pull col roulé laine grise, jean droit brut, manteau en laine noire, bottines en cuir, écharpe en cachemire camel.`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",

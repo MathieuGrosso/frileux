@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Link } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState("");
@@ -40,7 +41,7 @@ export default function RegisterScreen() {
         style={styles.inner}
       >
         <View style={styles.brand}>
-          <Text style={styles.logo}>frileuse</Text>
+          <BrandLogo size="lg" />
           <Text style={styles.tagline}>crée ton compte</Text>
         </View>
 
@@ -101,13 +102,6 @@ const styles = StyleSheet.create({
   inner: { flex: 1, justifyContent: "center", paddingHorizontal: 32, gap: 48 },
 
   brand: { alignItems: "flex-start" },
-  logo: {
-    fontFamily: "BarlowCondensed_600SemiBold",
-    fontSize: 56,
-    color: "#0F0F0D",
-    letterSpacing: -1,
-    lineHeight: 56,
-  },
   tagline: {
     fontFamily: "Jost_400Regular",
     fontSize: 13,
