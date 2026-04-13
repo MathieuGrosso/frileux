@@ -1,5 +1,6 @@
 import { Tabs } from "expo-router";
 import { Text, View, StyleSheet } from "react-native";
+import { colors, fonts } from "@/lib/theme";
 
 function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
   return (
@@ -49,9 +50,9 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: "#FAFAF8",
+    backgroundColor: colors.paper[100],
     borderTopWidth: 1,
-    borderTopColor: "#E8E5DF",
+    borderTopColor: colors.paper[300],
     height: 80,
     paddingBottom: 8,
     paddingTop: 8,
@@ -67,13 +68,13 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   tabIconActive: {
-    backgroundColor: "#E8F1F6",
+    backgroundColor: colors.ice[100],
     borderWidth: 1,
-    borderColor: "#D5E4EE",
+    borderColor: colors.ice[200],
   },
   tabLabel: {
-    fontFamily: "Jost_500Medium",
+    fontFamily: fonts.bodyMedium,
     fontSize: 12,
-    color: "#0F0F0D",
+    color: colors.ink[900],
   },
 });
