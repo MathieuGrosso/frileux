@@ -52,6 +52,31 @@ export type SwipeCardPayload =
 export type ColdnessLevel = 1 | 2 | 3 | 4 | 5;
 // 1 = "un peu frileuse" → 5 = "je vis en doudoune"
 
+export type OutfitOccasion =
+  | "casual"
+  | "travail"
+  | "sortie"
+  | "soiree"
+  | "sport"
+  | "repos";
+
+export const OUTFIT_OCCASIONS: { value: OutfitOccasion; label: string }[] = [
+  { value: "casual", label: "Casual" },
+  { value: "travail", label: "Travail" },
+  { value: "sortie", label: "Sortie" },
+  { value: "soiree", label: "Soirée" },
+  { value: "sport", label: "Sport" },
+  { value: "repos", label: "Repos" },
+];
+
+export type ThermalFeeling = "too_cold" | "just_right" | "too_warm";
+
+export const THERMAL_FEELINGS: { value: ThermalFeeling; label: string }[] = [
+  { value: "too_cold", label: "Trop froid" },
+  { value: "just_right", label: "Pile bien" },
+  { value: "too_warm", label: "Trop chaud" },
+];
+
 export interface Outfit {
   id: string;
   user_id: string;
@@ -62,7 +87,22 @@ export interface Outfit {
   notes: string | null;
   ai_suggestion: string | null;
   worn_description: string | null;
+  occasion: OutfitOccasion | null;
+  thermal_feeling: ThermalFeeling | null;
   created_at: string;
+}
+
+export interface DayForecastSlot {
+  hour: number;
+  temp: number;
+  icon: string;
+  rain: boolean;
+}
+
+export interface DayForecast {
+  morning: DayForecastSlot | null;
+  midday: DayForecastSlot | null;
+  evening: DayForecastSlot | null;
 }
 
 export interface WeatherData {

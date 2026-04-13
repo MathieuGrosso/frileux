@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import type { Outfit } from "@/lib/types";
 import { weatherEmoji } from "@/lib/weather";
 import { RatingStars } from "@/components/RatingStars";
+import { EmptyState } from "@/components/EmptyState";
 
 export default function HistoryScreen() {
   const [outfits, setOutfits] = useState<Outfit[]>([]);
@@ -71,6 +72,11 @@ export default function HistoryScreen() {
               <RatingStars rating={item.rating} size="small" />
             </View>
           )}
+          {item.occasion && (
+            <Text style={styles.outfitOccasion}>
+              {item.occasion.toUpperCase()}
+            </Text>
+          )}
           {item.notes ? (
             <Text style={styles.outfitNotes} numberOfLines={2}>
               {item.notes}
@@ -112,11 +118,13 @@ export default function HistoryScreen() {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>
-              {loading ? "—" : "Pas encore de tenue.\nPrends ta première photo."}
-            </Text>
-          </View>
+          loading ? null : (
+            <EmptyState
+              title="Aucune tenue"
+              subtitle="Tes prochaines tenues s'archiveront ici. Prends ta première photo depuis Aujourd'hui."
+              cta={{ label: "Aller à aujourd'hui", onPress: () => router.replace("/(tabs)") }}
+            />
+          )
         }
       />
     </SafeAreaView>
@@ -189,6 +197,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#9E9A96",
     lineHeight: 20,
+  },
+  outfitOccasion: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 9,
+    color: "#637D8E",
+    letterSpacing: 1.6,
+    marginTop: 4,
   },
   empty: { alignItems: "center", paddingTop: 80 },
   emptyText: {

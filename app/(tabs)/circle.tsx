@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
 import type { OutfitWithProfile, Circle } from "@/lib/types";
 import { weatherEmoji } from "@/lib/weather";
+import { EmptyState } from "@/components/EmptyState";
 
 export default function CircleScreen() {
   const [circle, setCircle] = useState<Circle | null>(null);
@@ -219,11 +220,12 @@ export default function CircleScreen() {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>
-              {loading ? "—" : "Personne n'a posté aujourd'hui.\nSois la première !"}
-            </Text>
-          </View>
+          loading ? null : (
+            <EmptyState
+              title="Personne aujourd'hui"
+              subtitle="Aucun membre du cercle n'a encore partagé sa tenue. Sois la première."
+            />
+          )
         }
       />
     </SafeAreaView>
