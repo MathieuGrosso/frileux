@@ -2,6 +2,7 @@ import { View, Text, Image, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import type { OutfitWithProfile } from "@/lib/types";
 import { weatherEmoji } from "@/lib/weather";
+import { MemberAvatar } from "./MemberAvatar";
 
 interface Props {
   outfit: OutfitWithProfile;
@@ -17,7 +18,6 @@ function formatTime(iso: string): string {
 
 export function CircleOutfitCard({ outfit, isFirst = false }: Props) {
   const router = useRouter();
-  const initial = outfit.profile?.username?.[0]?.toUpperCase() ?? "?";
   const username = outfit.profile?.username ?? "Anonyme";
   const temp = outfit.weather_data?.temp;
   const icon = outfit.weather_data?.icon ?? "01d";
@@ -29,11 +29,11 @@ export function CircleOutfitCard({ outfit, isFirst = false }: Props) {
       className="mb-8 active:opacity-70"
     >
       <View className="flex-row items-center gap-2.5 mb-3">
-        <View className="w-7 h-7 bg-ice-100 border border-ice-200 items-center justify-center">
-          <Text className="font-body-semibold text-ice-600 text-[11px]">
-            {initial}
-          </Text>
-        </View>
+        <MemberAvatar
+          username={outfit.profile?.username}
+          avatarUrl={outfit.profile?.avatar_url}
+          size={28}
+        />
         <View className="flex-1">
           <Text className="font-body-medium text-ink-900 text-[13px]">
             {username}
