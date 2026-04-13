@@ -304,6 +304,9 @@ enabled = false
 [functions.suggest-outfit]
 verify_jwt = false
 
+[functions.wardrobe-ai]
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.
