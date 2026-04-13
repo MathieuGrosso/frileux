@@ -23,6 +23,7 @@ import { supabase } from "@/lib/supabase";
 import { analyzeClothingImage, analyzeClothingDescription } from "@/lib/gemini";
 import type { WardrobeItem, ClothingAnalysis, WardrobeItemType } from "@/lib/types";
 import RefineImageModal from "@/components/RefineImageModal";
+import { BrandLogo } from "@/components/BrandLogo";
 
 const MIN_ITEMS = 3;
 const TYPE_LABELS: Record<WardrobeItemType, string> = {
@@ -182,6 +183,9 @@ export default function OnboardingItems() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <View style={styles.brandRow}>
+        <BrandLogo size="sm" showWordmark={false} />
+      </View>
       <View style={styles.topBar}>
         <View style={styles.progressWrap}>
           <View style={[styles.progressDot, styles.progressDotActive]} />
@@ -345,6 +349,7 @@ export default function OnboardingItems() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FAFAF8" },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FAFAF8" },
+  brandRow: { alignItems: "center", paddingTop: 8, paddingBottom: 4 },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
