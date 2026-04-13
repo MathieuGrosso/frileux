@@ -7,6 +7,7 @@ import {
   Pressable,
   TextInput,
   Alert,
+  Share,
   StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -200,7 +201,15 @@ export default function CircleScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>CERCLE</Text>
-        <Text style={styles.inviteCode}>Code : {circle?.invite_code}</Text>
+        <Pressable
+          onPress={() => {
+            if (circle?.invite_code) {
+              Share.share({ message: `Rejoins mon cercle Frileuse — code : ${circle.invite_code}` });
+            }
+          }}
+        >
+          <Text style={styles.inviteCode}>Code : {circle?.invite_code}  ↗</Text>
+        </Pressable>
       </View>
 
       <FlatList
@@ -326,7 +335,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: 0,
     backgroundColor: "#E8F1F6",
     alignItems: "center",
     justifyContent: "center",
