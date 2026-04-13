@@ -15,7 +15,8 @@ import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/lib/supabase";
 import { getDayForecast, getWeather, weatherEmoji } from "@/lib/weather";
 import { generateOutfitImage } from "@/lib/gemini";
-import type { DayForecast, OutfitOccasion, WeatherData } from "@/lib/types";
+import { comfortVerdict } from "@/lib/comfort";
+import type { ColdnessLevel, DayForecast, OutfitOccasion, WeatherData } from "@/lib/types";
 import { OUTFIT_OCCASIONS } from "@/lib/types";
 import { RatingStars } from "@/components/RatingStars";
 import { useRouter } from "expo-router";
@@ -29,6 +30,7 @@ export default function TodayScreen() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [rating, setRating] = useState(0);
   const [occasion, setOccasion] = useState<OutfitOccasion | null>(null);
+  const [coldness, setColdness] = useState<ColdnessLevel | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -100,6 +102,8 @@ export default function TodayScreen() {
       const { data: profile } = user
         ? await supabase.from("profiles").select("coldness_level").eq("id", user.id).maybeSingle()
         : { data: null };
+      const userColdness = (profile?.coldness_level ?? 3) as ColdnessLevel;
+      setColdness(userColdness);
 
       let recent_worn: string[] = [];
       if (user) {
@@ -121,7 +125,7 @@ export default function TodayScreen() {
       const { data, error } = await supabase.functions.invoke("suggest-outfit", {
         body: {
           weather: weatherData,
-          coldness_level: profile?.coldness_level ?? 3,
+          coldness_level: userColdness,
           recent_worn,
         },
       });
@@ -285,6 +289,17 @@ export default function TodayScreen() {
                     <Text style={styles.forecastTemp}>{forecast.evening.temp}°</Text>
                   </View>
                 )}
+              </View>
+            )}
+            {weather && coldness && (
+              <View style={styles.comfortRow}>
+                <Text style={[
+                  styles.comfortLabel,
+                  comfortVerdict(weather.feels_like, coldness).tone === "cold" && styles.comfortCold,
+                  comfortVerdict(weather.feels_like, coldness).tone === "warm" && styles.comfortWarm,
+                ]}>
+                  {comfortVerdict(weather.feels_like, coldness).label.toUpperCase()}
+                </Text>
               </View>
             )}
             {weather && (
@@ -499,6 +514,16 @@ const styles = StyleSheet.create({
     color: "#C4C0BC",
   },
   weatherAccent: { color: "#637D8E" },
+
+  comfortRow: { marginBottom: 10 },
+  comfortLabel: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 10,
+    letterSpacing: 1.8,
+    color: "#3A3836",
+  },
+  comfortCold: { color: "#637D8E" },
+  comfortWarm: { color: "#A36E3D" },
 
   forecastRow: {
     flexDirection: "row",
