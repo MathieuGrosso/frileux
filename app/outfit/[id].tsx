@@ -24,6 +24,7 @@ export default function OutfitDetailScreen() {
   const [rating, setRating] = useState(0);
   const [notes, setNotes] = useState("");
   const [editing, setEditing] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => { loadOutfit(); }, [id]);
 
@@ -33,6 +34,8 @@ export default function OutfitDetailScreen() {
       setOutfit(data);
       setRating(data.rating ?? 0);
       setNotes(data.notes ?? "");
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsOwner(!!user && user.id === data.user_id);
     }
   }
 
@@ -166,7 +169,8 @@ export default function OutfitDetailScreen() {
               )}
             </View>
 
-            {/* Actions */}
+            {/* Actions — owner only */}
+            {isOwner && (
             <View style={styles.actions}>
               {editing ? (
                 <>
@@ -204,6 +208,7 @@ export default function OutfitDetailScreen() {
                 </>
               )}
             </View>
+            )}
 
             <View style={{ height: 40 }} />
           </View>

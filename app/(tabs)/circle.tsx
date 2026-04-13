@@ -40,7 +40,12 @@ export default function CircleScreen() {
       {circle && <CircleFeedHeader circle={circle} />}
       <FlatList
         data={outfits}
-        renderItem={({ item }) => <CircleOutfitCard outfit={item} />}
+        renderItem={({ item, index }) => (
+          <CircleOutfitCard
+            outfit={item}
+            isFirst={index === outfits.length - 1 && outfits.length > 1}
+          />
+        )}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
         showsVerticalScrollIndicator={false}
