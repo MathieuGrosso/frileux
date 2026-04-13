@@ -57,3 +57,66 @@ components/             # Composants réutilisables
 lib/                    # Supabase client, API météo, types
 supabase/               # Migrations + Edge Functions
 ```
+
+## Déploiement
+
+### Web (live)
+
+URL prod : **https://frileuse.expo.app** (EAS Hosting)
+
+```bash
+npx expo export --platform web
+eas deploy --prod
+```
+
+Native modules (caméra, géoloc, notifs) dégradés sur web — fallbacks navigateur.
+
+### Partage rapide via Expo Go (sans compte Apple)
+
+Ami sur le même WiFi :
+```bash
+npx expo start
+```
+
+Ami à distance (nécessite ngrok dispo) :
+```bash
+npx expo start --tunnel
+```
+
+L'ami installe **Expo Go** depuis l'App Store, scanne le QR. Ton Mac doit rester allumé.
+
+### EAS Update (preview / dev clients)
+
+```bash
+eas update --branch preview --message "..."
+```
+
+Pousse un nouveau bundle JS aux builds dev/preview installés. Ne crée pas de nouveau binaire.
+
+### iOS TestFlight
+
+Pré-requis : compte **Apple Developer** validé (99 €/an, enrollment sur https://developer.apple.com/programs/enroll/, Individual, validation 24–48h).
+
+```bash
+eas credentials                                       # une seule fois — EAS gère certif + provisioning
+eas build --platform ios --profile production         # ~15–20 min sur serveurs Expo
+eas submit --platform ios --latest                    # upload App Store Connect
+```
+
+Ensuite sur **App Store Connect → TestFlight** : remplir la fiche test, ajouter testeurs internes par email Apple, ils reçoivent l'invit.
+
+### Profils EAS Build
+
+Définis dans [`eas.json`](./eas.json) :
+
+- `development` — dev client + simulateur iOS
+- `preview` — build ad-hoc, distribution interne (UDID requis)
+- `production` — store, auto-increment `buildNumber`
+
+### Bump version
+
+- `app.json` → `expo.version` (user-facing, ex: `1.0.0`)
+- `app.json` → `expo.ios.buildNumber` (auto-incrémenté en profile production)
+
+Voir [`DEPLOY.md`](./DEPLOY.md) pour les commandes courtes.
+
