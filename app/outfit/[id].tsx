@@ -7,6 +7,7 @@ import {
   TextInput,
   Pressable,
   Alert,
+  ActivityIndicator,
   StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -68,7 +69,7 @@ export default function OutfitDetailScreen() {
     return (
       <View style={styles.container}>
         <SafeAreaView style={styles.loadingCenter}>
-          <Text style={styles.loadingText}>—</Text>
+          <ActivityIndicator size="small" color="#637D8E" />
         </SafeAreaView>
       </View>
     );

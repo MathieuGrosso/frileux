@@ -6,6 +6,7 @@ import {
   ScrollView,
   Image,
   Alert,
+  ActivityIndicator,
   StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -49,7 +50,7 @@ export default function TodayScreen() {
           longitude = location.coords.longitude;
           fromGeoloc = true;
         } catch (geoErr) {
-          console.warn("Géoloc indisponible, fallback profil/Paris:", geoErr);
+          if (__DEV__) console.warn("Géoloc indisponible, fallback profil/Paris:", geoErr);
         }
       }
 
@@ -75,7 +76,7 @@ export default function TodayScreen() {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) supabase.from("profiles").update({ last_latitude: latitude, last_longitude: longitude }).eq("id", user.id);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { if (__DEV__) console.error(e); }
     finally { setLoading(false); }
   }
 
@@ -89,14 +90,14 @@ export default function TodayScreen() {
         body: { weather: weatherData, coldness_level: profile?.coldness_level ?? 3 },
       });
       if (error) {
-        console.error("suggest-outfit error:", error);
+        if (__DEV__) console.error("suggest-outfit error:", error);
         setSuggestion("Suggestion indisponible.");
         return;
       }
       if (data?.suggestion) setSuggestion(data.suggestion);
       else setSuggestion("Suggestion indisponible.");
     } catch (e) {
-      console.error("fetchSuggestion exception:", e);
+      if (__DEV__) console.error("fetchSuggestion exception:", e);
       setSuggestion("Suggestion indisponible.");
     }
   }
@@ -130,7 +131,11 @@ export default function TodayScreen() {
       const { error: uploadError } = await supabase.storage
         .from("outfits")
         .upload(fileName, blob, { contentType: mimeType });
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        Alert.alert("Upload échoué", "Réessaye dans un instant.");
+        setSaving(false);
+        return;
+      }
 
       const { data: urlData } = supabase.storage.from("outfits").getPublicUrl(fileName);
 
@@ -149,9 +154,9 @@ export default function TodayScreen() {
         const { data: wornData, error: wornError } = await supabase.functions.invoke("wardrobe-ai", {
           body: { action: "describe_worn", image_base64: base64, mime_type: mimeType, suggestion },
         });
-        if (wornError) console.warn("describe_worn failed:", wornError);
+        if (wornError) { if (__DEV__) console.warn("describe_worn failed:", wornError); }
         else worn_description = wornData?.worn_description ?? null;
-      } catch (e) { console.warn("worn_description analysis skipped:", e); }
+      } catch (e) { if (__DEV__) console.warn("worn_description analysis skipped:", e); }
 
       const { error: insertError } = await supabase.from("outfits").insert({
         user_id: user.id, photo_url: urlData.publicUrl,
@@ -166,7 +171,7 @@ export default function TodayScreen() {
       setRating(0);
       setTimeout(() => setSaved(false), 3000);
     } catch (e: any) {
-      console.error("saveOutfit error:", e);
+      if (__DEV__) console.error("saveOutfit error:", e);
       Alert.alert("Impossible de sauvegarder", e?.message ?? "Erreur inconnue");
     }
     finally { setSaving(false); }
@@ -227,9 +232,16 @@ export default function TodayScreen() {
           {/* Suggestion */}
           <View style={styles.suggestionSection}>
             <Text style={styles.suggestionLabel}>SUGGESTION DU JOUR</Text>
-            <Text style={[styles.suggestionText, !suggestion && styles.suggestionMuted]}>
-              {suggestion ?? (loading ? "Récupération de la météo…" : "Génération en cours…")}
-            </Text>
+            {suggestion ? (
+              <Text style={styles.suggestionText}>{suggestion}</Text>
+            ) : (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <ActivityIndicator size="small" color="#637D8E" />
+                <Text style={[styles.suggestionText, styles.suggestionMuted]}>
+                  {loading ? "Récupération de la météo…" : "Génération en cours…"}
+                </Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.divider} />
