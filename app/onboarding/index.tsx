@@ -16,7 +16,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { decode } from "base64-arraybuffer";
 import { supabase } from "@/lib/supabase";
@@ -76,20 +75,21 @@ export default function OnboardingItems() {
     if (perm.status !== "granted") return;
 
     const result = fromCamera
-      ? await ImagePicker.launchCameraAsync({ quality: 0.85, base64: false })
+      ? await ImagePicker.launchCameraAsync({ quality: 0.85, base64: true })
       : await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ["images"],
           quality: 0.85,
-          base64: false,
+          base64: true,
         });
     if (result.canceled) return;
-    const uri = result.assets[0].uri;
+    const base64 = result.assets[0].base64;
+    if (!base64) {
+      Alert.alert("Erreur", "Image illisible.");
+      return;
+    }
 
     setAnalyzing(true);
     try {
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: "base64",
-      });
       const analysis = await analyzeClothingImage(base64);
 
       const { data: { user } } = await supabase.auth.getUser();
