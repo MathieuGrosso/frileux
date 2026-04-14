@@ -80,6 +80,8 @@ eas deploy           # sans --prod → URL de preview uniquement
 
 Dashboard des déploiements : https://expo.dev/accounts/batmat9/projects/frileuse/hosting/deployments
 
+**CD automatique** : push sur `main` → déploie en prod (`.github/workflows/deploy-web.yml`). Chaque PR → URL de preview éphémère commentée sur la PR (`.github/workflows/preview-web.yml`). Requiert le secret GitHub `EXPO_TOKEN`.
+
 Native modules (caméra, géoloc, notifs) dégradés sur web — fallbacks navigateur.
 
 ### Partage rapide via Expo Go (sans compte Apple)
