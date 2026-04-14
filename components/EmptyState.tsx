@@ -1,5 +1,4 @@
 import { View, Text, Pressable } from "react-native";
-import { PressableScale } from "@/components/ui/PressableScale";
 
 interface Props {
   title: string;
@@ -19,11 +18,11 @@ export function EmptyState({ title, subtitle, cta }: Props) {
         </Text>
       ) : null}
       {cta ? (
-        <PressableScale onPress={cta.onPress} hitSlop={12}>
+        <Pressable onPress={cta.onPress} hitSlop={12}>
           <Text className="font-body-medium text-eyebrow text-ice uppercase underline mt-2">
             {cta.label}
           </Text>
-        </PressableScale>
+        </Pressable>
       ) : null}
     </View>
   );

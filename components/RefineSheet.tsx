@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { PressableScale } from "@/components/ui/PressableScale";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { REJECTION_REASONS, type RejectionReason } from "@/lib/rejections";
 import { colors } from "@/lib/theme";
@@ -57,9 +56,9 @@ export function RefineSheet({
           >
             <View className="flex-row justify-between items-center px-6 pt-2 pb-4 border-b border-paper-300">
               <Text className="font-body-medium text-eyebrow text-ink-900">RAFFINER</Text>
-              <PressableScale onPress={onClose} hitSlop={12}>
+              <Pressable onPress={onClose} hitSlop={12}>
                 <Text className="font-body-medium text-eyebrow text-ice">FERMER</Text>
-              </PressableScale>
+              </Pressable>
             </View>
 
             <ScrollView
@@ -71,14 +70,14 @@ export function RefineSheet({
               </Text>
               <View className="flex-row flex-wrap" style={{ gap: 6 }}>
                 {REJECTION_REASONS.filter((r) => r.value !== "autre").map((opt) => (
-                  <PressableScale
+                  <Pressable
                     key={opt.value}
                     onPress={() => onRefine({ reason: opt.value })}
                     disabled={refining}
                     className={`py-2 px-3 border border-paper-300 bg-paper-50 ${refining ? "opacity-50" : "active:bg-paper-200"}`}
                   >
                     <Text className="font-body text-xs text-ink-900">{opt.label}</Text>
-                  </PressableScale>
+                  </Pressable>
                 ))}
               </View>
 
@@ -91,7 +90,7 @@ export function RefineSheet({
                     {favoriteBrands.map((brand) => {
                       const active = steerBrands.includes(brand);
                       return (
-                        <PressableScale
+                        <Pressable
                           key={brand}
                           onPress={() => onToggleBrand(brand)}
                           disabled={refining}
@@ -100,7 +99,7 @@ export function RefineSheet({
                           <Text className={`font-body text-xs ${active ? "text-paper" : "text-ink-900"}`}>
                             {brand}
                           </Text>
-                        </PressableScale>
+                        </Pressable>
                       );
                     })}
                   </View>
@@ -123,7 +122,7 @@ export function RefineSheet({
             </ScrollView>
 
             <View className="px-6 pt-3 pb-4 border-t border-paper-300 bg-paper">
-              <PressableScale
+              <Pressable
                 onPress={() =>
                   onRefine({ reason: null, steerText, steerBrands })
                 }
@@ -135,7 +134,7 @@ export function RefineSheet({
                 <Text className="font-body-semibold text-eyebrow text-paper">
                   {refining ? "…" : "RAFFINER"}
                 </Text>
-              </PressableScale>
+              </Pressable>
             </View>
           </KeyboardAvoidingView>
         </SafeAreaView>

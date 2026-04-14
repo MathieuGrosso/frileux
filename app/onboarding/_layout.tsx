@@ -6,8 +6,7 @@ export default function OnboardingLayout() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: "#FAFAF8" },
-        animation: "slide_from_right",
-        animationDuration: 220,
+        animation: "fade",
       }}
     />
   );
