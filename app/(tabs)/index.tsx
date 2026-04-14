@@ -649,16 +649,8 @@ export default function TodayScreen() {
             )}
 
             {adopted && (
-              <View className="mt-5" style={{ gap: 8 }}>
-                <Pressable
-                  onPress={scrollToPhoto}
-                  className="py-[14px] items-center border border-paper-300 bg-paper active:bg-paper-200"
-                >
-                  <Text className="font-body-medium text-eyebrow text-ink-700">
-                    PHOTOGRAPHIER LA TENUE
-                  </Text>
-                </Pressable>
-                <Pressable onPress={unadoptSuggestion} className="py-2 items-center">
+              <View className="mt-4 items-start">
+                <Pressable onPress={unadoptSuggestion} hitSlop={8}>
                   <Text className="font-body-medium text-micro text-ink-300">
                     CHANGER D'AVIS
                   </Text>
