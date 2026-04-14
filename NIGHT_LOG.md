@@ -223,3 +223,16 @@ Format par session :
 - F14 challenges du jour (edge function + streak).
 - F15 feed « Pour toi » cross-public-circles.
 - F18 voice notes (expo-audio + waveform 1px).
+
+### Extension session (suite)
+- F7 ✅ Présence — hook `usePresence` basé sur canal Realtime `user_presence` partagé (un seul channel pour toute l'app). Composant `PresenceDot` (6px ice-600). Branché dans DM list + profile header.
+- F8 ✅ Réactions messages — migration `026`, set fermé 5 clés (`fire`, `eye`, `snow`, `heart`, `spark`) rendues avec glyphs mono (△◎✸♡✦) pour éviter le vibe emoji consumer. Composants `MessageReactions` (aggrège counts, max 3 + N) et `ReactionPicker` (modal bottom sheet 5 boutons 56px sharp + DELETE owner). Chat: long-press → picker.
+- F15 ✅ Feed « POUR TOI » — hook `usePublicFeed` (query cross-cercles publics, paginé 30). Écran `/circle/feed` grille 2 col (1.3 ratio) + refresh + infinite scroll. Toggle POUR TOI ↔ CERCLES en haut des deux écrans de discovery.
+- F16 ✅ Follow graph — migration `027`, hook `useFollow` (counts + toggle). Compteurs FOLLOWERS / SUIVIS en Barlow 24 dans profile. Bouton SUIVRE ice-100 / SUIVI ✓ outline ink-900.
+- F21 ✅ Statuts utilisateur 24h — même migration `027`. Écran `/status/edit` (TextInput italic Barlow 24, upsert avec expires_at +24h, bouton EFFACER). Affichage dans profile en italique ice-600 avec guillemets français.
+
+### Bilan session
+- 11 commits · 5 migrations (023-027) · 10 features livrées.
+- typecheck vert à chaque commit.
+- PR #102 en **ready for review** (non-draft) + merge de main.
+- Feedback PR workflow respecté : merge main fait avant passage ready.
