@@ -3,11 +3,6 @@ name: Deploy Web (prod)
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "**/*.md"
-      - "NIGHT_LOG.md"
-      - "BACKLOG.md"
-      - ".github/ISSUE_TEMPLATE/**"
   workflow_dispatch:
 
 concurrency:
