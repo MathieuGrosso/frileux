@@ -78,10 +78,14 @@ export default function TodayScreen() {
       }
 
       if (latitude === null || longitude === null) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("last_latitude, last_longitude")
-          .single();
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: profile } = user
+          ? await supabase
+              .from("profiles")
+              .select("last_latitude, last_longitude")
+              .eq("id", user.id)
+              .maybeSingle()
+          : { data: null };
         if (profile?.last_latitude && profile?.last_longitude) {
           latitude = profile.last_latitude;
           longitude = profile.last_longitude;
