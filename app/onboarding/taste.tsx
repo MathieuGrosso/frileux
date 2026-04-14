@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
-import type { Brand, Build, FitPreference, GenderPresentation } from "@/lib/types";
+import type { Build, FitPreference, GenderPresentation } from "@/lib/types";
 import { colors } from "@/lib/theme";
 
 const STYLE_UNIVERSES = [
@@ -67,29 +67,23 @@ export default function OnboardingTaste() {
 
   const [gender, setGender] = useState<GenderPresentation | null>(null);
   const [universes, setUniverses] = useState<string[]>([]);
-  const [brands, setBrands] = useState<string[]>([]);
   const [avoid, setAvoid] = useState<string[]>([]);
   const [fit, setFit] = useState<FitPreference | null>(null);
   const [build, setBuild] = useState<Build | null>(null);
   const [heightStr, setHeightStr] = useState("");
   const [shoeStr, setShoeStr] = useState("");
-
-  const [brandQuery, setBrandQuery] = useState("");
-  const [brandResults, setBrandResults] = useState<Brand[]>([]);
-  const [searching, setSearching] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!isUpgrade) AsyncStorage.setItem("@onboarding/last-step", "taste");
     supabase
       .from("profiles")
-      .select("gender_presentation, style_universes, favorite_brands, avoid_tags, fit_preference, build, height_cm, shoe_size_eu")
+      .select("gender_presentation, style_universes, avoid_tags, fit_preference, build, height_cm, shoe_size_eu")
       .single()
       .then(({ data }) => {
         if (!data) return;
         if (data.gender_presentation) setGender(data.gender_presentation as GenderPresentation);
         if (Array.isArray(data.style_universes)) setUniverses(data.style_universes);
-        if (Array.isArray(data.favorite_brands)) setBrands(data.favorite_brands);
         if (Array.isArray(data.avoid_tags)) setAvoid(data.avoid_tags);
         if (data.fit_preference) setFit(data.fit_preference as FitPreference);
         if (data.build) setBuild(data.build as Build);
@@ -98,32 +92,6 @@ export default function OnboardingTaste() {
       });
   }, [isUpgrade]);
 
-  useEffect(() => {
-    const q = brandQuery.trim();
-    if (q.length < 2) {
-      setBrandResults([]);
-      return;
-    }
-    let cancelled = false;
-    setSearching(true);
-    const timer = setTimeout(async () => {
-      const { data } = await supabase
-        .from("brands")
-        .select("id, name, slug, universe, tier")
-        .ilike("name", `%${q}%`)
-        .order("name")
-        .limit(8);
-      if (!cancelled) {
-        setBrandResults((data as Brand[]) ?? []);
-        setSearching(false);
-      }
-    }, 200);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [brandQuery]);
-
   const toggleUniverse = (u: string) =>
     setUniverses((prev) =>
       prev.includes(u) ? prev.filter((x) => x !== u) : prev.length >= 5 ? prev : [...prev, u]
@@ -131,16 +99,6 @@ export default function OnboardingTaste() {
 
   const toggleAvoid = (a: string) =>
     setAvoid((prev) => (prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]));
-
-  const addBrand = (name: string) => {
-    if (brands.includes(name) || brands.length >= 10) return;
-    setBrands((prev) => [...prev, name]);
-    setBrandQuery("");
-    setBrandResults([]);
-  };
-
-  const removeBrand = (name: string) =>
-    setBrands((prev) => prev.filter((b) => b !== name));
 
   async function saveAndContinue() {
     setSaving(true);
@@ -154,7 +112,6 @@ export default function OnboardingTaste() {
         .update({
           gender_presentation: gender,
           style_universes: universes,
-          favorite_brands: brands,
           avoid_tags: avoid,
           fit_preference: fit,
           build,
@@ -177,11 +134,6 @@ export default function OnboardingTaste() {
       setSaving(false);
     }
   }
-
-  const filteredResults = useMemo(
-    () => brandResults.filter((b) => !brands.includes(b.name)),
-    [brandResults, brands]
-  );
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
@@ -220,7 +172,7 @@ export default function OnboardingTaste() {
         <Text style={styles.kicker}>{isUpgrade ? "MISE À JOUR · GOÛT" : "ÉTAPE 02 / 04 · GOÛT"}</Text>
         <Text style={styles.title}>QU'EST-CE QUI{"\n"}TE RESSEMBLE</Text>
         <Text style={styles.subtitle}>
-          Quelques choix pour calibrer le ton, les marques de référence, les silhouettes.
+          Quelques choix pour calibrer le ton, les silhouettes et la coupe.
         </Text>
 
         <Text style={styles.sectionLabel}>PRÉSENTATION</Text>
@@ -259,48 +211,6 @@ export default function OnboardingTaste() {
             );
           })}
         </View>
-
-        <Text style={[styles.sectionLabel, styles.sectionGap]}>
-          MARQUES DE RÉFÉRENCE · {brands.length}/10
-        </Text>
-        <Text style={styles.helper}>Tape pour rechercher (Margiela, Lemaire, Arc'teryx…)</Text>
-        <View style={styles.searchWrap}>
-          <TextInput
-            value={brandQuery}
-            onChangeText={setBrandQuery}
-            placeholder="Chercher une marque"
-            placeholderTextColor={colors.ink[300]}
-            style={styles.searchInput}
-            autoCorrect={false}
-            autoCapitalize="none"
-          />
-          {searching && (
-            <ActivityIndicator size="small" color={colors.ice[600]} style={styles.searchSpinner} />
-          )}
-        </View>
-        {filteredResults.length > 0 && (
-          <View style={styles.results}>
-            {filteredResults.map((b) => (
-              <Pressable key={b.id} style={styles.resultRow} onPress={() => addBrand(b.name)}>
-                <Text style={styles.resultName}>{b.name}</Text>
-                {b.tier && <Text style={styles.resultTier}>{b.tier.toUpperCase()}</Text>}
-              </Pressable>
-            ))}
-          </View>
-        )}
-        {brands.length > 0 && (
-          <View style={styles.tagsRow}>
-            {brands.map((b) => (
-              <Pressable
-                key={b}
-                onPress={() => removeBrand(b)}
-                style={[styles.tag, styles.tagActive]}
-              >
-                <Text style={[styles.tagText, styles.tagTextActive]}>{b}  ×</Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
 
         <Text style={[styles.sectionLabel, styles.sectionGap]}>COUPE PRÉFÉRÉE</Text>
         <View style={styles.fitRow}>

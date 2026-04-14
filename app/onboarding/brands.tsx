@@ -258,8 +258,7 @@ export default function OnboardingBrands() {
 
   const canContinue = selected.length >= MIN_SELECTION;
 
-  async function saveAndContinue() {
-    if (!canContinue) return;
+  async function persistAndNavigate(brands: string[]) {
     setSaving(true);
     try {
       const {
@@ -268,7 +267,7 @@ export default function OnboardingBrands() {
       if (!user) throw new Error("not authenticated");
       const { error } = await supabase
         .from("profiles")
-        .update({ favorite_brands: selected })
+        .update({ favorite_brands: brands })
         .eq("id", user.id);
       if (error) throw error;
       if (isUpgrade) {
@@ -282,6 +281,15 @@ export default function OnboardingBrands() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function saveAndContinue() {
+    if (!canContinue) return;
+    await persistAndNavigate(selected);
+  }
+
+  async function skip() {
+    await persistAndNavigate([]);
   }
 
   if (loading) {
@@ -309,9 +317,18 @@ export default function OnboardingBrands() {
             </>
           )}
         </View>
-        {!isUpgrade && (
-          <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Text style={styles.backText}>← GOÛT</Text>
+        {!isUpgrade ? (
+          <View style={styles.topBarRight}>
+            <Pressable onPress={() => router.back()} hitSlop={12}>
+              <Text style={styles.backText}>← GOÛT</Text>
+            </Pressable>
+            <Pressable onPress={skip} hitSlop={12} disabled={saving}>
+              <Text style={styles.skipText}>PASSER →</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable onPress={skip} hitSlop={12} disabled={saving}>
+            <Text style={styles.skipText}>PASSER →</Text>
           </Pressable>
         )}
       </View>
@@ -391,6 +408,13 @@ const styles = StyleSheet.create({
   progressDot: { width: 24, height: 2, backgroundColor: "#E8E5DF" },
   progressDotActive: { backgroundColor: "#0F0F0D" },
   backText: {
+    fontFamily: "Jost_500Medium",
+    fontSize: 11,
+    letterSpacing: 1.2,
+    color: "#637D8E",
+  },
+  topBarRight: { flexDirection: "row", alignItems: "center", gap: 16 },
+  skipText: {
     fontFamily: "Jost_500Medium",
     fontSize: 11,
     letterSpacing: 1.2,
