@@ -21,6 +21,14 @@ export default function DiscoverScreen() {
               ← RETOUR
             </Text>
           </PressableScale>
+          <PressableScale onPress={() => router.replace("/circle/feed")}>
+            <Text
+              className="font-body-medium text-ice-600"
+              style={{ fontSize: 11, letterSpacing: 2 }}
+            >
+              POUR TOI →
+            </Text>
+          </PressableScale>
         </View>
         <Text
           className="font-display text-ink-900"
