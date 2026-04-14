@@ -52,6 +52,9 @@ interface RequestBody {
   occasion?: string | null;
   taste?: TasteBody;
   avoid_reasons?: string[];
+  steer_text?: string | null;
+  steer_brands?: string[];
+  liked_anchors?: string[];
 }
 
 const BRAND_AESTHETICS: Record<string, string> = {
@@ -177,6 +180,24 @@ function validate(body: unknown): RequestBody {
       }
     }
   }
+  const st = b.steer_text;
+  if (st !== undefined && st !== null && (typeof st !== "string" || st.length > 400)) {
+    throw new Error("steer_text invalid");
+  }
+  const sb = b.steer_brands;
+  if (sb !== undefined) {
+    if (!Array.isArray(sb) || sb.length > 5) throw new Error("steer_brands invalid");
+    for (const item of sb) {
+      if (typeof item !== "string" || item.length > 80) throw new Error("steer_brands entry invalid");
+    }
+  }
+  const la = b.liked_anchors;
+  if (la !== undefined) {
+    if (!Array.isArray(la) || la.length > 5) throw new Error("liked_anchors invalid");
+    for (const item of la) {
+      if (typeof item !== "string" || item.length > 500) throw new Error("liked_anchors entry invalid");
+    }
+  }
   return body as RequestBody;
 }
 
@@ -203,7 +224,10 @@ Deno.serve(async (req: Request) => {
   try {
     if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
     const raw = await req.json();
-    const { weather, coldness_level, recent_worn, recent_feedback, occasion, taste, avoid_reasons } = validate(raw);
+    const {
+      weather, coldness_level, recent_worn, recent_feedback, occasion, taste,
+      avoid_reasons, steer_text, steer_brands, liked_anchors,
+    } = validate(raw);
     const tasteBlock = buildTasteBlock(taste);
 
     const coldnessDescriptions: Record<number, string> = {
@@ -236,6 +260,19 @@ Deno.serve(async (req: Request) => {
       ? `\n\nContraintes négatives (STRICTES, à respecter en priorité) :\n${avoid_reasons.map((r) => `- ${r}`).join("\n")}`
       : "";
 
+    const steerBrandLines = (steer_brands ?? [])
+      .map((name) => {
+        const aes = BRAND_AESTHETICS[name];
+        return aes ? `- ${aes}` : `- vocabulaire ${name}`;
+      });
+    const steerBlock = (steer_text && steer_text.trim().length > 0) || steerBrandLines.length > 0
+      ? `\n\nPilotage pour AUJOURD'HUI (oriente la silhouette sans nommer de marque) :${steer_text ? `\n- Intention : ${steer_text.trim()}` : ""}${steerBrandLines.length ? `\n${steerBrandLines.join("\n")}` : ""}`
+      : "";
+
+    const anchorsBlock = liked_anchors && liked_anchors.length > 0
+      ? `\n\nTenues adorées par l'utilisatrice (sers-t'en comme ancres de goût, varie les pièces mais garde l'esprit) :\n${liked_anchors.slice(0, 3).map((a, i) => `${i + 1}. ${a}`).join("\n")}`
+      : "";
+
     const occasionBlock = occasion
       ? `\n\nContexte demandé pour aujourd'hui : ${occasion}. Adapte le code vestimentaire (ex: travail = un cran plus formel, sortie = plus expressif, sport = technique).`
       : "";
@@ -248,7 +285,7 @@ Météo du jour :
 - Vent : ${weather.wind_speed} m/s
 - Humidité : ${weather.humidity}%
 ${weather.rain ? "- Il pleut" : ""}
-${weather.snow ? "- Il neige" : ""}${occasionBlock}${tasteBlock}${recentBlock}${feedbackBlock}${avoidBlock}
+${weather.snow ? "- Il neige" : ""}${occasionBlock}${tasteBlock}${anchorsBlock}${recentBlock}${feedbackBlock}${steerBlock}${avoidBlock}
 
 Donne une suggestion de tenue ULTRA COURTE en français (1 phrase, 20 mots max). Liste 4 à 6 pièces séparées par des virgules, dans l'ordre haut → bas (haut, bas, manteau si besoin, chaussures, accessoires). Sois spécifique sur les matières (ex: "pull laine épaisse" plutôt que "pull"). Adapte au fait que la personne est ${coldnessDescriptions[coldness_level]}.${recentBlock ? " Varie les matières, couleurs et coupes par rapport aux dernières tenues." : ""}
 
