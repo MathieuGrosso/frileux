@@ -23,7 +23,8 @@ import { Skeleton } from "@/components/Skeleton";
 import { TodayLoader, type LoaderStep } from "@/components/TodayLoader";
 import { OutfitImageLoader } from "@/components/OutfitImageLoader";
 import { loadProfileBundle, type ProfileBundle } from "@/lib/profile";
-import { patchSuggestionImage, readSuggestion, writeSuggestion } from "@/lib/suggestionCache";
+import { clearSuggestion, patchSuggestionImage, readSuggestion, writeSuggestion } from "@/lib/suggestionCache";
+import { REJECTION_REASONS, insertRejection, type RejectionReason } from "@/lib/rejections";
 import { colors, motion } from "@/lib/theme";
 import { useRouter } from "expo-router";
 
@@ -42,6 +43,7 @@ export default function TodayScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [refining, setRefining] = useState(false);
   const router = useRouter();
 
   const today = new Date();
@@ -113,13 +115,16 @@ export default function TodayScreen() {
     finally { setLoading(false); }
   }
 
-  async function fetchSuggestion(weatherData: WeatherData) {
+  async function fetchSuggestion(
+    weatherData: WeatherData,
+    opts: { avoid_reasons?: string[]; skipCache?: boolean } = {}
+  ) {
     try {
       const bundle = await (profilePromiseRef.current ?? loadProfileBundle());
       const { userId, coldness: userColdness, taste, recent_worn, recent_feedback } = bundle;
       setColdness(userColdness);
 
-      if (userId) {
+      if (userId && !opts.skipCache) {
         const cached = await readSuggestion({
           userId,
           coldness: userColdness,
@@ -151,6 +156,7 @@ export default function TodayScreen() {
           recent_feedback,
           occasion,
           taste,
+          avoid_reasons: opts.avoid_reasons,
         },
       });
       if (error) {
@@ -179,6 +185,39 @@ export default function TodayScreen() {
     } catch (e) {
       if (__DEV__) console.error("fetchSuggestion exception:", e);
       setSuggestion("Suggestion indisponible.");
+    }
+  }
+
+  async function refineSuggestion(reason: RejectionReason | null) {
+    if (!weather || !suggestion || refining) return;
+    setRefining(true);
+    try {
+      const reasonEntry = reason
+        ? REJECTION_REASONS.find((r) => r.value === reason)
+        : null;
+      await insertRejection({
+        suggestion_text: suggestion,
+        reason: reason ?? "autre",
+        weather_data: weather,
+        occasion,
+      });
+      const bundle = await (profilePromiseRef.current ?? loadProfileBundle());
+      if (bundle.userId) {
+        await clearSuggestion({
+          userId: bundle.userId,
+          coldness: bundle.coldness,
+          occasion,
+        });
+      }
+      setSuggestion(null);
+      setSuggestionImage(null);
+      const avoid = [
+        `Ne reprends pas cette tenue : "${suggestion}".`,
+        reasonEntry ? reasonEntry.prompt : "propose une silhouette différente",
+      ];
+      await fetchSuggestion(weather, { avoid_reasons: avoid, skipCache: true });
+    } finally {
+      setRefining(false);
     }
   }
 
@@ -425,6 +464,37 @@ export default function TodayScreen() {
               </Animated.View>
             ) : (
               <TodayLoader step={loaderStep} />
+            )}
+
+            {suggestion && (
+              <View className="mt-6">
+                <Text className="font-body-medium text-micro text-ink-300 mb-4">
+                  RAFFINER
+                </Text>
+                <View className="flex-row flex-wrap" style={{ gap: 6 }}>
+                  {REJECTION_REASONS.filter((r) => r.value !== "autre").map((opt) => (
+                    <Pressable
+                      key={opt.value}
+                      onPress={() => refineSuggestion(opt.value)}
+                      disabled={refining}
+                      className={`py-2 px-3 border border-paper-300 bg-paper-50 ${refining ? "opacity-50" : "active:bg-paper-200"}`}
+                    >
+                      <Text className="font-body text-xs text-ink-900">
+                        {opt.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <Pressable
+                  onPress={() => refineSuggestion(null)}
+                  disabled={refining}
+                  className={`mt-4 py-3 items-center border border-ink-900 bg-paper ${refining ? "opacity-50" : "active:bg-paper-200"}`}
+                >
+                  <Text className="font-body-medium text-eyebrow text-ink-900">
+                    {refining ? "…" : "PASSER"}
+                  </Text>
+                </Pressable>
+              </View>
             )}
           </View>
 
