@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable } from "react-native";
 
 interface Props {
   title: string;
@@ -8,40 +8,22 @@ interface Props {
 
 export function EmptyState({ title, subtitle, cta }: Props) {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
-      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+    <View className="items-center pt-24 px-8 gap-3">
+      <Text className="font-display text-h2 tracking-tight text-ink-900 text-center">
+        {title}
+      </Text>
+      {subtitle ? (
+        <Text className="font-body text-body-sm text-ink-500 text-center">
+          {subtitle}
+        </Text>
+      ) : null}
       {cta ? (
         <Pressable onPress={cta.onPress} hitSlop={12}>
-          <Text style={styles.cta}>{cta.label.toUpperCase()}</Text>
+          <Text className="font-body-medium text-eyebrow text-ice uppercase underline mt-2">
+            {cta.label}
+          </Text>
         </Pressable>
       ) : null}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { alignItems: "center", paddingTop: 96, paddingHorizontal: 32, gap: 12 },
-  title: {
-    fontFamily: "BarlowCondensed_600SemiBold",
-    fontSize: 28,
-    letterSpacing: -0.5,
-    color: "#0F0F0D",
-    textAlign: "center",
-  },
-  subtitle: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 14,
-    lineHeight: 20,
-    color: "#6B6A66",
-    textAlign: "center",
-  },
-  cta: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 11,
-    letterSpacing: 1.6,
-    color: "#637D8E",
-    textDecorationLine: "underline",
-    marginTop: 8,
-  },
-});
