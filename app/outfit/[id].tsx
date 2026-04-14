@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import {
   View,
   Text,
-  Image,
   ScrollView,
   TextInput,
   Pressable,
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
@@ -18,6 +18,7 @@ import { weatherEmoji } from "@/lib/weather";
 import { RatingStars } from "@/components/RatingStars";
 import { OutfitNotes } from "@/components/circle/OutfitNotes";
 import { colors } from "@/lib/theme";
+import { confirmAction, notifyError } from "@/lib/ui";
 
 export default function OutfitDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -29,6 +30,7 @@ export default function OutfitDetailScreen() {
   const [thermal, setThermal] = useState<ThermalFeeling | null>(null);
   const [editing, setEditing] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => { loadOutfit(); }, [id]);
 
@@ -65,18 +67,22 @@ export default function OutfitDetailScreen() {
   }
 
   async function deleteOutfit() {
-    Alert.alert("Supprimer ?", "Cette tenue sera supprimée définitivement.", [
-      { text: "Annuler", style: "cancel" },
-      {
-        text: "Supprimer",
-        style: "destructive",
-        onPress: async () => {
-          if (!outfit) return;
-          await supabase.from("outfits").delete().eq("id", outfit.id);
-          router.back();
-        },
-      },
-    ]);
+    if (!outfit || deleting) return;
+    const confirmed = await confirmAction(
+      "Supprimer ?",
+      "Cette tenue sera supprimée définitivement.",
+      "Supprimer",
+      true,
+    );
+    if (!confirmed) return;
+    setDeleting(true);
+    const { error } = await supabase.from("outfits").delete().eq("id", outfit.id);
+    setDeleting(false);
+    if (error) {
+      notifyError("Échec", error.message);
+      return;
+    }
+    router.back();
   }
 
   if (!outfit) {
@@ -322,10 +328,11 @@ export default function OutfitDetailScreen() {
                     </Pressable>
                     <Pressable
                       onPress={deleteOutfit}
-                      className="flex-1 border border-paper-300 py-4 items-center active:bg-paper-200"
+                      disabled={deleting}
+                      className={`flex-1 border border-paper-300 py-4 items-center ${deleting ? "opacity-50" : "active:bg-paper-200"}`}
                     >
                       <Text className="font-body text-body-sm text-error">
-                        Supprimer
+                        {deleting ? "Suppression…" : "Supprimer"}
                       </Text>
                     </Pressable>
                   </>

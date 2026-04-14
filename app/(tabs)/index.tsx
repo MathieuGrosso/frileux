@@ -514,13 +514,21 @@ export default function TodayScreen() {
                   <Text className="font-body text-body text-ink-900">
                     {suggestion}
                   </Text>
+                  {suggestion === "Suggestion indisponible." && weather && (
+                    <Pressable
+                      onPress={() => fetchSuggestion(weather, { skipCache: true })}
+                      className="mt-3 self-start py-2 px-3 border border-ink-900 bg-paper active:bg-paper-200"
+                    >
+                      <Text className="font-body-medium text-eyebrow text-ink-900">RÉESSAYER</Text>
+                    </Pressable>
+                  )}
                 </Animated.View>
               </SuggestionSwipeArea>
             ) : (
               <TodayLoader step={loaderStep} />
             )}
 
-            {suggestion && !kept && (
+            {suggestion && !kept && suggestion !== "Suggestion indisponible." && (
               <View className="mt-2 flex-row justify-between">
                 <Text className="font-body-medium text-micro text-ink-300">
                   ← PASSER
@@ -539,7 +547,7 @@ export default function TodayScreen() {
               </View>
             )}
 
-            {suggestion && (
+            {suggestion && suggestion !== "Suggestion indisponible." && (
               <View className="mt-6">
                 <Text className="font-body-medium text-micro text-ink-300 mb-4">
                   RAFFINER
