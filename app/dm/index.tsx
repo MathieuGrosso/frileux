@@ -1,10 +1,10 @@
 import { FlatList, Text, View, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, Stack } from "expo-router";
-import { Image } from "expo-image";
 import { useDMThreads } from "@/hooks/useDMThreads";
 import { PressableScale } from "@/components/ui/PressableScale";
 import { MemberAvatar } from "@/components/circle/MemberAvatar";
+import { PresenceDot } from "@/components/PresenceDot";
 
 function relTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -70,7 +70,7 @@ export default function DMListScreen() {
                   size={44}
                 />
                 <View className="flex-1 ml-4">
-                  <View className="flex-row items-baseline justify-between">
+                  <View className="flex-row items-center gap-1.5 mb-0.5">
                     <Text
                       className="font-body-semibold text-ink-900"
                       style={{ fontSize: 15 }}
@@ -78,6 +78,8 @@ export default function DMListScreen() {
                     >
                       {item.peer.username}
                     </Text>
+                    <PresenceDot userId={item.peer.id} />
+                    <View style={{ flex: 1 }} />
                     <Text
                       className="font-body text-ink-300"
                       style={{ fontSize: 10, letterSpacing: 1 }}
@@ -86,7 +88,7 @@ export default function DMListScreen() {
                     </Text>
                   </View>
                   <Text
-                    className="font-body text-ink-500 mt-0.5"
+                    className="font-body text-ink-500"
                     style={{ fontSize: 13 }}
                     numberOfLines={1}
                   >

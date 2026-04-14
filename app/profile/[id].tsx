@@ -7,6 +7,7 @@ import { PressableScale } from "@/components/ui/PressableScale";
 import { MemberAvatar } from "@/components/circle/MemberAvatar";
 import { openDMThread } from "@/hooks/useDMThreads";
 import { useFollow } from "@/hooks/useFollow";
+import { PresenceDot } from "@/components/PresenceDot";
 
 interface PublicProfile {
   id: string;
@@ -114,12 +115,15 @@ export default function ProfileScreen() {
           <View className="items-center mb-6">
             <MemberAvatar username={profile.username} avatarUrl={profile.avatar_url} size={96} />
           </View>
-          <Text
-            className="font-display text-ink-900 text-center"
-            style={{ fontSize: 44, letterSpacing: -0.5 }}
-          >
-            {profile.username.toUpperCase()}
-          </Text>
+          <View className="flex-row items-center justify-center gap-2">
+            <Text
+              className="font-display text-ink-900 text-center"
+              style={{ fontSize: 44, letterSpacing: -0.5 }}
+            >
+              {profile.username.toUpperCase()}
+            </Text>
+            <PresenceDot userId={profile.id} size={8} />
+          </View>
           <Text
             className="font-body text-ink-300 text-center mt-2"
             style={{ fontSize: 11, letterSpacing: 1.5 }}
