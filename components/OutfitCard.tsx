@@ -12,7 +12,7 @@ export function OutfitCard({ outfit, onPress }: OutfitCardProps) {
   return (
     <Pressable
       onPress={onPress}
-      className="bg-midnight-500 rounded-2xl overflow-hidden active:opacity-80"
+      className="bg-paper-200 overflow-hidden active:opacity-80"
     >
       <Image
         source={{ uri: outfit.photo_url }}
@@ -21,7 +21,7 @@ export function OutfitCard({ outfit, onPress }: OutfitCardProps) {
       />
       <View className="p-4">
         <View className="flex-row justify-between items-center">
-          <Text className="text-cream-200 text-sm">
+          <Text className="text-ink-700 text-body-sm font-body">
             {new Date(outfit.date).toLocaleDateString("fr-FR", {
               weekday: "short",
               day: "numeric",
@@ -33,7 +33,7 @@ export function OutfitCard({ outfit, onPress }: OutfitCardProps) {
               <Text className="text-lg">
                 {weatherEmoji(outfit.weather_data.icon)}
               </Text>
-              <Text className="text-cream-300 text-sm">
+              <Text className="text-ink-500 text-body-sm font-body">
                 {outfit.weather_data.temp}°C
               </Text>
             </View>

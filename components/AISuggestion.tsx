@@ -1,4 +1,5 @@
 import { View, Text, ActivityIndicator } from "react-native";
+import { colors } from "@/lib/theme";
 
 interface AISuggestionProps {
   suggestion: string | null;
@@ -11,23 +12,20 @@ export function AISuggestion({ suggestion, loading }: AISuggestionProps) {
   }
 
   return (
-    <View className="bg-cream-500/10 rounded-2xl p-5 mt-4">
-      <View className="flex-row items-center gap-2 mb-3">
-        <Text className="text-lg">✨</Text>
-        <Text className="text-cream-500 font-sans-semibold">
-          Suggestion du jour
-        </Text>
-      </View>
+    <View className="bg-paper-300 p-5 mt-4">
+      <Text className="text-ice-700 text-eyebrow font-body-semibold uppercase mb-3">
+        Suggestion du jour
+      </Text>
 
       {suggestion ? (
-        <Text className="text-cream-200 text-base leading-6">
+        <Text className="text-ink-900 text-body font-body">
           {suggestion}
         </Text>
       ) : (
         <View className="flex-row items-center gap-2">
-          <ActivityIndicator size="small" color="#FFC94D" />
-          <Text className="text-cream-300 text-sm">
-            L'IA prépare ta suggestion...
+          <ActivityIndicator size="small" color={colors.ice[600]} />
+          <Text className="text-ink-500 text-body-sm font-body">
+            L&apos;IA prépare ta suggestion...
           </Text>
         </View>
       )}
