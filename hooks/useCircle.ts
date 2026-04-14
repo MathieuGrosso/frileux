@@ -250,19 +250,10 @@ export function useCircle(): UseCircleResult {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
-    const { data: circleData } = await supabase
-      .from("circles")
-      .select()
-      .eq("invite_code", trimmed)
-      .single();
-
-    if (!circleData) return null;
-
-    const { error } = await supabase.from("circle_members").insert({
-      circle_id: circleData.id,
-      user_id: user.id,
+    const { data: circleData, error } = await supabase.rpc("join_circle_by_code", {
+      code: trimmed,
     });
-    if (error) return null;
+    if (error || !circleData) return null;
 
     const joined = circleData as Circle;
     setCircles((prev) => (prev.some((c) => c.id === joined.id) ? prev : [...prev, joined]));
