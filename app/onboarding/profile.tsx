@@ -14,6 +14,7 @@ import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import type { ColdnessLevel } from "@/lib/types";
+import { colors } from "@/lib/theme";
 
 const COLDNESS_LABELS: Record<ColdnessLevel, string> = {
   1: "Un peu frileuse",
@@ -162,7 +163,7 @@ export default function OnboardingProfile() {
             disabled={geo === "asking"}
           >
             {geo === "asking" ? (
-              <ActivityIndicator color="#637D8E" size="small" />
+              <ActivityIndicator color={colors.ice[600]} size="small" />
             ) : (
               <Text style={styles.geoBtnText}>
                 {geo === "denied" ? "RÉESSAYER LA POSITION" : "AUTORISER LA POSITION"}

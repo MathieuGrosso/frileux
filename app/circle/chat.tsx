@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import type { CircleMessage } from "@/lib/types";
+import { colors } from "@/lib/theme";
 
 const MAX_LEN = 500;
 
@@ -286,8 +287,8 @@ export default function CircleChatScreen() {
             value={draft}
             onChangeText={(t) => setDraft(t.slice(0, MAX_LEN))}
             placeholder="Écrire un message"
-            placeholderTextColor="#9E9A96"
-            selectionColor="#637D8E"
+            placeholderTextColor={colors.ink[300]}
+            selectionColor={colors.ice[600]}
             multiline
             className="flex-1 border border-paper-300 bg-paper-200 px-3 py-2 font-body text-ink-900 text-[14px]"
             style={{ maxHeight: 96 }}

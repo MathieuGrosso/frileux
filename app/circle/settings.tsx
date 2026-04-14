@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import type { Circle, Profile } from "@/lib/types";
 import { MemberAvatar } from "@/components/circle/MemberAvatar";
+import { colors } from "@/lib/theme";
 
 interface MemberRow {
   user_id: string;
@@ -170,7 +171,7 @@ export default function CircleSettingsScreen() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-paper-100 items-center justify-center">
-        <ActivityIndicator color="#637D8E" />
+        <ActivityIndicator color={colors.ice[600]} />
       </SafeAreaView>
     );
   }
@@ -215,8 +216,8 @@ export default function CircleSettingsScreen() {
                   value={nameDraft}
                   onChangeText={setNameDraft}
                   className="flex-1 border border-paper-300 bg-paper-200 px-3 py-2 font-body text-ink-900"
-                  placeholderTextColor="#9E9A96"
-                  selectionColor="#637D8E"
+                  placeholderTextColor={colors.ink[300]}
+                  selectionColor={colors.ice[600]}
                   autoFocus
                   onSubmitEditing={saveName}
                 />

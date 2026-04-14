@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, Alert } from "react-native";
 import { supabase } from "@/lib/supabase";
 import type { OutfitComment } from "@/lib/types";
 import { MemberAvatar } from "./MemberAvatar";
+import { colors } from "@/lib/theme";
 
 interface Props {
   outfitId: string;
@@ -166,8 +167,8 @@ export function OutfitNotes({ outfitId }: Props) {
           value={draft}
           onChangeText={(t) => setDraft(t.slice(0, MAX_LEN))}
           placeholder="Ajouter une note"
-          placeholderTextColor="#9E9A96"
-          selectionColor="#637D8E"
+          placeholderTextColor={colors.ink[300]}
+          selectionColor={colors.ice[600]}
           className="flex-1 border border-paper-300 bg-paper-200 px-3 py-2 font-body text-ink-900 text-[13px]"
           multiline
         />
