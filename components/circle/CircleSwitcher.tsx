@@ -25,7 +25,7 @@ export function CircleSwitcher({ circles, activeId, onSelect }: Props) {
             className={`border px-3 py-1.5 ${active ? "border-ink-900 bg-ink-900" : "border-paper-300 bg-paper-100"}`}
           >
             <Text
-              className={`font-body-semibold text-[10px] ${active ? "text-paper-100" : "text-ink-500"}`}
+              className={`font-body-semibold text-eyebrow ${active ? "text-paper-100" : "text-ink-500"}`}
               style={{ letterSpacing: 1.5 }}
             >
               {c.name.toUpperCase()}

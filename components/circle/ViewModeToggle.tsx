@@ -19,7 +19,7 @@ export function ViewModeToggle({ mode, onChange }: Props) {
         return (
           <Pressable key={it.value} onPress={() => onChange(it.value)}>
             <Text
-              className={`font-body-semibold text-[11px] ${active ? "text-ink-900" : "text-ink-300"}`}
+              className={`font-body-semibold text-eyebrow ${active ? "text-ink-900" : "text-ink-300"}`}
               style={{ letterSpacing: 2 }}
             >
               {it.label}

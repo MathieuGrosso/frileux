@@ -50,14 +50,14 @@ export default function HistoryScreen() {
         />
         <View className="pt-3">
           <View className="flex-row justify-between items-center mb-2.5">
-            <Text className="font-body-medium text-[10px] text-ink-300 tracking-[1.5px]">
+            <Text className="font-body-medium text-eyebrow text-ink-300 tracking-[1.5px]">
               {new Date(item.date).toLocaleDateString("fr-FR", {
                 weekday: "short",
                 day: "numeric",
                 month: "short",
               }).toUpperCase()}
             </Text>
-            <Text className="font-body text-[13px] text-ink-500">
+            <Text className="font-body text-body-sm text-ink-500">
               {item.weather_data?.temp ?? "?"}°
             </Text>
           </View>
@@ -67,12 +67,12 @@ export default function HistoryScreen() {
             </View>
           )}
           {item.occasion && (
-            <Text className="font-body-medium text-[9px] text-ice tracking-[1.6px] mt-1">
+            <Text className="font-body-medium text-micro text-ice tracking-[1.6px] mt-1">
               {item.occasion.toUpperCase()}
             </Text>
           )}
           {item.notes ? (
-            <Text className="font-body text-[13px] text-ink-300 leading-5 mt-1" numberOfLines={2}>
+            <Text className="font-body text-body-sm text-ink-300 leading-5 mt-1" numberOfLines={2}>
               {item.notes}
             </Text>
           ) : null}
@@ -90,7 +90,7 @@ export default function HistoryScreen() {
         <View className="flex-row" style={{ gap: 24 }}>
           <Pressable onPress={() => setFilter("all")} className="pb-1.5 relative">
             <Text
-              className={`font-body-medium text-[11px] tracking-[2px] ${
+              className={`font-body-medium text-eyebrow tracking-[2px] ${
                 filter === "all" ? "text-ink-900" : "text-ink-300"
               }`}
             >
@@ -100,7 +100,7 @@ export default function HistoryScreen() {
           </Pressable>
           <Pressable onPress={() => setFilter("top")} className="pb-1.5 relative">
             <Text
-              className={`font-body-medium text-[11px] tracking-[2px] ${
+              className={`font-body-medium text-eyebrow tracking-[2px] ${
                 filter === "top" ? "text-ink-900" : "text-ink-300"
               }`}
             >

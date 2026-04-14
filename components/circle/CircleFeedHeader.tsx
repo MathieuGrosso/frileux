@@ -29,7 +29,7 @@ export function CircleFeedHeader({ circle }: Props) {
         </Text>
         <Pressable onPress={handleShare}>
           <Text
-            className="font-body text-ink-300 text-[11px]"
+            className="font-body text-ink-300 text-eyebrow"
             style={{ letterSpacing: 1 }}
           >
             Code : {circle.invite_code}  ↗
@@ -42,14 +42,14 @@ export function CircleFeedHeader({ circle }: Props) {
           className="active:opacity-50 flex-row items-center gap-1"
         >
           <Text
-            className="font-body-semibold text-ink-900 text-[11px]"
+            className="font-body-semibold text-ink-900 text-eyebrow"
             style={{ letterSpacing: 2 }}
           >
             CHAT
           </Text>
           {unread > 0 && (
             <Text
-              className="font-body-semibold text-ice text-[10px]"
+              className="font-body-semibold text-ice text-eyebrow"
               style={{ letterSpacing: 1 }}
             >
               · {unread > 99 ? "99+" : unread}
@@ -61,7 +61,7 @@ export function CircleFeedHeader({ circle }: Props) {
           className="active:opacity-50"
         >
           <Text
-            className="font-body-semibold text-ink-900 text-[11px]"
+            className="font-body-semibold text-ink-900 text-eyebrow"
             style={{ letterSpacing: 2 }}
           >
             RÉGLAGES
