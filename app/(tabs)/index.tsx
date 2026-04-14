@@ -25,6 +25,7 @@ import { OutfitImageLoader } from "@/components/OutfitImageLoader";
 import { loadProfileBundle, type ProfileBundle } from "@/lib/profile";
 import { clearSuggestion, patchSuggestionImage, readSuggestion, writeSuggestion } from "@/lib/suggestionCache";
 import { REJECTION_REASONS, insertRejection, type RejectionReason } from "@/lib/rejections";
+import { embedOutfitText } from "@/lib/embedOutfit";
 import { colors, motion } from "@/lib/theme";
 import { useRouter } from "expo-router";
 
@@ -294,6 +295,9 @@ export default function TodayScreen() {
         else worn_description = wornData?.worn_description ?? null;
       } catch (e) { if (__DEV__) console.warn("worn_description analysis skipped:", e); }
 
+      const embeddingSource = worn_description ?? suggestion ?? null;
+      const embedding = embeddingSource ? await embedOutfitText(embeddingSource) : null;
+
       const { error: insertError } = await supabase.from("outfits").insert({
         user_id: user.id, photo_url: urlData.publicUrl,
         date: today.toISOString().split("T")[0], weather_data: weather,
@@ -301,6 +305,8 @@ export default function TodayScreen() {
         worn_description, occasion,
         thermal_feeling: thermal,
         notes: notes.trim() || null,
+        embedding,
+        embedding_source: embedding ? (worn_description ? "worn" : "suggested") : null,
       });
       if (insertError) throw insertError;
 
