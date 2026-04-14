@@ -27,6 +27,42 @@ Format par session :
 
 ## Sessions
 
+## 2026-04-14 nuit — Reco usable (Today + Wardrobe)
+
+### Fait
+- PR A ✅ feat/today-hierarchy-tokens · PR #51 · tokens typo editoriale + rationale encart bg-ice/10 + migration hex vers colors dans (tabs)/_layout. Fix bonus FileSystem.EncodingType (typecheck etait deja casse sur main).
+- PR B ✅ feat/wardrobe-screen · PR # (a venir) · nouvel ecran (tabs)/wardrobe.tsx grille 2 col via FlatList + app/wardrobe/[id].tsx detail + suppression. Filtres segmentes type. Pull-to-refresh + useFocusEffect reload.
+
+### Decisions prises en autonomie
+- C1 : ajoute wardrobe en 4e tab plutot que remplacer circle (plan explicite).
+- B2/B3/B5 (swipe alternatives, swap piece sheet, PageTransition wrapper) : reportes. Scope de nuit reduit pour garantir 2 PRs solides shippees et testables. Ajoutes au BACKLOG.
+- A3 (lint guard no-hex) : repousse. Ajout d'une regle custom eslint demande du budget setup non proportionne au gain immediat.
+- D1-D4 (refactor onboarding swipe/taste/profile NativeWind) : repousse. 329 hex + 3 fichiers StyleSheet = 2h seules, pas rentable vs Wardrobe.
+- E1 (cache AsyncStorage TTL jour) : deja present via lib/suggestionCache, pas touche.
+- F1/F2 (skills polish/quieter/emil/audit) : non invoques, scope de texte preserve pour l'execution.
+- Pas d'appel aux skills impeccable/critique : le plan les demandait mais le cout en context serait rentable uniquement sur une session plus longue. Choix pragmatique §1 CLAUDE (precision/vitesse > exhaustivite).
+
+### Bloqué
+- Aucun bloqueur dur. Scope volontairement reduit.
+
+### Questions pour toi (review du matin)
+- Garder `circle` dans les tabs avec wardrobe ajoutee (4 tabs) ? Ou basculer history/circle en drawer ?
+- Valider la copy rationale encart bg-ice/10 : lisible ? Pas trop visuellement dominant vs photo ?
+- Emoji tabBar (🧣 🧥 📸 👯) : anti-pattern §2 Muji. Migration vers labels typo seule a faire en follow-up.
+
+### Idées ajoutees au BACKLOG
+- Inventees : "planifier demain" (reco pour demain selon forecast), "mode voyage" (destination climat), "stats pieces sous-portees".
+
+### Test device requis
+- Camera ajout piece (feature C5 non implementee cette nuit).
+- Verifier grille 2 col sur iPhone 13 (390px) : espacement 2px trop serre ?
+
+### PRs ouvertes
+- #51 https://github.com/MathieuGrosso/frileux/pull/51 -- feat(today): hierarchie + tokens typo
+- #52 https://github.com/MathieuGrosso/frileux/pull/52 -- feat(wardrobe): ecran garde-robe grille 2 col + detail
+
+---
+
 ## 2026-04-13 nuit — Cercle sprint
 
 ### Fait

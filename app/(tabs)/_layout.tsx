@@ -29,6 +29,14 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="wardrobe"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon emoji="🧥" label="Garde-robe" focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="history"
         options={{
           tabBarIcon: ({ focused }) => (
