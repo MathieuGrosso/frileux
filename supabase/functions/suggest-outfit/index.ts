@@ -53,6 +53,39 @@ interface RequestBody {
   taste?: TasteBody;
 }
 
+const BRAND_AESTHETICS: Record<string, string> = {
+  "Our Legacy": "workwear ample réinterprété, teintes sourdes gris-sable, jersey lourd",
+  "Lemaire": "ligne fluide, camel écru noir, manches longues, drapé, tailoring déstructuré",
+  "Acne Studios": "denim brut, silhouettes larges, cuir patiné, rose poudré, codes scandinaves",
+  "Jacquemus": "épures méditerranéennes, écru terracotta, volumes courts, côté soleil",
+  "Aimé Leon Dore": "preppy new-yorkais, polos, chinos, sneakers rétro, crème burgundy marine",
+  "Stüssy": "streetwear Californien, tees graphiques, nylon, béton olive, 90s décontracté",
+  "Carhartt WIP": "workwear duck canvas, ample, poches utilitaires, beige marron noir",
+  "Kapital": "patchwork Japonais, indigo teint, boro, coupes étranges, folklore décalé",
+  "Needles": "track pants papillon, velours, tailoring rétro, rayures, élégance dérangée",
+  "Palace": "skateboarding UK, sportswear technique, logos discrets, tricolore",
+  "Stone Island": "sportswear technique, teintures réactives, nylon, vert militaire stone",
+  "Rick Owens": "drape sombre, cuir noir, asymétries, silhouettes longues, gothique",
+  "Maison Margiela": "déconstruction, tabi, blanc cassé, anthracite, tailoring éclaté",
+  "Auralee": "matières sublimes, coton fin, camel poudré, ligne pure, luxe silencieux",
+  "Uniqlo U": "basiques sculptés, laine mélangée, minimalisme accessible, oversize contrôlé",
+  "Arc'teryx": "outdoor technique, gore-tex, gris ardoise noir, gorpcore urbain",
+  "Gramicci": "pantalons escalade, nylon léger, outdoor décontracté, tons terre",
+  "Polo Ralph Lauren": "preppy Américain, oxford boutonné, tweed, marine ivoire bordeaux",
+  "A.P.C.": "denim brut Japonais, tailoring minimaliste Parisien, marine écru noir",
+  "Engineered Garments": "workwear hybride, poches multiples, tissus mixés, kaki moutarde",
+  "Universal Works": "workwear Anglais, laine grise, cordons, tweed, tailoring décontracté",
+  "Patta": "streetwear Amsterdam, sportswear saturé, motifs graphiques, culture sneaker",
+  "Drake's": "tailoring Anglais relâché, tweed, laine, palette automne, Ivy revisité",
+  "Beams Plus": "Ivy Japonais, madras, oxford, chinos, précision heritage, marine moutarde",
+  "Marine Serre": "upcycling, lune imprimée, skintight mixé workwear, noir crème",
+  "Bode": "textile vintage, quilt, broderies, Americana narratif, tons fanés",
+  "JW Anderson": "silhouettes étranges, volumes exagérés, maille sculpturale, art conceptuel",
+  "Junya Watanabe": "patchwork technique, denim déconstruit, Japonais expérimental",
+  "Comme des Garçons": "noir avant-garde, tailoring asymétrique, textures mixtes, sculpté",
+  "Noah": "preppy New-York rebelle, rugbies, tailoring marine, pop rock 60s",
+};
+
 function buildTasteBlock(t?: TasteBody): string {
   if (!t) return "";
   const lines: string[] = [];
@@ -63,9 +96,21 @@ function buildTasteBlock(t?: TasteBody): string {
     lines.push(`- Univers : ${t.style_universes.join(", ")}`);
   }
   if (t.favorite_brands?.length) {
-    lines.push(
-      `- Marques de référence (utilise leur vocabulaire et leurs silhouettes — ne les nomme PAS dans la réponse) : ${t.favorite_brands.join(", ")}`
-    );
+    const inspirations = t.favorite_brands
+      .map((name) => {
+        const aes = BRAND_AESTHETICS[name];
+        return aes ? `  · ${aes}` : null;
+      })
+      .filter(Boolean) as string[];
+    if (inspirations.length) {
+      lines.push(
+        `- Inspirations esthétiques (utilise ce vocabulaire, ces silhouettes et palettes — ne nomme JAMAIS les marques) :\n${inspirations.join("\n")}`
+      );
+    } else {
+      lines.push(
+        `- Marques de référence (utilise leur vocabulaire — ne les nomme PAS) : ${t.favorite_brands.join(", ")}`
+      );
+    }
   }
   if (t.fit_preference) {
     lines.push(`- Coupe préférée : ${t.fit_preference}`);

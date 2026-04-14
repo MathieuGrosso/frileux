@@ -167,8 +167,8 @@ export default function OnboardingTaste() {
       if (isUpgrade) {
         router.replace("/(tabs)");
       } else {
-        await AsyncStorage.setItem("@onboarding/last-step", "profile");
-        router.push("/onboarding/profile");
+        await AsyncStorage.setItem("@onboarding/last-step", "brands");
+        router.push("/onboarding/brands");
       }
     } catch (e) {
       Alert.alert("Erreur", e instanceof Error ? e.message : "Sauvegarde impossible.");
