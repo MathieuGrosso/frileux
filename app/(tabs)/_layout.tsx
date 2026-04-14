@@ -22,7 +22,7 @@ function TabIcon({
     >
       <Feather
         name={icon}
-        size={22}
+        size={24}
         color={focused ? colors.ink[900] : colors.ink[500]}
       />
       {focused && (
