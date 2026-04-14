@@ -1,7 +1,6 @@
 import { View, Text, Image, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import type { OutfitWithProfile } from "@/lib/types";
-import { weatherEmoji } from "@/lib/weather";
 import { MemberAvatar } from "./MemberAvatar";
 
 interface Props {
@@ -20,7 +19,6 @@ export function CircleOutfitCard({ outfit, isFirst = false }: Props) {
   const router = useRouter();
   const username = outfit.profile?.username ?? "Anonyme";
   const temp = outfit.weather_data?.temp;
-  const icon = outfit.weather_data?.icon ?? "01d";
   const time = formatTime(outfit.created_at);
 
   return (
@@ -55,12 +53,14 @@ export function CircleOutfitCard({ outfit, isFirst = false }: Props) {
             </Text>
           </View>
         )}
-        <View className="flex-row items-center gap-1">
-          <Text style={{ fontSize: 14 }}>{weatherEmoji(icon)}</Text>
-          {typeof temp === "number" && (
-            <Text className="font-body text-ink-500 text-xs">{temp}°</Text>
-          )}
-        </View>
+        {typeof temp === "number" && (
+          <Text
+            className="font-display text-ink-500 text-body-sm"
+            style={{ letterSpacing: -0.2 }}
+          >
+            {temp}°
+          </Text>
+        )}
       </View>
       <Image
         source={{ uri: outfit.photo_url }}
