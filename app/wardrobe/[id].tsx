@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { View, Text, Pressable, ScrollView } from "react-native";
+import { PressableScale } from "@/components/ui/PressableScale";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -66,15 +67,15 @@ export default function WardrobeDetail() {
     <View className="flex-1 bg-paper">
       <SafeAreaView className="flex-1">
         <View className="flex-row items-center justify-between px-6 pt-2 pb-4">
-          <Pressable onPress={() => router.back()} hitSlop={12}>
+          <PressableScale onPress={() => router.back()} hitSlop={12}>
             <Text className="font-body-medium text-eyebrow text-ink-500">RETOUR</Text>
-          </Pressable>
+          </PressableScale>
           {item && (
-            <Pressable onPress={handleDelete} disabled={deleting} hitSlop={12}>
+            <PressableScale onPress={handleDelete} disabled={deleting} hitSlop={12}>
               <Text className="font-body-medium text-eyebrow text-error">
                 {deleting ? "SUPPRESSION..." : "SUPPRIMER"}
               </Text>
-            </Pressable>
+            </PressableScale>
           )}
         </View>
 

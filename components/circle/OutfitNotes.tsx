@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { View, Text, TextInput, Pressable } from "react-native";
+import { PressableScale } from "@/components/ui/PressableScale";
 import { supabase } from "@/lib/supabase";
 import type { OutfitComment } from "@/lib/types";
 import { MemberAvatar } from "./MemberAvatar";
@@ -154,14 +155,14 @@ export function OutfitNotes({ outfitId }: Props) {
               </Text>
             </View>
             {isMine && (
-              <Pressable onPress={() => remove(n.id)} className="active:opacity-50 pt-0.5">
+              <PressableScale onPress={() => remove(n.id)} className="active:opacity-50 pt-0.5">
                 <Text
                   className="font-body-semibold text-ink-300 text-micro"
                   style={{ letterSpacing: 1 }}
                 >
                   SUPPR.
                 </Text>
-              </Pressable>
+              </PressableScale>
             )}
           </View>
         );
@@ -177,7 +178,7 @@ export function OutfitNotes({ outfitId }: Props) {
           className="flex-1 border border-paper-300 bg-paper-200 px-3 py-2 font-body text-ink-900 text-body-sm"
           multiline
         />
-        <Pressable
+        <PressableScale
           onPress={send}
           disabled={!draft.trim() || sending}
           className={`px-4 py-3 ${draft.trim() ? "bg-ink-900 active:bg-ink-700" : "bg-paper-300"}`}
@@ -188,7 +189,7 @@ export function OutfitNotes({ outfitId }: Props) {
           >
             ENVOYER
           </Text>
-        </Pressable>
+        </PressableScale>
       </View>
       <Text className="font-body text-ink-300 text-micro mt-1 text-right">
         {draft.length}/{MAX_LEN}

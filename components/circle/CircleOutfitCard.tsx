@@ -1,4 +1,5 @@
 import { View, Text, Image, Pressable } from "react-native";
+import { PressableScale } from "@/components/ui/PressableScale";
 import { useRouter } from "expo-router";
 import type { OutfitWithProfile } from "@/lib/types";
 import { MemberAvatar } from "./MemberAvatar";
@@ -22,7 +23,7 @@ export function CircleOutfitCard({ outfit, isFirst = false }: Props) {
   const time = formatTime(outfit.created_at);
 
   return (
-    <Pressable
+    <PressableScale
       onPress={() => router.push(`/outfit/${outfit.id}`)}
       className="mb-8 active:opacity-70"
     >
@@ -75,6 +76,6 @@ export function CircleOutfitCard({ outfit, isFirst = false }: Props) {
           {outfit.notes_count} {outfit.notes_count > 1 ? "notes" : "note"}
         </Text>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
