@@ -41,16 +41,26 @@ export default function OnboardingProfile() {
 
   useEffect(() => {
     AsyncStorage.setItem("@onboarding/last-step", "profile");
-    supabase
-      .from("profiles")
-      .select("coldness_level, last_latitude")
-      .single()
-      .then(({ data }) => {
-        if (data?.coldness_level) setColdness(data.coldness_level as ColdnessLevel);
-        if (data?.last_latitude !== null && data?.last_latitude !== undefined) {
-          setGeo("granted");
-        }
-      });
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("coldness_level, last_latitude")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (!data) {
+        const fallbackUsername = user.email?.split("@")[0] ?? "user";
+        await supabase
+          .from("profiles")
+          .upsert({ id: user.id, username: fallbackUsername }, { onConflict: "id" });
+        return;
+      }
+      if (data.coldness_level) setColdness(data.coldness_level as ColdnessLevel);
+      if (data.last_latitude !== null && data.last_latitude !== undefined) {
+        setGeo("granted");
+      }
+    })();
   }, []);
 
   async function selectColdness(level: ColdnessLevel) {

@@ -29,16 +29,34 @@ export default function SettingsScreen() {
   }, []);
 
   async function loadProfile() {
-    const { data } = await supabase
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    let { data, error: err } = await supabase
       .from("profiles")
       .select("coldness_level, username")
-      .single();
+      .eq("id", user.id)
+      .maybeSingle();
 
-    if (data) {
-      setColdnessLevel(data.coldness_level as ColdnessLevel);
-      setUsername(data.username);
-      void loadCalibration(data.coldness_level as ColdnessLevel);
+    if (err) return;
+
+    if (!data) {
+      const fallbackUsername = user.email?.split("@")[0] ?? "user";
+      const { data: created, error: upsertErr } = await supabase
+        .from("profiles")
+        .upsert(
+          { id: user.id, username: fallbackUsername, coldness_level: 3 },
+          { onConflict: "id" },
+        )
+        .select("coldness_level, username")
+        .maybeSingle();
+      if (upsertErr || !created) return;
+      data = created;
     }
+
+    setColdnessLevel(data.coldness_level as ColdnessLevel);
+    setUsername(data.username);
+    void loadCalibration(data.coldness_level as ColdnessLevel);
   }
 
   async function loadCalibration(current: ColdnessLevel) {
