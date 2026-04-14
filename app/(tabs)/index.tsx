@@ -44,6 +44,9 @@ export default function TodayScreen() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [refining, setRefining] = useState(false);
+  const [steerText, setSteerText] = useState("");
+  const [steerBrands, setSteerBrands] = useState<string[]>([]);
+  const [favoriteBrands, setFavoriteBrands] = useState<string[]>([]);
   const router = useRouter();
 
   const today = new Date();
@@ -128,6 +131,7 @@ export default function TodayScreen() {
       const bundle = await (profilePromiseRef.current ?? loadProfileBundle());
       const { userId, coldness: userColdness, taste, recent_worn, recent_feedback, liked_anchors, derived_prefs } = bundle;
       setColdness(userColdness);
+      if (taste?.favorite_brands?.length) setFavoriteBrands(taste.favorite_brands);
 
       if (userId && !opts.skipCache) {
         const cached = await readSuggestion({
@@ -197,18 +201,29 @@ export default function TodayScreen() {
     }
   }
 
-  async function refineSuggestion(reason: RejectionReason | null) {
+  async function refineSuggestion(opts: {
+    reason?: RejectionReason | null;
+    steerText?: string;
+    steerBrands?: string[];
+  }) {
     if (!weather || !suggestion || refining) return;
+    const reason = opts.reason ?? null;
+    const trimmedText = opts.steerText?.trim() ?? "";
+    const brands = opts.steerBrands ?? [];
     setRefining(true);
     try {
       const reasonEntry = reason
         ? REJECTION_REASONS.find((r) => r.value === reason)
         : null;
+      const notePieces: string[] = [];
+      if (trimmedText) notePieces.push(trimmedText);
+      if (brands.length) notePieces.push(`marques: ${brands.join(", ")}`);
       await insertRejection({
         suggestion_text: suggestion,
         reason: reason ?? "autre",
         weather_data: weather,
         occasion,
+        reason_note: notePieces.join(" · ") || null,
       });
       const bundle = await (profilePromiseRef.current ?? loadProfileBundle());
       if (bundle.userId) {
@@ -222,9 +237,16 @@ export default function TodayScreen() {
       setSuggestionImage(null);
       const avoid = [
         `Ne reprends pas cette tenue : "${suggestion}".`,
-        reasonEntry ? reasonEntry.prompt : "propose une silhouette différente",
+        ...(reasonEntry ? [reasonEntry.prompt] : []),
       ];
-      await fetchSuggestion(weather, { avoid_reasons: avoid, skipCache: true });
+      await fetchSuggestion(weather, {
+        avoid_reasons: avoid,
+        steer_text: trimmedText || null,
+        steer_brands: brands.length ? brands : undefined,
+        skipCache: true,
+      });
+      setSteerText("");
+      setSteerBrands([]);
     } finally {
       setRefining(false);
     }
@@ -484,7 +506,7 @@ export default function TodayScreen() {
                   {REJECTION_REASONS.filter((r) => r.value !== "autre").map((opt) => (
                     <Pressable
                       key={opt.value}
-                      onPress={() => refineSuggestion(opt.value)}
+                      onPress={() => refineSuggestion({ reason: opt.value })}
                       disabled={refining}
                       className={`py-2 px-3 border border-paper-300 bg-paper-50 ${refining ? "opacity-50" : "active:bg-paper-200"}`}
                     >
@@ -494,15 +516,76 @@ export default function TodayScreen() {
                     </Pressable>
                   ))}
                 </View>
-                <Pressable
-                  onPress={() => refineSuggestion(null)}
-                  disabled={refining}
-                  className={`mt-4 py-3 items-center border border-ink-900 bg-paper ${refining ? "opacity-50" : "active:bg-paper-200"}`}
-                >
-                  <Text className="font-body-medium text-eyebrow text-ink-900">
-                    {refining ? "…" : "PASSER"}
-                  </Text>
-                </Pressable>
+
+                {favoriteBrands.length > 0 && (
+                  <>
+                    <Text className="font-body-medium text-micro text-ink-300 mt-6 mb-4">
+                      DANS L'ESPRIT DE
+                    </Text>
+                    <View className="flex-row flex-wrap" style={{ gap: 6 }}>
+                      {favoriteBrands.map((brand) => {
+                        const active = steerBrands.includes(brand);
+                        return (
+                          <Pressable
+                            key={brand}
+                            onPress={() =>
+                              setSteerBrands((prev) =>
+                                active ? prev.filter((b) => b !== brand) : [...prev, brand]
+                              )
+                            }
+                            disabled={refining}
+                            className={`py-2 px-3 border ${active ? "bg-ink-900 border-ink-900" : "bg-paper-50 border-paper-300"}`}
+                          >
+                            <Text className={`font-body text-xs ${active ? "text-paper" : "text-ink-900"}`}>
+                              {brand}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </>
+                )}
+
+                <Text className="font-body-medium text-micro text-ink-300 mt-6 mb-4">
+                  AUTREMENT
+                </Text>
+                <TextInput
+                  value={steerText}
+                  onChangeText={setSteerText}
+                  placeholder="plus cozy, superposé, tonalité terre…"
+                  placeholderTextColor={colors.ink[300]}
+                  className="border border-paper-300 bg-paper-50 p-3 font-body text-body-sm text-ink-900"
+                  style={{ minHeight: 56, textAlignVertical: "top" }}
+                  multiline
+                  editable={!refining}
+                />
+
+                <View className="flex-row mt-4" style={{ gap: 8 }}>
+                  <Pressable
+                    onPress={() => refineSuggestion({ reason: null })}
+                    disabled={refining}
+                    className={`flex-1 py-3 items-center border border-ink-900 bg-paper ${refining ? "opacity-50" : "active:bg-paper-200"}`}
+                  >
+                    <Text className="font-body-medium text-eyebrow text-ink-900">
+                      {refining ? "…" : "PASSER"}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() =>
+                      refineSuggestion({ reason: null, steerText, steerBrands })
+                    }
+                    disabled={refining || (!steerText.trim() && steerBrands.length === 0)}
+                    className={`flex-1 py-3 items-center ${
+                      refining || (!steerText.trim() && steerBrands.length === 0)
+                        ? "bg-ink-200"
+                        : "bg-ink-900 active:bg-ink-700"
+                    }`}
+                  >
+                    <Text className="font-body-medium text-eyebrow text-paper">
+                      RAFFINER
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
             )}
           </View>
