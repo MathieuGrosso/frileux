@@ -205,7 +205,7 @@ export default function CircleSettingsScreen() {
         ListHeaderComponent={
           <View className="px-6 pt-6">
             <Text
-              className="font-body-semibold text-ink-300 text-[10px] mb-2"
+              className="font-body-semibold text-ink-300 text-eyebrow mb-2"
               style={{ letterSpacing: 1.5 }}
             >
               NOM
@@ -223,7 +223,7 @@ export default function CircleSettingsScreen() {
                 />
                 <Pressable onPress={saveName} className="bg-ink-900 active:bg-ink-700 px-4 py-2">
                   <Text
-                    className="font-body-semibold text-paper-100 text-[10px]"
+                    className="font-body-semibold text-paper-100 text-eyebrow"
                     style={{ letterSpacing: 1.5 }}
                   >
                     OK
@@ -245,7 +245,7 @@ export default function CircleSettingsScreen() {
             )}
 
             <Text
-              className="font-body-semibold text-ink-300 text-[10px] mb-2"
+              className="font-body-semibold text-ink-300 text-eyebrow mb-2"
               style={{ letterSpacing: 1.5 }}
             >
               CODE D'INVITATION
@@ -260,7 +260,7 @@ export default function CircleSettingsScreen() {
               {isOwner && (
                 <Pressable onPress={regenerateCode} className="border border-ink-900 active:bg-paper-200 px-3 py-2">
                   <Text
-                    className="font-body-semibold text-ink-900 text-[10px]"
+                    className="font-body-semibold text-ink-900 text-eyebrow"
                     style={{ letterSpacing: 1.5 }}
                   >
                     RÉGÉNÉRER
@@ -270,7 +270,7 @@ export default function CircleSettingsScreen() {
             </View>
 
             <Text
-              className="font-body-semibold text-ink-300 text-[10px] mb-3"
+              className="font-body-semibold text-ink-300 text-eyebrow mb-3"
               style={{ letterSpacing: 1.5 }}
             >
               MEMBRES ({members.length})
@@ -294,14 +294,14 @@ export default function CircleSettingsScreen() {
                   {isSelf && <Text className="font-body text-ink-300"> · toi</Text>}
                   {isCreator && <Text className="font-body text-ink-300"> · créateur</Text>}
                 </Text>
-                <Text className="font-body text-ink-300 text-[10px]">
+                <Text className="font-body text-ink-300 text-eyebrow">
                   rejoint le {new Date(item.joined_at).toLocaleDateString("fr-FR")}
                 </Text>
               </View>
               {isOwner && !isSelf && (
                 <Pressable onPress={() => kick(item.user_id, username)} className="active:opacity-50">
                   <Text
-                    className="font-body-semibold text-error text-[10px]"
+                    className="font-body-semibold text-error text-eyebrow"
                     style={{ letterSpacing: 1.5 }}
                   >
                     RETIRER
@@ -318,7 +318,7 @@ export default function CircleSettingsScreen() {
               className="border border-error active:bg-error/10 py-4 items-center"
             >
               <Text
-                className="font-body-semibold text-error text-[11px]"
+                className="font-body-semibold text-error text-eyebrow"
                 style={{ letterSpacing: 2 }}
               >
                 QUITTER LE CERCLE
