@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { View, Text, Pressable, TextInput, Alert } from "react-native";
+import { View, Text, TextInput, Alert } from "react-native";
+import { router } from "expo-router";
 import { PressableScale } from "@/components/ui/PressableScale";
 import type { Circle } from "@/lib/types";
 import { colors } from "@/lib/theme";
@@ -12,13 +13,8 @@ interface Props {
 export function CircleOnboarding({ onCreate, onJoin }: Props) {
   const [inviteCode, setInviteCode] = useState("");
 
-  async function handleCreate() {
-    const c = await onCreate();
-    if (!c) {
-      Alert.alert("Erreur", "Impossible de créer le cercle.");
-      return;
-    }
-    Alert.alert("Cercle créé", `Code d'invitation : ${c.invite_code}`);
+  function handleCreate() {
+    router.push("/circle/new");
   }
 
   async function handleJoin() {
@@ -75,13 +71,25 @@ export function CircleOnboarding({ onCreate, onJoin }: Props) {
 
       <PressableScale
         onPress={handleJoin}
-        className="border border-ink-900 active:bg-paper-200 py-5 items-center"
+        className="border border-ink-900 active:bg-paper-200 py-5 items-center mb-6"
       >
         <Text
           className="font-body-semibold text-ink-900 text-eyebrow"
           style={{ letterSpacing: 2.5 }}
         >
           REJOINDRE
+        </Text>
+      </PressableScale>
+
+      <PressableScale
+        onPress={() => router.push("/circle/discover")}
+        className="py-4 items-center"
+      >
+        <Text
+          className="font-body-medium text-ice-600"
+          style={{ fontSize: 12, letterSpacing: 2 }}
+        >
+          EXPLORER LES CERCLES PUBLICS →
         </Text>
       </PressableScale>
     </View>
