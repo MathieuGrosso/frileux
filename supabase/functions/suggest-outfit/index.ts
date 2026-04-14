@@ -55,6 +55,15 @@ interface RequestBody {
   steer_text?: string | null;
   steer_brands?: string[];
   liked_anchors?: string[];
+  derived_prefs?: string[];
+  wardrobe?: Array<{
+    type: string;
+    color: string | null;
+    material: string | null;
+    style_tags: string[];
+    description: string;
+  }>;
+  wardrobe_mode?: "priority" | "strict";
 }
 
 const BRAND_AESTHETICS: Record<string, string> = {
@@ -198,6 +207,27 @@ function validate(body: unknown): RequestBody {
       if (typeof item !== "string" || item.length > 500) throw new Error("liked_anchors entry invalid");
     }
   }
+  const wr = b.wardrobe;
+  if (wr !== undefined) {
+    if (!Array.isArray(wr) || wr.length > 120) throw new Error("wardrobe invalid");
+    for (const item of wr) {
+      if (!item || typeof item !== "object") throw new Error("wardrobe entry invalid");
+      const it = item as Record<string, unknown>;
+      if (typeof it.type !== "string") throw new Error("wardrobe.type invalid");
+      if (typeof it.description !== "string" || it.description.length > 300) throw new Error("wardrobe.description invalid");
+    }
+  }
+  const wm = b.wardrobe_mode;
+  if (wm !== undefined && wm !== "priority" && wm !== "strict") {
+    throw new Error("wardrobe_mode invalid");
+  }
+  const dp = b.derived_prefs;
+  if (dp !== undefined) {
+    if (!Array.isArray(dp) || dp.length > 10) throw new Error("derived_prefs invalid");
+    for (const item of dp) {
+      if (typeof item !== "string" || item.length > 300) throw new Error("derived_prefs entry invalid");
+    }
+  }
   return body as RequestBody;
 }
 
@@ -226,7 +256,8 @@ Deno.serve(async (req: Request) => {
     const raw = await req.json();
     const {
       weather, coldness_level, recent_worn, recent_feedback, occasion, taste,
-      avoid_reasons, steer_text, steer_brands, liked_anchors,
+      avoid_reasons, steer_text, steer_brands, liked_anchors, derived_prefs,
+      wardrobe, wardrobe_mode,
     } = validate(raw);
     const tasteBlock = buildTasteBlock(taste);
 
@@ -269,8 +300,29 @@ Deno.serve(async (req: Request) => {
       ? `\n\nPilotage pour AUJOURD'HUI (oriente la silhouette sans nommer de marque) :${steer_text ? `\n- Intention : ${steer_text.trim()}` : ""}${steerBrandLines.length ? `\n${steerBrandLines.join("\n")}` : ""}`
       : "";
 
+    const derivedBlock = derived_prefs && derived_prefs.length > 0
+      ? `\n\nTendances des 30 derniers jours (ajuste la baseline, ne les mentionne pas) :\n${derived_prefs.map((p) => `- ${p}`).join("\n")}`
+      : "";
+
     const anchorsBlock = liked_anchors && liked_anchors.length > 0
       ? `\n\nTenues adorées par l'utilisatrice (sers-t'en comme ancres de goût, varie les pièces mais garde l'esprit) :\n${liked_anchors.slice(0, 3).map((a, i) => `${i + 1}. ${a}`).join("\n")}`
+      : "";
+
+    const wardrobeBlock = wardrobe && wardrobe.length > 0
+      ? (() => {
+          const byType: Record<string, string[]> = {};
+          for (const p of wardrobe) {
+            const line = `${p.description}${p.color ? ` (${p.color}${p.material ? `, ${p.material}` : ""})` : p.material ? ` (${p.material})` : ""}`;
+            (byType[p.type] ??= []).push(line);
+          }
+          const listed = Object.entries(byType)
+            .map(([type, lines]) => `- ${type} : ${lines.slice(0, 12).join(" | ")}`)
+            .join("\n");
+          const header = wardrobe_mode === "strict"
+            ? "Vestiaire de l'utilisatrice (compose UNIQUEMENT avec ces pièces) :"
+            : "Vestiaire de l'utilisatrice (priorité à ces pièces, sinon suggère ce qu'il manquerait) :";
+          return `\n\n${header}\n${listed}`;
+        })()
       : "";
 
     const occasionBlock = occasion
@@ -285,7 +337,7 @@ Météo du jour :
 - Vent : ${weather.wind_speed} m/s
 - Humidité : ${weather.humidity}%
 ${weather.rain ? "- Il pleut" : ""}
-${weather.snow ? "- Il neige" : ""}${occasionBlock}${tasteBlock}${anchorsBlock}${recentBlock}${feedbackBlock}${steerBlock}${avoidBlock}
+${weather.snow ? "- Il neige" : ""}${occasionBlock}${tasteBlock}${derivedBlock}${anchorsBlock}${wardrobeBlock}${recentBlock}${feedbackBlock}${steerBlock}${avoidBlock}
 
 Donne une suggestion de tenue ULTRA COURTE en français (1 phrase, 20 mots max). Liste 4 à 6 pièces séparées par des virgules, dans l'ordre haut → bas (haut, bas, manteau si besoin, chaussures, accessoires). Sois spécifique sur les matières (ex: "pull laine épaisse" plutôt que "pull"). Adapte au fait que la personne est ${coldnessDescriptions[coldness_level]}.${recentBlock ? " Varie les matières, couleurs et coupes par rapport aux dernières tenues." : ""}
 
