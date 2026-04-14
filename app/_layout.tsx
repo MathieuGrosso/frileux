@@ -40,7 +40,16 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session) {
+        const { error } = await supabase.auth.getUser();
+        if (error) {
+          await supabase.auth.signOut();
+          setSession(null);
+          setLoading(false);
+          return;
+        }
+      }
       setSession(session);
       setLoading(false);
     });

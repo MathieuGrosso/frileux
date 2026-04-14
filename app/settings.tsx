@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, Pressable, Alert, Platform, StyleSheet } from "react-native";
+import { View, Text, Pressable, Alert, Platform, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -15,14 +15,6 @@ const COLDNESS_LABELS: Record<ColdnessLevel, string> = {
   3: "Très frileuse",
   4: "Ultra frileuse",
   5: "Je vis en doudoune",
-};
-
-const COLDNESS_EMOJIS: Record<ColdnessLevel, string> = {
-  1: "🌤️",
-  2: "🧥",
-  3: "🧣",
-  4: "🧤",
-  5: "🥶",
 };
 
 export default function SettingsScreen() {
@@ -142,283 +134,145 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.inner}>
-        {/* Header */}
-        <View style={styles.header}>
+    <SafeAreaView className="flex-1 bg-paper">
+      <ScrollView
+        contentContainerClassName="px-6 pb-12"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Top bar */}
+        <View className="flex-row items-center justify-between pt-2 pb-10">
           <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Text style={styles.backText}>← Retour</Text>
+            <Text className="font-body text-body-sm text-ink-500">← Retour</Text>
           </Pressable>
-          <Text style={styles.headerTitle}>RÉGLAGES</Text>
-          <View style={{ width: 60 }} />
+          {username ? (
+            <Text className="font-body-medium text-eyebrow text-ink-300 uppercase">
+              @{username}
+            </Text>
+          ) : null}
         </View>
 
-        {/* Profile */}
-        <View style={styles.profileCard}>
-          <View style={styles.profileAvatar}>
-            <Text style={styles.profileInitial}>
-              {username?.[0]?.toUpperCase() ?? "?"}
+        {/* Page title */}
+        <View className="mb-12">
+          <Text className="font-body-medium text-eyebrow text-ink-300 uppercase mb-2">
+            Compte
+          </Text>
+          <Text className="font-display text-h1 text-ink-900">Réglages</Text>
+        </View>
+
+        {/* Coldness */}
+        <View className="mb-12">
+          <View className="flex-row items-baseline justify-between mb-1">
+            <Text className="font-body-medium text-eyebrow text-ink-500 uppercase">
+              Niveau de frilosité
+            </Text>
+            <Text className="font-display text-h3 text-ice">
+              0{coldnessLevel}
             </Text>
           </View>
-          <Text style={styles.profileName}>{username}</Text>
-        </View>
-
-        <View style={styles.divider} />
-
-        {/* Coldness Level */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>NIVEAU DE FRILOSITÉ</Text>
-          <Text style={styles.sectionHint}>
-            Les suggestions seront adaptées à ton niveau
+          <Text className="font-body text-caption text-ink-300 mb-5">
+            Les suggestions seront adaptées à ton niveau.
           </Text>
 
           {calibration && (
-            <View style={styles.calibrationBanner}>
-              <Text style={styles.calibrationLabel}>
-                {calibration.delta > 0 ? "PASSER AU NIVEAU SUPÉRIEUR ?" : "PASSER AU NIVEAU INFÉRIEUR ?"}
+            <View className="bg-ice-100 border-l-2 border-ice p-4 mb-4">
+              <Text className="font-body-medium text-micro text-ice-900 uppercase mb-1">
+                {calibration.delta > 0
+                  ? "Passer au niveau supérieur ?"
+                  : "Passer au niveau inférieur ?"}
               </Text>
-              <Text style={styles.calibrationReason}>{calibration.reason}</Text>
-              <View style={styles.calibrationActions}>
-                <Pressable onPress={acceptCalibration} style={styles.calibrationAccept}>
-                  <Text style={styles.calibrationAcceptText}>
-                    PASSER À {calibration.suggested}
+              <Text className="font-body text-body-sm text-ink-700 mb-3">
+                {calibration.reason}
+              </Text>
+              <View className="flex-row items-center gap-4">
+                <Pressable
+                  onPress={acceptCalibration}
+                  className="bg-ink-900 px-3.5 py-2"
+                >
+                  <Text className="font-body-medium text-micro text-paper uppercase">
+                    Passer à 0{calibration.suggested}
                   </Text>
                 </Pressable>
                 <Pressable onPress={() => setCalibration(null)} hitSlop={8}>
-                  <Text style={styles.calibrationDismiss}>IGNORER</Text>
+                  <Text className="font-body-medium text-micro text-ice uppercase underline">
+                    Ignorer
+                  </Text>
                 </Pressable>
               </View>
             </View>
           )}
 
-          {([1, 2, 3, 4, 5] as ColdnessLevel[]).map((level) => (
-            <Pressable
-              key={level}
-              onPress={() => updateColdness(level)}
-              style={[
-                styles.coldnessRow,
-                coldnessLevel === level && styles.coldnessRowActive,
-              ]}
-            >
-              <Text style={styles.coldnessEmoji}>{COLDNESS_EMOJIS[level]}</Text>
-              <Text style={[
-                styles.coldnessLabel,
-                coldnessLevel === level && styles.coldnessLabelActive,
-              ]}>
-                {COLDNESS_LABELS[level]}
-              </Text>
-              {coldnessLevel === level && (
-                <Text style={styles.coldnessCheck}>✓</Text>
-              )}
-            </Pressable>
-          ))}
+          <View className="border-t border-paper-300">
+            {([1, 2, 3, 4, 5] as ColdnessLevel[]).map((level) => {
+              const active = coldnessLevel === level;
+              return (
+                <Pressable
+                  key={level}
+                  onPress={() => updateColdness(level)}
+                  className="flex-row items-center py-4 border-b border-paper-300"
+                >
+                  <Text
+                    className={`font-display text-body-sm w-10 ${
+                      active ? "text-ice" : "text-ink-300"
+                    }`}
+                  >
+                    0{level}
+                  </Text>
+                  <Text
+                    className={`flex-1 ${
+                      active
+                        ? "font-body-medium text-body text-ink-900"
+                        : "font-body text-body text-ink-500"
+                    }`}
+                  >
+                    {COLDNESS_LABELS[level]}
+                  </Text>
+                  {active && (
+                    <Text className="font-body-medium text-body-sm text-ice">✓</Text>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
-
-        <View style={styles.divider} />
 
         {/* Personnalisation */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>PERSONNALISATION</Text>
-          <Pressable onPress={redoTaste} style={styles.resetBtn}>
-            <Text style={styles.resetBtnText}>METTRE À JOUR MON GOÛT</Text>
+        <View className="mb-12">
+          <Text className="font-body-medium text-eyebrow text-ink-500 uppercase mb-5">
+            Personnalisation
+          </Text>
+
+          <Pressable
+            onPress={redoTaste}
+            className="bg-ink-900 py-4 items-center active:bg-ink-700"
+          >
+            <Text className="font-display text-body-sm text-paper uppercase tracking-widest">
+              Mettre à jour mon goût
+            </Text>
           </Pressable>
-          <Pressable onPress={resetOnboarding} style={[styles.resetBtn, { marginTop: 8 }]}>
-            <Text style={styles.resetBtnText}>RECOMMENCER L'ONBOARDING</Text>
+
+          <Pressable
+            onPress={resetOnboarding}
+            className="border border-ink-900 py-4 items-center mt-2 active:bg-paper-200"
+          >
+            <Text className="font-display text-body-sm text-ink-900 uppercase tracking-widest">
+              Recommencer l'onboarding
+            </Text>
           </Pressable>
         </View>
 
-        <View style={styles.divider} />
+        {/* Session */}
+        <View className="border-t border-paper-300 pt-6">
+          <Pressable onPress={handleLogout} hitSlop={8}>
+            <Text className="font-body text-body-sm text-error underline">
+              Se déconnecter
+            </Text>
+          </Pressable>
+        </View>
 
-        {/* Logout */}
-        <Pressable
-          onPress={handleLogout}
-          style={({ pressed }) => [styles.logoutBtn, pressed && styles.logoutBtnPressed]}
-        >
-          <Text style={styles.logoutText}>Se déconnecter</Text>
-        </Pressable>
-
-        <View style={styles.brandFooter}>
+        <View className="items-center mt-20 opacity-30">
           <BrandLogo size="sm" />
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FAFAF8" },
-  inner: { paddingHorizontal: 24, paddingTop: 8 },
-
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 32,
-  },
-  backText: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 14,
-    color: "#9E9A96",
-  },
-  headerTitle: {
-    fontFamily: "BarlowCondensed_600SemiBold",
-    fontSize: 16,
-    color: "#0F0F0D",
-    letterSpacing: 2,
-  },
-
-  profileCard: {
-    alignItems: "center",
-    paddingVertical: 24,
-  },
-  profileAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 0,
-    backgroundColor: "#E8F1F6",
-    borderWidth: 1,
-    borderColor: "#D5E4EE",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  profileInitial: {
-    fontFamily: "BarlowCondensed_600SemiBold",
-    fontSize: 22,
-    color: "#637D8E",
-  },
-  profileName: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 16,
-    color: "#0F0F0D",
-  },
-
-  divider: { height: 1, backgroundColor: "#E8E5DF", marginBottom: 28 },
-
-  section: { marginBottom: 28 },
-
-  calibrationBanner: {
-    backgroundColor: "#E8F1F6",
-    padding: 14,
-    marginTop: 12,
-    marginBottom: 8,
-    borderLeftWidth: 2,
-    borderLeftColor: "#637D8E",
-  },
-  calibrationLabel: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 10,
-    letterSpacing: 1.6,
-    color: "#2C4A5C",
-    marginBottom: 6,
-  },
-  calibrationReason: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 13,
-    lineHeight: 18,
-    color: "#3A3836",
-    marginBottom: 12,
-  },
-  calibrationActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  calibrationAccept: {
-    backgroundColor: "#0F0F0D",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  calibrationAcceptText: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 10,
-    letterSpacing: 1.6,
-    color: "#FAFAF8",
-  },
-  calibrationDismiss: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 10,
-    letterSpacing: 1.6,
-    color: "#637D8E",
-    textDecorationLine: "underline",
-  },
-  sectionLabel: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 9,
-    color: "#9E9A96",
-    letterSpacing: 2,
-    marginBottom: 4,
-  },
-  sectionHint: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 12,
-    color: "#9E9A96",
-    marginBottom: 16,
-  },
-
-  coldnessRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: "#E8E5DF",
-    marginBottom: 6,
-    backgroundColor: "#FAFAF8",
-  },
-  coldnessRowActive: {
-    backgroundColor: "#E8F1F6",
-    borderColor: "#D5E4EE",
-  },
-  coldnessEmoji: { fontSize: 20 },
-  coldnessLabel: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 14,
-    color: "#6B6A66",
-    flex: 1,
-  },
-  coldnessLabelActive: {
-    fontFamily: "Jost_500Medium",
-    color: "#637D8E",
-  },
-  coldnessCheck: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 14,
-    color: "#637D8E",
-  },
-
-  resetBtn: {
-    borderWidth: 1,
-    borderColor: "#0F0F0D",
-    paddingVertical: 16,
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-  },
-  resetBtnText: {
-    fontFamily: "BarlowCondensed_600SemiBold",
-    fontSize: 13,
-    letterSpacing: 1.4,
-    color: "#0F0F0D",
-  },
-
-  logoutBtn: {
-    borderWidth: 1,
-    borderColor: "#C0392B",
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  logoutBtnPressed: { backgroundColor: "#FDF2F1" },
-  logoutText: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 13,
-    color: "#C0392B",
-    letterSpacing: 0.5,
-  },
-  brandFooter: {
-    alignItems: "center",
-    marginTop: 48,
-    marginBottom: 16,
-    opacity: 0.4,
-  },
-});
