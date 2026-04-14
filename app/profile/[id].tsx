@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { PressableScale } from "@/components/ui/PressableScale";
 import { MemberAvatar } from "@/components/circle/MemberAvatar";
 import { openDMThread } from "@/hooks/useDMThreads";
+import { useFollow } from "@/hooks/useFollow";
 
 interface PublicProfile {
   id: string;
@@ -26,6 +27,8 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const { stats, toggle: toggleFollow } = useFollow(id ?? null);
 
   useEffect(() => {
     if (!id) return;
@@ -47,6 +50,15 @@ export default function ProfileScreen() {
       ]);
       setProfile(p as PublicProfile | null);
       setOutfits((o as OutfitThumb[]) ?? []);
+
+      const { data: s } = await supabase
+        .from("user_statuses")
+        .select("text, expires_at")
+        .eq("user_id", id)
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
+      setStatus((s as { text: string } | null)?.text ?? null);
+
       setLoading(false);
     })();
   }, [id]);
@@ -117,6 +129,54 @@ export default function ProfileScreen() {
               .toLocaleDateString("fr-FR", { month: "short", year: "numeric" })
               .toUpperCase()}
           </Text>
+
+          {status ? (
+            <Text
+              className="font-body text-ice-600 text-center mt-3 italic"
+              style={{ fontSize: 13 }}
+            >
+              « {status} »
+            </Text>
+          ) : null}
+
+          <View className="flex-row justify-center gap-10 mt-6">
+            <View className="items-center">
+              <Text className="font-display text-ink-900" style={{ fontSize: 24 }}>
+                {stats.followers}
+              </Text>
+              <Text
+                className="font-body text-ink-300 mt-0.5"
+                style={{ fontSize: 10, letterSpacing: 1.5 }}
+              >
+                FOLLOWERS
+              </Text>
+            </View>
+            <View className="items-center">
+              <Text className="font-display text-ink-900" style={{ fontSize: 24 }}>
+                {stats.following}
+              </Text>
+              <Text
+                className="font-body text-ink-300 mt-0.5"
+                style={{ fontSize: 10, letterSpacing: 1.5 }}
+              >
+                SUIVIS
+              </Text>
+            </View>
+          </View>
+
+          {!isMe && (
+            <PressableScale
+              onPress={toggleFollow}
+              className={`py-3 items-center mt-6 border ${stats.iFollow ? "border-ink-900" : "border-ice-600 bg-ice-100"}`}
+            >
+              <Text
+                className={`font-body-semibold ${stats.iFollow ? "text-ink-900" : "text-ice-600"}`}
+                style={{ fontSize: 11, letterSpacing: 2.5 }}
+              >
+                {stats.iFollow ? "SUIVI ✓" : "SUIVRE"}
+              </Text>
+            </PressableScale>
+          )}
 
           {!isMe && (
             <PressableScale
