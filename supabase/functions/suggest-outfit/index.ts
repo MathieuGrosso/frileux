@@ -51,7 +51,41 @@ interface RequestBody {
   }>;
   occasion?: string | null;
   taste?: TasteBody;
+  avoid_reasons?: string[];
 }
+
+const BRAND_AESTHETICS: Record<string, string> = {
+  "Our Legacy": "workwear ample réinterprété, teintes sourdes gris-sable, jersey lourd",
+  "Lemaire": "ligne fluide, camel écru noir, manches longues, drapé, tailoring déstructuré",
+  "Acne Studios": "denim brut, silhouettes larges, cuir patiné, rose poudré, codes scandinaves",
+  "Jacquemus": "épures méditerranéennes, écru terracotta, volumes courts, côté soleil",
+  "Aimé Leon Dore": "preppy new-yorkais, polos, chinos, sneakers rétro, crème burgundy marine",
+  "Stüssy": "streetwear Californien, tees graphiques, nylon, béton olive, 90s décontracté",
+  "Carhartt WIP": "workwear duck canvas, ample, poches utilitaires, beige marron noir",
+  "Kapital": "patchwork Japonais, indigo teint, boro, coupes étranges, folklore décalé",
+  "Needles": "track pants papillon, velours, tailoring rétro, rayures, élégance dérangée",
+  "Palace": "skateboarding UK, sportswear technique, logos discrets, tricolore",
+  "Stone Island": "sportswear technique, teintures réactives, nylon, vert militaire stone",
+  "Rick Owens": "drape sombre, cuir noir, asymétries, silhouettes longues, gothique",
+  "Maison Margiela": "déconstruction, tabi, blanc cassé, anthracite, tailoring éclaté",
+  "Auralee": "matières sublimes, coton fin, camel poudré, ligne pure, luxe silencieux",
+  "Uniqlo U": "basiques sculptés, laine mélangée, minimalisme accessible, oversize contrôlé",
+  "Arc'teryx": "outdoor technique, gore-tex, gris ardoise noir, gorpcore urbain",
+  "Gramicci": "pantalons escalade, nylon léger, outdoor décontracté, tons terre",
+  "Polo Ralph Lauren": "preppy Américain, oxford boutonné, tweed, marine ivoire bordeaux",
+  "A.P.C.": "denim brut Japonais, tailoring minimaliste Parisien, marine écru noir",
+  "Engineered Garments": "workwear hybride, poches multiples, tissus mixés, kaki moutarde",
+  "Universal Works": "workwear Anglais, laine grise, cordons, tweed, tailoring décontracté",
+  "Patta": "streetwear Amsterdam, sportswear saturé, motifs graphiques, culture sneaker",
+  "Drake's": "tailoring Anglais relâché, tweed, laine, palette automne, Ivy revisité",
+  "Beams Plus": "Ivy Japonais, madras, oxford, chinos, précision heritage, marine moutarde",
+  "Marine Serre": "upcycling, lune imprimée, skintight mixé workwear, noir crème",
+  "Bode": "textile vintage, quilt, broderies, Americana narratif, tons fanés",
+  "JW Anderson": "silhouettes étranges, volumes exagérés, maille sculpturale, art conceptuel",
+  "Junya Watanabe": "patchwork technique, denim déconstruit, Japonais expérimental",
+  "Comme des Garçons": "noir avant-garde, tailoring asymétrique, textures mixtes, sculpté",
+  "Noah": "preppy New-York rebelle, rugbies, tailoring marine, pop rock 60s",
+};
 
 function buildTasteBlock(t?: TasteBody): string {
   if (!t) return "";
@@ -63,9 +97,21 @@ function buildTasteBlock(t?: TasteBody): string {
     lines.push(`- Univers : ${t.style_universes.join(", ")}`);
   }
   if (t.favorite_brands?.length) {
-    lines.push(
-      `- Marques de référence (utilise leur vocabulaire et leurs silhouettes — ne les nomme PAS dans la réponse) : ${t.favorite_brands.join(", ")}`
-    );
+    const inspirations = t.favorite_brands
+      .map((name) => {
+        const aes = BRAND_AESTHETICS[name];
+        return aes ? `  · ${aes}` : null;
+      })
+      .filter(Boolean) as string[];
+    if (inspirations.length) {
+      lines.push(
+        `- Inspirations esthétiques (utilise ce vocabulaire, ces silhouettes et palettes — ne nomme JAMAIS les marques) :\n${inspirations.join("\n")}`
+      );
+    } else {
+      lines.push(
+        `- Marques de référence (utilise leur vocabulaire — ne les nomme PAS) : ${t.favorite_brands.join(", ")}`
+      );
+    }
   }
   if (t.fit_preference) {
     lines.push(`- Coupe préférée : ${t.fit_preference}`);
@@ -122,6 +168,15 @@ function validate(body: unknown): RequestBody {
   if (t !== undefined && (t === null || typeof t !== "object" || Array.isArray(t))) {
     throw new Error("taste invalid");
   }
+  const ar = b.avoid_reasons;
+  if (ar !== undefined) {
+    if (!Array.isArray(ar) || ar.length > 10) throw new Error("avoid_reasons invalid");
+    for (const item of ar) {
+      if (typeof item !== "string" || item.length > 200) {
+        throw new Error("avoid_reasons entry invalid");
+      }
+    }
+  }
   return body as RequestBody;
 }
 
@@ -148,7 +203,7 @@ Deno.serve(async (req: Request) => {
   try {
     if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
     const raw = await req.json();
-    const { weather, coldness_level, recent_worn, recent_feedback, occasion, taste } = validate(raw);
+    const { weather, coldness_level, recent_worn, recent_feedback, occasion, taste, avoid_reasons } = validate(raw);
     const tasteBlock = buildTasteBlock(taste);
 
     const coldnessDescriptions: Record<number, string> = {
@@ -177,6 +232,10 @@ Deno.serve(async (req: Request) => {
           .join("\n")}`
       : "";
 
+    const avoidBlock = avoid_reasons && avoid_reasons.length > 0
+      ? `\n\nContraintes négatives (STRICTES, à respecter en priorité) :\n${avoid_reasons.map((r) => `- ${r}`).join("\n")}`
+      : "";
+
     const occasionBlock = occasion
       ? `\n\nContexte demandé pour aujourd'hui : ${occasion}. Adapte le code vestimentaire (ex: travail = un cran plus formel, sortie = plus expressif, sport = technique).`
       : "";
@@ -189,7 +248,7 @@ Météo du jour :
 - Vent : ${weather.wind_speed} m/s
 - Humidité : ${weather.humidity}%
 ${weather.rain ? "- Il pleut" : ""}
-${weather.snow ? "- Il neige" : ""}${occasionBlock}${tasteBlock}${recentBlock}${feedbackBlock}
+${weather.snow ? "- Il neige" : ""}${occasionBlock}${tasteBlock}${recentBlock}${feedbackBlock}${avoidBlock}
 
 Donne une suggestion de tenue ULTRA COURTE en français (1 phrase, 20 mots max). Liste 4 à 6 pièces séparées par des virgules, dans l'ordre haut → bas (haut, bas, manteau si besoin, chaussures, accessoires). Sois spécifique sur les matières (ex: "pull laine épaisse" plutôt que "pull"). Adapte au fait que la personne est ${coldnessDescriptions[coldness_level]}.${recentBlock ? " Varie les matières, couleurs et coupes par rapport aux dernières tenues." : ""}
 

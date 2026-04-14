@@ -12,6 +12,7 @@ import { Link } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { BrandLogo } from "@/components/BrandLogo";
 import { mapAuthError } from "@/lib/auth-errors";
+import { colors } from "@/lib/theme";
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState("");
@@ -60,29 +61,29 @@ export default function RegisterScreen() {
           <TextInput
             style={styles.input}
             placeholder="Prénom ou pseudo"
-            placeholderTextColor="#9E9A96"
+            placeholderTextColor={colors.ink[300]}
             value={username}
             onChangeText={(v) => { setUsername(v); clearError(); }}
-            selectionColor="#637D8E"
+            selectionColor={colors.ice[600]}
           />
           <TextInput
             style={styles.input}
             placeholder="Email"
-            placeholderTextColor="#9E9A96"
+            placeholderTextColor={colors.ink[300]}
             value={email}
             onChangeText={(v) => { setEmail(v); clearError(); }}
             autoCapitalize="none"
             keyboardType="email-address"
-            selectionColor="#637D8E"
+            selectionColor={colors.ice[600]}
           />
           <TextInput
             style={styles.input}
             placeholder="Mot de passe"
-            placeholderTextColor="#9E9A96"
+            placeholderTextColor={colors.ink[300]}
             value={password}
             onChangeText={(v) => { setPassword(v); clearError(); }}
             secureTextEntry
-            selectionColor="#637D8E"
+            selectionColor={colors.ice[600]}
           />
           <Pressable
             onPress={handleRegister}

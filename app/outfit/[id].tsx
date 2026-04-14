@@ -18,6 +18,7 @@ import { OUTFIT_OCCASIONS, THERMAL_FEELINGS } from "@/lib/types";
 import { weatherEmoji } from "@/lib/weather";
 import { RatingStars } from "@/components/RatingStars";
 import { OutfitNotes } from "@/components/circle/OutfitNotes";
+import { colors } from "@/lib/theme";
 
 export default function OutfitDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -83,7 +84,7 @@ export default function OutfitDetailScreen() {
     return (
       <View style={styles.container}>
         <SafeAreaView style={styles.loadingCenter}>
-          <ActivityIndicator size="small" color="#637D8E" />
+          <ActivityIndicator size="small" color={colors.ice[600]} />
         </SafeAreaView>
       </View>
     );
@@ -220,12 +221,12 @@ export default function OutfitDetailScreen() {
                 <TextInput
                   style={styles.notesInput}
                   placeholder="Comment te sentais-tu dans cette tenue ?"
-                  placeholderTextColor="#9E9A96"
+                  placeholderTextColor={colors.ink[300]}
                   value={notes}
                   onChangeText={setNotes}
                   multiline
                   textAlignVertical="top"
-                  selectionColor="#637D8E"
+                  selectionColor={colors.ice[600]}
                 />
               ) : (
                 <Text style={[styles.notesText, !notes && styles.notesMuted]}>

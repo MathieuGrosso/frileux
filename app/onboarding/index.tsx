@@ -24,6 +24,7 @@ import { analyzeClothingImage, analyzeClothingDescription } from "@/lib/gemini";
 import type { WardrobeItem, ClothingAnalysis, WardrobeItemType } from "@/lib/types";
 import RefineImageModal from "@/components/RefineImageModal";
 import { BrandLogo } from "@/components/BrandLogo";
+import { colors } from "@/lib/theme";
 
 const MIN_ITEMS = 3;
 const TYPE_LABELS: Record<WardrobeItemType, string> = {
@@ -175,7 +176,7 @@ export default function OnboardingItems() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator color="#637D8E" />
+        <ActivityIndicator color={colors.ice[600]} />
       </View>
     );
   }
@@ -235,7 +236,7 @@ export default function OnboardingItems() {
 
         {analyzing && (
           <View style={styles.analyzingRow}>
-            <ActivityIndicator color="#637D8E" size="small" />
+            <ActivityIndicator color={colors.ice[600]} size="small" />
             <Text style={styles.analyzingText}>Gemini analyse la pièce…</Text>
           </View>
         )}
@@ -319,7 +320,7 @@ export default function OnboardingItems() {
               multiline
               autoFocus
               placeholder="Décris ta pièce…"
-              placeholderTextColor="#A8A49F"
+              placeholderTextColor={colors.ink[300]}
               style={styles.modalInput}
             />
             <View style={styles.modalRow}>

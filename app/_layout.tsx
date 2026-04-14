@@ -20,6 +20,7 @@ import {
   Jost_500Medium,
   Jost_600SemiBold,
 } from "@expo-google-fonts/jost";
+import { colors } from "@/lib/theme";
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null);
@@ -119,7 +120,7 @@ export default function RootLayout() {
   if (loading || !fontsLoaded) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FAFAF8" }}>
-        <ActivityIndicator size="large" color="#637D8E" />
+        <ActivityIndicator size="large" color={colors.ice[600]} />
       </View>
     );
   }

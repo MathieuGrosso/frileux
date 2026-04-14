@@ -14,6 +14,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import type { Brand, Build, FitPreference, GenderPresentation } from "@/lib/types";
+import { colors } from "@/lib/theme";
 
 const STYLE_UNIVERSES = [
   "minimal",
@@ -167,8 +168,8 @@ export default function OnboardingTaste() {
       if (isUpgrade) {
         router.replace("/(tabs)");
       } else {
-        await AsyncStorage.setItem("@onboarding/last-step", "profile");
-        router.push("/onboarding/profile");
+        await AsyncStorage.setItem("@onboarding/last-step", "brands");
+        router.push("/onboarding/brands");
       }
     } catch (e) {
       Alert.alert("Erreur", e instanceof Error ? e.message : "Sauvegarde impossible.");
@@ -268,13 +269,13 @@ export default function OnboardingTaste() {
             value={brandQuery}
             onChangeText={setBrandQuery}
             placeholder="Chercher une marque"
-            placeholderTextColor="#A8A49F"
+            placeholderTextColor={colors.ink[300]}
             style={styles.searchInput}
             autoCorrect={false}
             autoCapitalize="none"
           />
           {searching && (
-            <ActivityIndicator size="small" color="#637D8E" style={styles.searchSpinner} />
+            <ActivityIndicator size="small" color={colors.ice[600]} style={styles.searchSpinner} />
           )}
         </View>
         {filteredResults.length > 0 && (
@@ -363,7 +364,7 @@ export default function OnboardingTaste() {
               onChangeText={(v) => setHeightStr(v.replace(/[^0-9]/g, "").slice(0, 3))}
               keyboardType="number-pad"
               placeholder="172"
-              placeholderTextColor="#A8A49F"
+              placeholderTextColor={colors.ink[300]}
               style={styles.measureInput}
               maxLength={3}
             />
@@ -375,7 +376,7 @@ export default function OnboardingTaste() {
               onChangeText={(v) => setShoeStr(v.replace(/[^0-9]/g, "").slice(0, 2))}
               keyboardType="number-pad"
               placeholder="42"
-              placeholderTextColor="#A8A49F"
+              placeholderTextColor={colors.ink[300]}
               style={styles.measureInput}
               maxLength={2}
             />
@@ -386,7 +387,7 @@ export default function OnboardingTaste() {
       <View style={styles.bottomBar}>
         <Pressable style={styles.continueBtn} onPress={saveAndContinue} disabled={saving}>
           {saving ? (
-            <ActivityIndicator color="#FAFAF8" size="small" />
+            <ActivityIndicator color={colors.paper[100]} size="small" />
           ) : (
             <Text style={styles.continueText}>
               {isUpgrade ? "TERMINER →" : "CONTINUER →"}
