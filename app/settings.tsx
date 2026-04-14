@@ -11,10 +11,10 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { suggestColdnessAdjustment, type CalibrationSuggestion } from "@/lib/coldness-calibration";
 
 const COLDNESS_LABELS: Record<ColdnessLevel, string> = {
-  1: "Un peu frileuse",
-  2: "Frileuse",
-  3: "Très frileuse",
-  4: "Ultra frileuse",
+  1: "Un peu frileux",
+  2: "Frileux",
+  3: "Très frileux",
+  4: "Ultra frileux",
   5: "Je vis en doudoune",
 };
 

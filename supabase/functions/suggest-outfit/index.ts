@@ -274,9 +274,9 @@ Deno.serve(async (req: Request) => {
       : "";
 
     const thermalLabel: Record<string, string> = {
-      too_cold: "elle a eu trop froid",
+      too_cold: "il a eu trop froid",
       just_right: "le ressenti était pile bien",
-      too_warm: "elle a eu trop chaud",
+      too_warm: "il a eu trop chaud",
     };
 
     const feedbackBlock = recent_feedback && recent_feedback.length > 0
