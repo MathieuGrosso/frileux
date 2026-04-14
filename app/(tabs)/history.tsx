@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
-import { View, Text, FlatList, Image } from "react-native";
+import { View, Text, FlatList } from "react-native";
+import { Image } from "expo-image";
 import Animated, { useReducedMotion } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -49,9 +50,11 @@ export default function HistoryScreen() {
         className="mb-9"
       >
         <Image
-          source={{ uri: item.photo_url }}
-          className="w-full h-[280px]"
-          resizeMode="cover"
+          source={item.photo_url ? { uri: item.photo_url } : null}
+          className="w-full h-[280px] bg-paper-200"
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={150}
         />
         <View className="pt-3">
           <View className="flex-row justify-between items-center mb-2.5">
