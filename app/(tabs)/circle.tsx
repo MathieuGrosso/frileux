@@ -93,7 +93,6 @@ export default function CircleScreen() {
             <CircleOutfitCard
               outfit={item}
               isFirst={index === outfits.length - 1 && outfits.length > 1}
-              index={index}
             />
           )}
           keyExtractor={(item) => item.id}
