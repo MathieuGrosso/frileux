@@ -28,6 +28,8 @@ import { REJECTION_REASONS, insertRejection, type RejectionReason } from "@/lib/
 import { embedOutfitText } from "@/lib/embedOutfit";
 import { SuggestionSwipeArea } from "@/components/SuggestionSwipeArea";
 import { RefineSheet } from "@/components/RefineSheet";
+import { OutfitCritique } from "@/components/OutfitCritique";
+import { fetchOutfitCritique } from "@/lib/critique";
 import { colors, motion } from "@/lib/theme";
 import { useRouter } from "expo-router";
 
@@ -53,6 +55,10 @@ export default function TodayScreen() {
   const [adoptedOutfitId, setAdoptedOutfitId] = useState<string | null>(null);
   const [adopting, setAdopting] = useState(false);
   const [refineOpen, setRefineOpen] = useState(false);
+  const [critique, setCritique] = useState<import("@/lib/types").OutfitCritique | null>(null);
+  const [critiqueLoading, setCritiqueLoading] = useState(false);
+  const [critiqueOutfitId, setCritiqueOutfitId] = useState<string | null>(null);
+  const critiqueTargetRef = useRef<string | null>(null);
   const [todayOutfit, setTodayOutfit] = useState<{
     id: string;
     photo_url: string;
@@ -470,6 +476,18 @@ export default function TodayScreen() {
           rating: rating || null,
           notes: notes.trim() || null,
         });
+        setCritique(null);
+        setCritiqueOutfitId(savedId);
+        setCritiqueLoading(true);
+        const targetId = savedId;
+        critiqueTargetRef.current = targetId;
+        fetchOutfitCritique(targetId)
+          .then((c) => {
+            if (critiqueTargetRef.current === targetId) setCritique(c);
+          })
+          .finally(() => {
+            if (critiqueTargetRef.current === targetId) setCritiqueLoading(false);
+          });
       }
 
       setSaved(true);
@@ -644,6 +662,9 @@ export default function TodayScreen() {
                 <Pressable
                   onPress={() => {
                     setTodayOutfit(null);
+                    setCritique(null);
+                    setCritiqueOutfitId(null);
+                    critiqueTargetRef.current = null;
                     if (weather) fetchSuggestion(weather, { skipCache: true });
                   }}
                   hitSlop={8}
@@ -668,6 +689,11 @@ export default function TodayScreen() {
                   </Text>
                 </Pressable>
               </View>
+              {critiqueOutfitId === todayOutfit.id && (
+                <View className="mt-8 -mx-6">
+                  <OutfitCritique critique={critique} loading={critiqueLoading} />
+                </View>
+              )}
             </View>
           ) : (
           <>
