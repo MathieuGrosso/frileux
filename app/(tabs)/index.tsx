@@ -21,7 +21,7 @@ import { OUTFIT_OCCASIONS, THERMAL_FEELINGS } from "@/lib/types";
 import { RatingStars } from "@/components/RatingStars";
 import { Skeleton } from "@/components/Skeleton";
 import { TodayLoader, type LoaderStep } from "@/components/TodayLoader";
-import { HatchedPlaceholder } from "@/components/HatchedPlaceholder";
+import { OutfitImageLoader } from "@/components/OutfitImageLoader";
 import { loadProfileBundle, type ProfileBundle } from "@/lib/profile";
 import { patchSuggestionImage, readSuggestion, writeSuggestion } from "@/lib/suggestionCache";
 import { colors, motion } from "@/lib/theme";
@@ -407,7 +407,7 @@ export default function TodayScreen() {
                   resizeMode="cover"
                 />
               ) : (
-                <HatchedPlaceholder style={{ width: "100%", height: "100%" }} />
+                <OutfitImageLoader style={{ width: "100%", height: "100%" }} />
               )}
             </View>
 
