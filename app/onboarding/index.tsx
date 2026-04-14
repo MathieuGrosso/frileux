@@ -87,7 +87,7 @@ export default function OnboardingItems() {
     setAnalyzing(true);
     try {
       const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
+        encoding: "base64",
       });
       const analysis = await analyzeClothingImage(base64);
 
