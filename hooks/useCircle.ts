@@ -12,6 +12,7 @@ export interface UseCircleResult {
   circles: Circle[];
   circle: Circle | null;
   outfits: OutfitWithProfile[];
+  memberCount: number;
   loading: boolean;
   refreshing: boolean;
   userId: string | null;
@@ -46,6 +47,7 @@ export function useCircle(): UseCircleResult {
   const [refreshing, setRefreshing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [viewMode, setViewModeState] = useState<CircleViewMode>("today");
+  const [memberCount, setMemberCount] = useState(0);
 
   const circle = circles.find((c) => c.id === activeId) ?? null;
 
@@ -60,9 +62,12 @@ export function useCircle(): UseCircleResult {
       .eq("circle_id", circleId);
 
     if (!members) {
+      setMemberCount(0);
       setOutfits([]);
       return;
     }
+
+    setMemberCount(members.length);
 
     const memberIds = members
       .map((m) => m.user_id)
@@ -272,6 +277,7 @@ export function useCircle(): UseCircleResult {
     circles,
     circle,
     outfits,
+    memberCount,
     loading,
     refreshing,
     userId,

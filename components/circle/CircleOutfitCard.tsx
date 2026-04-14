@@ -35,11 +35,11 @@ export function CircleOutfitCard({ outfit, isFirst = false }: Props) {
           size={28}
         />
         <View className="flex-1">
-          <Text className="font-body-medium text-ink-900 text-[13px]">
+          <Text className="font-body-medium text-ink-900 text-body-sm">
             {username}
           </Text>
           <Text
-            className="font-body text-ink-300 text-[10px]"
+            className="font-body text-ink-300 text-eyebrow"
             style={{ letterSpacing: 0.5 }}
           >
             {time}
@@ -48,7 +48,7 @@ export function CircleOutfitCard({ outfit, isFirst = false }: Props) {
         {isFirst && (
           <View className="bg-ink-900 px-1.5 py-0.5">
             <Text
-              className="font-body-semibold text-paper-100 text-[9px]"
+              className="font-body-semibold text-paper-100 text-micro"
               style={{ letterSpacing: 1.5 }}
             >
               PREMIÈRE
@@ -69,7 +69,7 @@ export function CircleOutfitCard({ outfit, isFirst = false }: Props) {
       />
       {typeof outfit.notes_count === "number" && outfit.notes_count > 0 && (
         <Text
-          className="font-body text-ink-300 text-[11px] mt-2"
+          className="font-body text-ink-300 text-eyebrow mt-2"
           style={{ letterSpacing: 0.5 }}
         >
           {outfit.notes_count} {outfit.notes_count > 1 ? "notes" : "note"}

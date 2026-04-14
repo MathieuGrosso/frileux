@@ -7,7 +7,6 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
-  StyleSheet,
 } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -88,8 +87,8 @@ export default function OutfitDetailScreen() {
 
   if (!outfit) {
     return (
-      <View style={styles.container}>
-        <SafeAreaView style={styles.loadingCenter}>
+      <View className="flex-1 bg-paper-100">
+        <SafeAreaView className="flex-1 items-center justify-center">
           <ActivityIndicator size="small" color={colors.ice[600]} />
         </SafeAreaView>
       </View>
@@ -102,83 +101,103 @@ export default function OutfitDetailScreen() {
   });
 
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safe}>
+    <View className="flex-1 bg-paper-100">
+      <SafeAreaView className="flex-1">
         <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
 
-          {/* Photo with bare back button — no gradient overlay */}
-          <View style={styles.heroContainer}>
+          <View className="relative" style={{ height: 520 }}>
             <Image
               source={{ uri: outfit.photo_url }}
-              style={styles.heroPhoto}
-              contentFit="cover"
-              cachePolicy="memory-disk"
+              className="w-full h-full"
+              resizeMode="cover"
             />
-            <Pressable onPress={() => router.back()} style={styles.backBtn}>
-              <Text style={styles.backText}>←</Text>
+            <Pressable
+              onPress={() => router.back()}
+              className="absolute top-4 left-4 bg-paper-100/90 px-3.5 py-2 border border-paper-300"
+            >
+              <Text className="font-body-medium text-body-sm text-ink-900">←</Text>
             </Pressable>
           </View>
 
-          <View style={styles.content}>
+          <View className="px-6 pt-6">
 
-            {/* Date + weather row */}
-            <View style={styles.metaRow}>
-              <Text style={styles.heroDate}>{dateStr}</Text>
+            <View className="flex-row justify-between items-end mb-5">
+              <Text className="font-display text-h2 tracking-tight text-ink-900 flex-1">
+                {dateStr}
+              </Text>
               {weather && (
-                <View style={styles.heroBadge}>
+                <View className="flex-row items-center gap-1.5 px-2.5 py-1 border border-paper-300 bg-paper-200">
                   <Text style={{ fontSize: 14 }}>{weatherEmoji(weather.icon)}</Text>
-                  <Text style={styles.heroBadgeTemp}>{weather.temp}°</Text>
+                  <Text className="font-body-medium text-body-sm text-ink-500">
+                    {weather.temp}°
+                  </Text>
                 </View>
               )}
             </View>
 
-            {/* Weather strip */}
             {weather && (
-              <View style={styles.weatherStrip}>
+              <View className="flex-row bg-paper-200 border border-paper-300 py-4 mb-6">
                 <WeatherStat label="Ressenti" value={`${weather.feels_like}°`} />
-                <View style={styles.weatherDivider} />
+                <View className="w-px bg-paper-300 my-1" />
                 <WeatherStat label="Vent" value={`${weather.wind_speed} m/s`} />
-                <View style={styles.weatherDivider} />
+                <View className="w-px bg-paper-300 my-1" />
                 <WeatherStat label="Humidité" value={`${weather.humidity}%`} />
-                <View style={styles.weatherDivider} />
+                <View className="w-px bg-paper-300 my-1" />
                 <WeatherStat label="Ciel" value={weather.description} />
               </View>
             )}
 
-            <View style={styles.divider} />
+            <View className="h-px bg-paper-300 mb-6" />
 
-            {/* AI Suggestion (what was suggested this morning) */}
             {outfit.ai_suggestion && (
-              <View style={styles.suggestionSection}>
-                <Text style={styles.suggestionLabel}>SUGGESTION DU MATIN</Text>
-                <Text style={styles.suggestionText}>{outfit.ai_suggestion}</Text>
+              <View className="mb-6">
+                <Text className="font-body-medium text-micro tracking-widest text-ice mb-3">
+                  SUGGESTION DU MATIN
+                </Text>
+                <Text className="font-body text-body-sm text-ink-700 leading-6">
+                  {outfit.ai_suggestion}
+                </Text>
               </View>
             )}
 
-            {/* Worn description (what was actually worn, from photo analysis) */}
             {outfit.worn_description && (
-              <View style={styles.suggestionSection}>
-                <Text style={[styles.suggestionLabel, styles.wornLabel]}>CE QUE TU AS PORTÉ</Text>
-                <Text style={styles.suggestionText}>{outfit.worn_description}</Text>
+              <View className="mb-6">
+                <Text className="font-body-medium text-micro tracking-widest text-ink-900 mb-3">
+                  CE QUE TU AS PORTÉ
+                </Text>
+                <Text className="font-body text-body-sm text-ink-700 leading-6">
+                  {outfit.worn_description}
+                </Text>
               </View>
             )}
 
-            {(outfit.ai_suggestion || outfit.worn_description) && <View style={styles.divider} />}
+            {(outfit.ai_suggestion || outfit.worn_description) && (
+              <View className="h-px bg-paper-300 mb-6" />
+            )}
 
-            {/* Occasion */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>OCCASION</Text>
+            <View className="mb-6">
+              <Text className="font-body-medium text-micro tracking-widest text-ink-300 mb-3">
+                OCCASION
+              </Text>
               {editing ? (
-                <View style={styles.chipRow}>
+                <View className="flex-row flex-wrap gap-1.5">
                   {OUTFIT_OCCASIONS.map((opt) => {
                     const active = occasion === opt.value;
                     return (
                       <Pressable
                         key={opt.value}
                         onPress={() => setOccasion(active ? null : opt.value)}
-                        style={[styles.chip, active && styles.chipActive]}
+                        className={`py-2 px-3 border ${
+                          active
+                            ? "bg-ink-900 border-ink-900"
+                            : "bg-paper-50 border-paper-300"
+                        }`}
                       >
-                        <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                        <Text
+                          className={`font-body text-caption ${
+                            active ? "text-paper-100" : "text-ink-900"
+                          }`}
+                        >
                           {opt.label}
                         </Text>
                       </Pressable>
@@ -186,26 +205,39 @@ export default function OutfitDetailScreen() {
                   })}
                 </View>
               ) : (
-                <Text style={[styles.notesText, !occasion && styles.notesMuted]}>
+                <Text
+                  className={`font-body text-body-sm leading-6 ${
+                    occasion ? "text-ink-700" : "text-ink-300"
+                  }`}
+                >
                   {OUTFIT_OCCASIONS.find((o) => o.value === occasion)?.label ?? "Non renseignée"}
                 </Text>
               )}
             </View>
 
-            {/* Ressenti thermique */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>RESSENTI</Text>
+            <View className="mb-6">
+              <Text className="font-body-medium text-micro tracking-widest text-ink-300 mb-3">
+                RESSENTI
+              </Text>
               {editing ? (
-                <View style={styles.chipRow}>
+                <View className="flex-row flex-wrap gap-1.5">
                   {THERMAL_FEELINGS.map((opt) => {
                     const active = thermal === opt.value;
                     return (
                       <Pressable
                         key={opt.value}
                         onPress={() => setThermal(active ? null : opt.value)}
-                        style={[styles.chip, active && styles.chipActive]}
+                        className={`py-2 px-3 border ${
+                          active
+                            ? "bg-ink-900 border-ink-900"
+                            : "bg-paper-50 border-paper-300"
+                        }`}
                       >
-                        <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                        <Text
+                          className={`font-body text-caption ${
+                            active ? "text-paper-100" : "text-ink-900"
+                          }`}
+                        >
                           {opt.label}
                         </Text>
                       </Pressable>
@@ -213,24 +245,31 @@ export default function OutfitDetailScreen() {
                   })}
                 </View>
               ) : (
-                <Text style={[styles.notesText, !thermal && styles.notesMuted]}>
+                <Text
+                  className={`font-body text-body-sm leading-6 ${
+                    thermal ? "text-ink-700" : "text-ink-300"
+                  }`}
+                >
                   {THERMAL_FEELINGS.find((t) => t.value === thermal)?.label ?? "Non renseigné"}
                 </Text>
               )}
             </View>
 
-            {/* Rating */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>NOTE</Text>
+            <View className="mb-6">
+              <Text className="font-body-medium text-micro tracking-widest text-ink-300 mb-3">
+                NOTE
+              </Text>
               <RatingStars rating={rating} onRate={editing ? setRating : undefined} />
             </View>
 
-            {/* Notes */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>NOTES</Text>
+            <View className="mb-6">
+              <Text className="font-body-medium text-micro tracking-widest text-ink-300 mb-3">
+                NOTES
+              </Text>
               {editing ? (
                 <TextInput
-                  style={styles.notesInput}
+                  className="bg-paper-200 border border-paper-300 px-4 py-3.5 font-body text-body-sm text-ink-900 leading-6"
+                  style={{ minHeight: 100 }}
                   placeholder="Comment te sentais-tu dans cette tenue ?"
                   placeholderTextColor={colors.ink[300]}
                   value={notes}
@@ -240,54 +279,65 @@ export default function OutfitDetailScreen() {
                   selectionColor={colors.ice[600]}
                 />
               ) : (
-                <Text style={[styles.notesText, !notes && styles.notesMuted]}>
+                <Text
+                  className={`font-body text-body-sm leading-6 ${
+                    notes ? "text-ink-700" : "text-ink-300"
+                  }`}
+                >
                   {notes || "Aucune note"}
                 </Text>
               )}
             </View>
 
-            {/* Actions — owner only */}
             {isOwner && (
-            <View style={styles.actions}>
-              {editing ? (
-                <>
-                  <Pressable
-                    onPress={saveChanges}
-                    style={({ pressed }) => [styles.saveBtn, pressed && styles.saveBtnPressed]}
-                  >
-                    <Text style={styles.saveBtnText}>SAUVEGARDER</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => {
-                      setEditing(false);
-                      setRating(outfit.rating ?? 0);
-                      setNotes(outfit.notes ?? "");
-                      setOccasion(outfit.occasion ?? null);
-                      setThermal(outfit.thermal_feeling ?? null);
-                    }}
-                    style={({ pressed }) => [styles.cancelBtn, pressed && styles.cancelBtnPressed]}
-                  >
-                    <Text style={styles.cancelBtnText}>Annuler</Text>
-                  </Pressable>
-                </>
-              ) : (
-                <>
-                  <Pressable
-                    onPress={() => setEditing(true)}
-                    style={({ pressed }) => [styles.editBtn, pressed && styles.editBtnPressed]}
-                  >
-                    <Text style={styles.editBtnText}>MODIFIER</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={deleteOutfit}
-                    disabled={deleting}
-                    style={({ pressed }) => [styles.deleteBtn, pressed && styles.deleteBtnPressed]}
-                  >
-                    <Text style={styles.deleteBtnText}>{deleting ? "Suppression…" : "Supprimer"}</Text>
-                  </Pressable>
-                </>
-              )}
-            </View>
+              <View className="flex-row gap-2.5 mt-2">
+                {editing ? (
+                  <>
+                    <Pressable
+                      onPress={saveChanges}
+                      className="flex-1 bg-ink-900 py-4 items-center active:bg-ink-700"
+                    >
+                      <Text className="font-body-semibold text-eyebrow tracking-widest text-paper-100">
+                        SAUVEGARDER
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        setEditing(false);
+                        setRating(outfit.rating ?? 0);
+                        setNotes(outfit.notes ?? "");
+                        setOccasion(outfit.occasion ?? null);
+                        setThermal(outfit.thermal_feeling ?? null);
+                      }}
+                      className="flex-1 border border-paper-300 py-4 items-center active:bg-paper-200"
+                    >
+                      <Text className="font-body text-body-sm text-ink-300">
+                        Annuler
+                      </Text>
+                    </Pressable>
+                  </>
+                ) : (
+                  <>
+                    <Pressable
+                      onPress={() => setEditing(true)}
+                      className="flex-1 border border-ink-900 py-4 items-center active:bg-paper-200"
+                    >
+                      <Text className="font-body-semibold text-eyebrow tracking-widest text-ink-900">
+                        MODIFIER
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={deleteOutfit}
+                      disabled={deleting}
+                      className={`flex-1 border border-paper-300 py-4 items-center ${deleting ? "opacity-50" : "active:bg-paper-200"}`}
+                    >
+                      <Text className="font-body text-body-sm text-error">
+                        {deleting ? "Suppression…" : "Supprimer"}
+                      </Text>
+                    </Pressable>
+                  </>
+                )}
+              </View>
             )}
 
             {outfit && <OutfitNotes outfitId={outfit.id} />}
@@ -302,213 +352,13 @@ export default function OutfitDetailScreen() {
 
 function WeatherStat({ label, value }: { label: string; value: string }) {
   return (
-    <View style={{ flex: 1, alignItems: "center" }}>
-      <Text style={weatherStatStyles.label}>{label.toUpperCase()}</Text>
-      <Text style={weatherStatStyles.value}>{value}</Text>
+    <View className="flex-1 items-center">
+      <Text className="font-body-medium text-micro tracking-widest text-ink-300 mb-1">
+        {label.toUpperCase()}
+      </Text>
+      <Text className="font-body-medium text-body-sm text-ink-900">
+        {value}
+      </Text>
     </View>
   );
 }
-
-const weatherStatStyles = StyleSheet.create({
-  label: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 8,
-    color: "#9E9A96",
-    letterSpacing: 1.5,
-    marginBottom: 4,
-  },
-  value: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 13,
-    color: "#0F0F0D",
-  },
-});
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FAFAF8" },
-  safe: { flex: 1 },
-  loadingCenter: { flex: 1, alignItems: "center", justifyContent: "center" },
-  loadingText: {
-    fontFamily: "BarlowCondensed_600SemiBold",
-    fontSize: 48,
-    color: "#C4C0BC",
-  },
-
-  heroContainer: { height: 520, position: "relative" },
-  heroPhoto: { width: "100%", height: "100%" },
-  backBtn: {
-    position: "absolute",
-    top: 16,
-    left: 16,
-    backgroundColor: "rgba(250,250,248,0.9)",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: "#E8E5DF",
-  },
-  backText: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 14,
-    color: "#0F0F0D",
-  },
-
-  content: { paddingHorizontal: 24, paddingTop: 24 },
-
-  metaRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginBottom: 20,
-  },
-  heroDate: {
-    fontFamily: "BarlowCondensed_600SemiBold",
-    fontSize: 24,
-    color: "#0F0F0D",
-    letterSpacing: 0.5,
-    flex: 1,
-  },
-  heroBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: "#E8E5DF",
-    backgroundColor: "#F2F0EC",
-  },
-  heroBadgeTemp: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 13,
-    color: "#6B6A66",
-  },
-
-  weatherStrip: {
-    flexDirection: "row",
-    backgroundColor: "#F2F0EC",
-    borderWidth: 1,
-    borderColor: "#E8E5DF",
-    paddingVertical: 16,
-    marginBottom: 24,
-  },
-  weatherDivider: { width: 1, backgroundColor: "#E8E5DF", marginVertical: 4 },
-
-  divider: { height: 1, backgroundColor: "#E8E5DF", marginBottom: 24 },
-
-  suggestionSection: { marginBottom: 24 },
-  suggestionLabel: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 9,
-    color: "#637D8E",
-    letterSpacing: 2,
-    marginBottom: 12,
-  },
-  wornLabel: { color: "#0F0F0D" },
-  suggestionText: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 14,
-    color: "#3A3836",
-    lineHeight: 23,
-  },
-
-  section: { marginBottom: 24 },
-  sectionLabel: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 9,
-    color: "#9E9A96",
-    letterSpacing: 2,
-    marginBottom: 12,
-  },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  chip: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: "#E8E5DF",
-    backgroundColor: "#FFFFFF",
-  },
-  chipActive: { backgroundColor: "#0F0F0D", borderColor: "#0F0F0D" },
-  chipText: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 12,
-    color: "#0F0F0D",
-  },
-  chipTextActive: { color: "#FAFAF8" },
-  notesInput: {
-    backgroundColor: "#F2F0EC",
-    borderWidth: 1,
-    borderColor: "#E8E5DF",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontFamily: "Jost_400Regular",
-    fontSize: 14,
-    color: "#0F0F0D",
-    minHeight: 100,
-    lineHeight: 22,
-  },
-  notesText: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 14,
-    color: "#3A3836",
-    lineHeight: 22,
-  },
-  notesMuted: { color: "#9E9A96" },
-
-  actions: { flexDirection: "row", gap: 10, marginTop: 8 },
-  saveBtn: {
-    flex: 1,
-    backgroundColor: "#0F0F0D",
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  saveBtnPressed: { backgroundColor: "#3A3836" },
-  saveBtnText: {
-    fontFamily: "Jost_600SemiBold",
-    fontSize: 11,
-    color: "#FAFAF8",
-    letterSpacing: 2,
-  },
-
-  cancelBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#E8E5DF",
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  cancelBtnPressed: { backgroundColor: "#F2F0EC" },
-  cancelBtnText: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 14,
-    color: "#9E9A96",
-  },
-
-  editBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#0F0F0D",
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  editBtnPressed: { backgroundColor: "#F2F0EC" },
-  editBtnText: {
-    fontFamily: "Jost_600SemiBold",
-    fontSize: 11,
-    color: "#0F0F0D",
-    letterSpacing: 2,
-  },
-
-  deleteBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#E8E5DF",
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  deleteBtnPressed: { backgroundColor: "#FDF2F1" },
-  deleteBtnText: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 14,
-    color: "#C0392B",
-  },
-});

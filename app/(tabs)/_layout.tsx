@@ -1,12 +1,18 @@
 import { Tabs } from "expo-router";
-import { Text, View, StyleSheet } from "react-native";
-import { colors, fonts } from "@/lib/theme";
+import { Text, View } from "react-native";
+import { colors } from "@/lib/theme";
 
 function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
   return (
-    <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
+    <View
+      className={`flex-row items-center gap-2 px-3.5 py-2.5 ${
+        focused ? "bg-ice-100 border border-ice-200" : ""
+      }`}
+    >
       <Text style={{ fontSize: 16 }}>{emoji}</Text>
-      {focused && <Text style={styles.tabLabel}>{label}</Text>}
+      {focused && (
+        <Text className="font-body-medium text-caption text-ink-900">{label}</Text>
+      )}
     </View>
   );
 }
@@ -16,7 +22,17 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: {
+          backgroundColor: colors.paper[100],
+          borderTopWidth: 1,
+          borderTopColor: colors.paper[300],
+          height: 80,
+          paddingBottom: 8,
+          paddingTop: 8,
+          paddingHorizontal: 8,
+          elevation: 0,
+          shadowOpacity: 0,
+        },
         tabBarShowLabel: false,
       }}
     >
@@ -55,34 +71,3 @@ export default function TabLayout() {
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: colors.paper[100],
-    borderTopWidth: 1,
-    borderTopColor: colors.paper[300],
-    height: 80,
-    paddingBottom: 8,
-    paddingTop: 8,
-    paddingHorizontal: 8,
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-  tabIcon: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  tabIconActive: {
-    backgroundColor: colors.ice[100],
-    borderWidth: 1,
-    borderColor: colors.ice[200],
-  },
-  tabLabel: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 12,
-    color: colors.ink[900],
-  },
-});

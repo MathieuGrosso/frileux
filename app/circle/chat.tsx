@@ -203,7 +203,7 @@ export default function CircleChatScreen() {
         <View>
           <Pressable onPress={() => router.back()} className="active:opacity-50 mb-1">
             <Text
-              className="font-body text-ink-300 text-[11px]"
+              className="font-body text-ink-300 text-eyebrow"
               style={{ letterSpacing: 1.5 }}
             >
               ← CERCLE
@@ -235,7 +235,7 @@ export default function CircleChatScreen() {
               return (
                 <View className="items-center py-4">
                   <Text
-                    className="font-body-semibold text-ink-300 text-[10px]"
+                    className="font-body-semibold text-ink-300 text-eyebrow"
                     style={{ letterSpacing: 2 }}
                   >
                     {item.label}
@@ -255,7 +255,7 @@ export default function CircleChatScreen() {
                     >
                       {(m.profile?.username ?? "—").toUpperCase()}
                     </Text>
-                    <Text className="font-body text-ink-300 text-[10px]">
+                    <Text className="font-body text-ink-300 text-eyebrow">
                       {formatTime(m.created_at)}
                     </Text>
                   </View>
@@ -272,12 +272,12 @@ export default function CircleChatScreen() {
           ListEmptyComponent={
             <View className="items-center py-16">
               <Text
-                className="font-body-semibold text-ink-300 text-[11px]"
+                className="font-body-semibold text-ink-300 text-eyebrow"
                 style={{ letterSpacing: 2 }}
               >
                 AUCUN MESSAGE
               </Text>
-              <Text className="font-body text-ink-300 text-[12px] mt-2">
+              <Text className="font-body text-ink-300 text-caption mt-2">
                 Lance la conversation.
               </Text>
             </View>
@@ -300,7 +300,7 @@ export default function CircleChatScreen() {
             className={`px-4 py-3 ${draft.trim() ? "bg-ink-900 active:bg-ink-700" : "bg-paper-300"}`}
           >
             <Text
-              className="font-body-semibold text-paper-100 text-[11px]"
+              className="font-body-semibold text-paper-100 text-eyebrow"
               style={{ letterSpacing: 2 }}
             >
               ENVOYER

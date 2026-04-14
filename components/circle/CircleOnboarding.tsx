@@ -47,7 +47,7 @@ export function CircleOnboarding({ onCreate, onJoin }: Props) {
         className="bg-ink-900 active:bg-ink-700 py-5 items-center mb-6"
       >
         <Text
-          className="font-body-semibold text-paper-100 text-[11px]"
+          className="font-body-semibold text-paper-100 text-eyebrow"
           style={{ letterSpacing: 2.5 }}
         >
           CRÉER UN CERCLE
@@ -56,7 +56,7 @@ export function CircleOnboarding({ onCreate, onJoin }: Props) {
 
       <View className="flex-row items-center gap-3 mb-6">
         <View className="flex-1 h-px bg-paper-300" />
-        <Text className="font-body text-ink-300 text-[13px]">ou</Text>
+        <Text className="font-body text-ink-300 text-body-sm">ou</Text>
         <View className="flex-1 h-px bg-paper-300" />
       </View>
 
@@ -77,7 +77,7 @@ export function CircleOnboarding({ onCreate, onJoin }: Props) {
         className="border border-ink-900 active:bg-paper-200 py-5 items-center"
       >
         <Text
-          className="font-body-semibold text-ink-900 text-[11px]"
+          className="font-body-semibold text-ink-900 text-eyebrow"
           style={{ letterSpacing: 2.5 }}
         >
           REJOINDRE
