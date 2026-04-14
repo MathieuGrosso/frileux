@@ -23,10 +23,11 @@ import { Skeleton } from "@/components/Skeleton";
 import { TodayLoader, type LoaderStep } from "@/components/TodayLoader";
 import { OutfitImageLoader } from "@/components/OutfitImageLoader";
 import { loadProfileBundle, type ProfileBundle } from "@/lib/profile";
-import { clearSuggestion, patchSuggestionImage, readSuggestion, writeSuggestion } from "@/lib/suggestionCache";
+import { clearSuggestion, patchSuggestionAdoption, patchSuggestionImage, readSuggestion, writeSuggestion } from "@/lib/suggestionCache";
 import { REJECTION_REASONS, insertRejection, type RejectionReason } from "@/lib/rejections";
 import { embedOutfitText } from "@/lib/embedOutfit";
 import { SuggestionSwipeArea } from "@/components/SuggestionSwipeArea";
+import { RefineSheet } from "@/components/RefineSheet";
 import { colors, motion } from "@/lib/theme";
 import { useRouter } from "expo-router";
 
@@ -49,7 +50,12 @@ export default function TodayScreen() {
   const [steerText, setSteerText] = useState("");
   const [steerBrands, setSteerBrands] = useState<string[]>([]);
   const [favoriteBrands, setFavoriteBrands] = useState<string[]>([]);
-  const [kept, setKept] = useState(false);
+  const [adopted, setAdopted] = useState(false);
+  const [adoptedOutfitId, setAdoptedOutfitId] = useState<string | null>(null);
+  const [adopting, setAdopting] = useState(false);
+  const [refineOpen, setRefineOpen] = useState(false);
+  const photoSectionY = useRef(0);
+  const scrollRef = useRef<ScrollView>(null);
   const router = useRouter();
 
   const today = new Date();
@@ -149,6 +155,10 @@ export default function TodayScreen() {
         });
         if (cached) {
           setSuggestion(cached.text);
+          if (cached.adopted) {
+            setAdopted(true);
+            setAdoptedOutfitId(cached.adoptedOutfitId ?? null);
+          }
           if (cached.imageUrl) setSuggestionImage(cached.imageUrl);
           else {
             setImageLoading(true);
@@ -256,9 +266,74 @@ export default function TodayScreen() {
       });
       setSteerText("");
       setSteerBrands([]);
+      setRefineOpen(false);
+      setAdopted(false);
+      setAdoptedOutfitId(null);
     } finally {
       setRefining(false);
     }
+  }
+
+  async function adoptSuggestion() {
+    if (!suggestion || !weather || adopting || adopted) return;
+    setAdopting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { Alert.alert("Non connecté"); return; }
+      const embedding = await embedOutfitText(suggestion).catch(() => null);
+      const { data, error } = await supabase
+        .from("outfits")
+        .insert({
+          user_id: user.id,
+          photo_url: null,
+          date: today.toISOString().split("T")[0],
+          weather_data: weather,
+          ai_suggestion: suggestion,
+          occasion,
+          embedding,
+          embedding_source: embedding ? "suggested" : null,
+          adopted: true,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      setAdopted(true);
+      setAdoptedOutfitId(data.id);
+      const bundle = await (profilePromiseRef.current ?? loadProfileBundle());
+      if (bundle.userId) {
+        await patchSuggestionAdoption(
+          { userId: bundle.userId, coldness: bundle.coldness, occasion },
+          true,
+          data.id
+        );
+      }
+    } catch (e: any) {
+      if (__DEV__) console.error("adoptSuggestion:", e);
+      Alert.alert("Impossible d'adopter", e?.message ?? "Erreur inconnue");
+    } finally {
+      setAdopting(false);
+    }
+  }
+
+  async function unadoptSuggestion() {
+    if (!adoptedOutfitId) { setAdopted(false); return; }
+    try {
+      await supabase.from("outfits").delete().eq("id", adoptedOutfitId);
+    } catch (e) { if (__DEV__) console.warn("unadopt delete:", e); }
+    setAdopted(false);
+    setAdoptedOutfitId(null);
+    const bundle = await (profilePromiseRef.current ?? loadProfileBundle());
+    if (bundle.userId) {
+      await patchSuggestionAdoption(
+        { userId: bundle.userId, coldness: bundle.coldness, occasion },
+        false,
+        null
+      );
+    }
+  }
+
+  function scrollToPhoto() {
+    scrollRef.current?.scrollTo({ y: photoSectionY.current, animated: true });
   }
 
   function stripMarkdown(text: string): string {
@@ -329,17 +404,31 @@ export default function TodayScreen() {
       const embeddingSource = worn_description ?? suggestion ?? null;
       const embedding = embeddingSource ? await embedOutfitText(embeddingSource) : null;
 
-      const { error: insertError } = await supabase.from("outfits").insert({
-        user_id: user.id, photo_url: urlData.publicUrl,
-        date: today.toISOString().split("T")[0], weather_data: weather,
-        rating: rating || null, ai_suggestion: suggestion,
-        worn_description, occasion,
+      const payload = {
+        user_id: user.id,
+        photo_url: urlData.publicUrl,
+        date: today.toISOString().split("T")[0],
+        weather_data: weather,
+        rating: rating || null,
+        ai_suggestion: suggestion,
+        worn_description,
+        occasion,
         thermal_feeling: thermal,
         notes: notes.trim() || null,
         embedding,
         embedding_source: embedding ? (worn_description ? "worn" : "suggested") : null,
-      });
-      if (insertError) throw insertError;
+        adopted: adopted || adoptedOutfitId !== null,
+      };
+      if (adoptedOutfitId) {
+        const { error: updateError } = await supabase
+          .from("outfits")
+          .update(payload)
+          .eq("id", adoptedOutfitId);
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase.from("outfits").insert(payload);
+        if (insertError) throw insertError;
+      }
 
       setSaved(true);
       setPhotoUri(null);
@@ -347,6 +436,7 @@ export default function TodayScreen() {
       setOccasion(null);
       setThermal(null);
       setNotes("");
+      setAdoptedOutfitId(null);
       setTimeout(() => setSaved(false), 3000);
     } catch (e: any) {
       if (__DEV__) console.error("saveOutfit error:", e);
@@ -387,7 +477,7 @@ export default function TodayScreen() {
   return (
     <View className="flex-1 bg-paper">
       <SafeAreaView className="flex-1">
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-6 pt-2 pb-10">
+        <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} contentContainerClassName="px-6 pt-2 pb-10">
 
           {/* Header */}
           <View className="flex-row justify-between items-start mb-6">
@@ -479,8 +569,8 @@ export default function TodayScreen() {
 
           {/* Suggestion */}
           <View className="mb-8">
-            <Text className="font-body-medium text-eyebrow text-ice mb-3">
-              SUGGESTION DU JOUR
+            <Text className={`font-body-medium text-eyebrow mb-3 ${adopted ? "text-ink-900" : "text-ice"}`}>
+              {adopted ? "ADOPTÉE POUR AUJOURD'HUI" : "SUGGESTION DU JOUR"}
             </Text>
 
             <View className="aspect-square mb-4">
@@ -497,15 +587,12 @@ export default function TodayScreen() {
 
             {suggestion ? (
               <SuggestionSwipeArea
-                disabled={refining}
+                disabled={refining || adopting || adopted}
                 onPass={() => refineSuggestion({ reason: null })}
-                onKeep={() => {
-                  setKept(true);
-                  setTimeout(() => setKept(false), 2400);
-                }}
+                onKeep={() => adoptSuggestion()}
               >
                 <Animated.View
-                  className="bg-ice/10 border-l-2 border-ice pl-3 pr-2 py-3"
+                  className={`pl-3 pr-2 py-3 border-l-2 ${adopted ? "bg-ink-900/5 border-ink-900" : "bg-ice/10 border-ice"}`}
                   style={{
                     opacity: suggestionFade,
                     transform: [{ translateY: suggestionShift }],
@@ -528,101 +615,52 @@ export default function TodayScreen() {
               <TodayLoader step={loaderStep} />
             )}
 
-            {suggestion && !kept && suggestion !== "Suggestion indisponible." && (
-              <View className="mt-2 flex-row justify-between">
-                <Text className="font-body-medium text-micro text-ink-300">
-                  ← PASSER
-                </Text>
-                <Text className="font-body-medium text-micro text-ink-300">
-                  GARDER →
-                </Text>
-              </View>
-            )}
-
-            {kept && (
-              <View className="mt-3 items-start">
-                <Text className="font-body-medium text-micro text-ice">
-                  GARDÉE POUR AUJOURD'HUI
-                </Text>
-              </View>
-            )}
-
-            {suggestion && suggestion !== "Suggestion indisponible." && (
-              <View className="mt-6">
-                <Text className="font-body-medium text-micro text-ink-300 mb-4">
-                  RAFFINER
-                </Text>
-                <View className="flex-row flex-wrap" style={{ gap: 6 }}>
-                  {REJECTION_REASONS.filter((r) => r.value !== "autre").map((opt) => (
-                    <Pressable
-                      key={opt.value}
-                      onPress={() => refineSuggestion({ reason: opt.value })}
-                      disabled={refining}
-                      className={`py-2 px-3 border border-paper-300 bg-paper-50 ${refining ? "opacity-50" : "active:bg-paper-200"}`}
-                    >
-                      <Text className="font-body text-xs text-ink-900">
-                        {opt.label}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-
-                {favoriteBrands.length > 0 && (
-                  <>
-                    <Text className="font-body-medium text-micro text-ink-300 mt-6 mb-4">
-                      DANS L'ESPRIT DE
-                    </Text>
-                    <View className="flex-row flex-wrap" style={{ gap: 6 }}>
-                      {favoriteBrands.map((brand) => {
-                        const active = steerBrands.includes(brand);
-                        return (
-                          <Pressable
-                            key={brand}
-                            onPress={() =>
-                              setSteerBrands((prev) =>
-                                active ? prev.filter((b) => b !== brand) : [...prev, brand]
-                              )
-                            }
-                            disabled={refining}
-                            className={`py-2 px-3 border ${active ? "bg-ink-900 border-ink-900" : "bg-paper-50 border-paper-300"}`}
-                          >
-                            <Text className={`font-body text-xs ${active ? "text-paper" : "text-ink-900"}`}>
-                              {brand}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  </>
-                )}
-
-                <Text className="font-body-medium text-micro text-ink-300 mt-6 mb-4">
-                  AUTREMENT
-                </Text>
-                <TextInput
-                  value={steerText}
-                  onChangeText={setSteerText}
-                  placeholder="plus cozy, superposé, tonalité terre…"
-                  placeholderTextColor={colors.ink[300]}
-                  className="border border-paper-300 bg-paper-50 p-3 font-body text-body-sm text-ink-900"
-                  style={{ minHeight: 56, textAlignVertical: "top" }}
-                  multiline
-                  editable={!refining}
-                />
-
+            {suggestion && suggestion !== "Suggestion indisponible." && !adopted && (
+              <View className="mt-5" style={{ gap: 8 }}>
                 <Pressable
-                  onPress={() =>
-                    refineSuggestion({ reason: null, steerText, steerBrands })
-                  }
-                  disabled={refining || (!steerText.trim() && steerBrands.length === 0)}
-                  className={`mt-4 py-3 items-center ${
-                    refining || (!steerText.trim() && steerBrands.length === 0)
-                      ? "bg-ink-200"
-                      : "bg-ink-900 active:bg-ink-700"
-                  }`}
+                  onPress={adoptSuggestion}
+                  disabled={adopting}
+                  className={`py-[18px] items-center ${adopting ? "bg-ink-200" : "bg-ink-900 active:bg-ink-700"}`}
                 >
-                  <Text className="font-body-medium text-eyebrow text-paper">
-                    {refining ? "…" : "RAFFINER"}
+                  <Text className="font-body-semibold text-eyebrow text-paper">
+                    {adopting ? "…" : "JE LA PORTE"}
+                  </Text>
+                </Pressable>
+                <View className="flex-row" style={{ gap: 8 }}>
+                  <Pressable
+                    onPress={() => setRefineOpen(true)}
+                    disabled={refining}
+                    className="flex-1 py-[14px] items-center border border-ink-900 bg-paper active:bg-paper-200"
+                  >
+                    <Text className="font-body-medium text-eyebrow text-ink-900">
+                      RAFFINER
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={scrollToPhoto}
+                    className="flex-1 py-[14px] items-center border border-paper-300 bg-paper-50 active:bg-paper-200"
+                  >
+                    <Text className="font-body-medium text-eyebrow text-ink-500">
+                      AUTRE CHOIX
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+
+            {adopted && (
+              <View className="mt-5" style={{ gap: 8 }}>
+                <Pressable
+                  onPress={scrollToPhoto}
+                  className="py-[14px] items-center border border-paper-300 bg-paper active:bg-paper-200"
+                >
+                  <Text className="font-body-medium text-eyebrow text-ink-700">
+                    PHOTOGRAPHIER LA TENUE
+                  </Text>
+                </Pressable>
+                <Pressable onPress={unadoptSuggestion} className="py-2 items-center">
+                  <Text className="font-body-medium text-micro text-ink-300">
+                    CHANGER D'AVIS
                   </Text>
                 </Pressable>
               </View>
@@ -632,7 +670,10 @@ export default function TodayScreen() {
           <View className="h-px bg-paper-300 mb-8" />
 
           {/* Photo */}
-          <View className="mb-6">
+          <View
+            className="mb-6"
+            onLayout={(e) => { photoSectionY.current = e.nativeEvent.layout.y; }}
+          >
             <Text className="font-body-medium text-micro text-ink-300 mb-4">
               TENUE DU JOUR
             </Text>
@@ -754,6 +795,22 @@ export default function TodayScreen() {
           )}
         </ScrollView>
       </SafeAreaView>
+
+      <RefineSheet
+        visible={refineOpen}
+        refining={refining}
+        favoriteBrands={favoriteBrands}
+        steerText={steerText}
+        steerBrands={steerBrands}
+        onSteerTextChange={setSteerText}
+        onToggleBrand={(brand) =>
+          setSteerBrands((prev) =>
+            prev.includes(brand) ? prev.filter((b) => b !== brand) : [...prev, brand]
+          )
+        }
+        onRefine={(opts) => refineSuggestion(opts)}
+        onClose={() => setRefineOpen(false)}
+      />
     </View>
   );
 }

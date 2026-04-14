@@ -6,6 +6,8 @@ export interface CachedSuggestion {
   imageUrl: string | null;
   weather: WeatherData;
   ts: number;
+  adopted?: boolean;
+  adoptedOutfitId?: string | null;
 }
 
 const TEMP_TOLERANCE = 2;
@@ -65,6 +67,26 @@ export async function clearSuggestion(
 ): Promise<void> {
   const key = buildKey(params);
   try { await AsyncStorage.removeItem(key); } catch {}
+}
+
+export async function patchSuggestionAdoption(
+  params: {
+    userId: string;
+    coldness: ColdnessLevel;
+    occasion: OutfitOccasion | null;
+  },
+  adopted: boolean,
+  adoptedOutfitId: string | null
+): Promise<void> {
+  const key = buildKey(params);
+  try {
+    const raw = await AsyncStorage.getItem(key);
+    if (!raw) return;
+    const value = JSON.parse(raw) as CachedSuggestion;
+    value.adopted = adopted;
+    value.adoptedOutfitId = adoptedOutfitId;
+    await AsyncStorage.setItem(key, JSON.stringify(value));
+  } catch {}
 }
 
 export async function patchSuggestionImage(
