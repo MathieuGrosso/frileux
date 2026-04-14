@@ -58,6 +58,17 @@ export function CircleFeedHeader({ circle }: Props) {
           )}
         </PressableScale>
         <PressableScale
+          onPress={() => router.push("/dm")}
+          className="active:opacity-50"
+        >
+          <Text
+            className="font-body-semibold text-ink-900 text-eyebrow"
+            style={{ letterSpacing: 2 }}
+          >
+            MP
+          </Text>
+        </PressableScale>
+        <PressableScale
           onPress={() => router.push("/circle/discover")}
           className="active:opacity-50"
         >

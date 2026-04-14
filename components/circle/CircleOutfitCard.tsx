@@ -33,11 +33,18 @@ export function CircleOutfitCard({ outfit, isFirst = false, index = 0 }: Props) 
       className="mb-8"
     >
       <View className="flex-row items-center gap-2.5 mb-3">
-        <MemberAvatar
-          username={outfit.profile?.username}
-          avatarUrl={outfit.profile?.avatar_url}
-          size={28}
-        />
+        <PressableScale
+          onPress={(e) => {
+            e.stopPropagation?.();
+            router.push({ pathname: "/profile/[id]", params: { id: outfit.user_id } });
+          }}
+        >
+          <MemberAvatar
+            username={outfit.profile?.username}
+            avatarUrl={outfit.profile?.avatar_url}
+            size={28}
+          />
+        </PressableScale>
         <View className="flex-1">
           <Text className="font-body-medium text-ink-900 text-body-sm">
             {username}
