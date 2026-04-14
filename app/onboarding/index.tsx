@@ -69,11 +69,33 @@ export default function OnboardingItems() {
     }
   }
 
+  async function readBase64(uri: string): Promise<string | null> {
+    try {
+      const res = await fetch(uri);
+      const blob = await res.blob();
+      return await new Promise<string | null>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const r = reader.result as string;
+          const comma = r.indexOf(",");
+          resolve(comma >= 0 ? r.slice(comma + 1) : null);
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return null;
+    }
+  }
+
   async function handlePhoto(fromCamera: boolean) {
     const perm = fromCamera
       ? await ImagePicker.requestCameraPermissionsAsync()
       : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (perm.status !== "granted") return;
+    if (perm.status !== "granted") {
+      Alert.alert("Permission refusée", "Active l'accès à " + (fromCamera ? "la caméra" : "la galerie") + " dans les réglages.");
+      return;
+    }
 
     const result = fromCamera
       ? await ImagePicker.launchCameraAsync({ quality: 0.85, base64: true })
@@ -83,13 +105,15 @@ export default function OnboardingItems() {
           base64: true,
         });
     if (result.canceled) return;
-    const base64 = result.assets[0].base64;
+    const asset = result.assets[0];
+    let base64 = asset.base64 ?? null;
+    if (!base64) base64 = await readBase64(asset.uri);
     if (!base64) {
-      Alert.alert("Erreur", "Image illisible.");
+      Alert.alert("Image illisible", "Impossible de lire cette photo (format non supporté). Essaie avec une autre image.");
       return;
     }
 
-    setPendingPhoto({ uri: result.assets[0].uri, base64 });
+    setPendingPhoto({ uri: asset.uri, base64 });
   }
 
   async function uploadPendingPhoto(base64: string): Promise<string> {
@@ -110,10 +134,11 @@ export default function OnboardingItems() {
     setPendingPhoto(null);
     setAnalyzing(true);
     try {
-      const analysis = await analyzeClothingImage(base64);
       const photoUrl = await uploadPendingPhoto(base64);
+      const analysis = await analyzeClothingImage(base64);
       await insertItem({ ...analysis, photo_url: photoUrl });
     } catch (e) {
+      console.warn("analyzePendingAsSingle:", e);
       Alert.alert("Erreur", e instanceof Error ? e.message : "Analyse impossible.");
     } finally {
       setAnalyzing(false);
@@ -126,16 +151,50 @@ export default function OnboardingItems() {
     setPendingPhoto(null);
     setAnalyzing(true);
     try {
-      const analyses = await analyzeClothingImageMulti(base64);
-      if (analyses.length === 0) {
-        Alert.alert("Rien trouvé", "Aucune pièce détectée sur la photo.");
-        return;
-      }
+      // Upload d'abord — si le storage fail, on le sait avant d'appeler Gemini.
       const photoUrl = await uploadPendingPhoto(base64);
+
+      let analyses: ClothingAnalysis[] = [];
+      try {
+        analyses = await analyzeClothingImageMulti(base64);
+      } catch (e) {
+        console.warn("analyzeClothingImageMulti:", e);
+      }
+
+      // Fallback : si Gemini renvoie rien en multi, on retente en single.
+      if (analyses.length === 0) {
+        try {
+          const single = await analyzeClothingImage(base64);
+          analyses = [single];
+        } catch (e) {
+          console.warn("fallback analyzeClothingImage:", e);
+          Alert.alert("Rien trouvé", "Aucune pièce détectée sur la photo. Essaie une autre image.");
+          return;
+        }
+      }
+
+      let ok = 0;
+      const failures: string[] = [];
       for (const analysis of analyses) {
-        await insertItem({ ...analysis, photo_url: photoUrl });
+        try {
+          await insertItem({ ...analysis, photo_url: photoUrl });
+          ok += 1;
+        } catch (e) {
+          console.warn("insertItem failed:", e);
+          failures.push(analysis.description ?? analysis.type);
+        }
+      }
+
+      if (ok === 0) {
+        Alert.alert("Échec", "Aucune pièce n'a pu être ajoutée. Réessaie.");
+      } else if (failures.length > 0) {
+        Alert.alert(
+          "Partiellement ajouté",
+          `${ok}/${analyses.length} pièces ajoutées. Échec : ${failures.join(", ")}.`
+        );
       }
     } catch (e) {
+      console.warn("analyzePendingAsMulti:", e);
       Alert.alert("Erreur", e instanceof Error ? e.message : "Analyse impossible.");
     } finally {
       setAnalyzing(false);
