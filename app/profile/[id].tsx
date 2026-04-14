@@ -168,6 +168,20 @@ export default function ProfileScreen() {
             </View>
           </View>
 
+          {isMe && (
+            <PressableScale
+              onPress={() => router.push("/status/edit")}
+              className="py-3 items-center mt-6 border border-ink-900"
+            >
+              <Text
+                className="font-body-semibold text-ink-900"
+                style={{ fontSize: 11, letterSpacing: 2.5 }}
+              >
+                {status ? "MODIFIER MON STATUT" : "DÉFINIR MON STATUT"}
+              </Text>
+            </PressableScale>
+          )}
+
           {!isMe && (
             <PressableScale
               onPress={toggleFollow}
