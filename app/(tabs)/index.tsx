@@ -117,11 +117,16 @@ export default function TodayScreen() {
 
   async function fetchSuggestion(
     weatherData: WeatherData,
-    opts: { avoid_reasons?: string[]; skipCache?: boolean } = {}
+    opts: {
+      avoid_reasons?: string[];
+      steer_text?: string | null;
+      steer_brands?: string[];
+      skipCache?: boolean;
+    } = {}
   ) {
     try {
       const bundle = await (profilePromiseRef.current ?? loadProfileBundle());
-      const { userId, coldness: userColdness, taste, recent_worn, recent_feedback } = bundle;
+      const { userId, coldness: userColdness, taste, recent_worn, recent_feedback, liked_anchors } = bundle;
       setColdness(userColdness);
 
       if (userId && !opts.skipCache) {
@@ -157,6 +162,9 @@ export default function TodayScreen() {
           occasion,
           taste,
           avoid_reasons: opts.avoid_reasons,
+          steer_text: opts.steer_text,
+          steer_brands: opts.steer_brands,
+          liked_anchors,
         },
       });
       if (error) {

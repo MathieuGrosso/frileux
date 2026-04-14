@@ -173,6 +173,7 @@ export interface CircleMessage {
   circle_id: string;
   user_id: string;
   body: string;
+  mentions?: string[];
   created_at: string;
   profile?: Pick<Profile, "username" | "avatar_url">;
 }
