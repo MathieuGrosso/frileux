@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, Alert } from "react-native";
+import { View, Text, TextInput, Pressable } from "react-native";
 import { supabase } from "@/lib/supabase";
 import type { OutfitComment } from "@/lib/types";
 import { MemberAvatar } from "./MemberAvatar";
 import { colors } from "@/lib/theme";
+import { notifyError } from "@/lib/ui";
 
 interface Props {
   outfitId: string;
@@ -92,13 +93,17 @@ export function OutfitNotes({ outfitId }: Props) {
   async function send() {
     const body = draft.trim();
     if (!body || sending) return;
+    if (!currentUserId) {
+      notifyError("Erreur", "Session expirée, reconnecte-toi.");
+      return;
+    }
     setSending(true);
     const { error } = await supabase
       .from("outfit_comments")
-      .insert({ outfit_id: outfitId, body });
+      .insert({ outfit_id: outfitId, user_id: currentUserId, body });
     setSending(false);
     if (error) {
-      Alert.alert("Erreur", "Impossible d'envoyer.");
+      notifyError("Erreur", "Impossible d'envoyer.");
       return;
     }
     setDraft("");
@@ -107,7 +112,7 @@ export function OutfitNotes({ outfitId }: Props) {
   async function remove(id: string) {
     const { error } = await supabase.from("outfit_comments").delete().eq("id", id);
     if (error) {
-      Alert.alert("Erreur", "Suppression refusée.");
+      notifyError("Erreur", "Suppression refusée.");
       return;
     }
     setNotes((prev) => prev.filter((n) => n.id !== id));
