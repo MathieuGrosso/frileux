@@ -53,6 +53,13 @@ export default function TodayScreen() {
   const [adoptedOutfitId, setAdoptedOutfitId] = useState<string | null>(null);
   const [adopting, setAdopting] = useState(false);
   const [refineOpen, setRefineOpen] = useState(false);
+  const [todayOutfit, setTodayOutfit] = useState<{
+    id: string;
+    photo_url: string;
+    occasion: OutfitOccasion | null;
+    rating: number | null;
+    notes: string | null;
+  } | null>(null);
   const router = useRouter();
 
   const today = new Date();
@@ -64,7 +71,32 @@ export default function TodayScreen() {
   useEffect(() => {
     profilePromiseRef.current = loadProfileBundle();
     loadWeather();
+    loadTodayOutfit();
   }, []);
+
+  async function loadTodayOutfit() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const todayStr = today.toISOString().split("T")[0];
+      const { data } = await supabase
+        .from("outfits")
+        .select("id, photo_url, occasion, rating, notes")
+        .eq("user_id", user.id)
+        .eq("date", todayStr)
+        .not("photo_url", "is", null)
+        .maybeSingle();
+      if (data?.photo_url) {
+        setTodayOutfit({
+          id: data.id,
+          photo_url: data.photo_url,
+          occasion: (data.occasion ?? null) as OutfitOccasion | null,
+          rating: data.rating ?? null,
+          notes: data.notes ?? null,
+        });
+      }
+    } catch (e) { if (__DEV__) console.warn("loadTodayOutfit:", e); }
+  }
 
   async function loadWeather() {
     try {
@@ -412,15 +444,32 @@ export default function TodayScreen() {
         embedding_source: embedding ? (worn_description ? "worn" : "suggested") : null,
         adopted: adopted || adoptedOutfitId !== null,
       };
+      let savedId: string | null = null;
       if (adoptedOutfitId) {
         const { error: updateError } = await supabase
           .from("outfits")
           .update(payload)
           .eq("id", adoptedOutfitId);
         if (updateError) throw updateError;
+        savedId = adoptedOutfitId;
       } else {
-        const { error: insertError } = await supabase.from("outfits").insert(payload);
+        const { data: inserted, error: insertError } = await supabase
+          .from("outfits")
+          .insert(payload)
+          .select("id")
+          .single();
         if (insertError) throw insertError;
+        savedId = inserted?.id ?? null;
+      }
+
+      if (savedId) {
+        setTodayOutfit({
+          id: savedId,
+          photo_url: urlData.publicUrl,
+          occasion,
+          rating: rating || null,
+          notes: notes.trim() || null,
+        });
       }
 
       setSaved(true);
@@ -559,6 +608,69 @@ export default function TodayScreen() {
 
           <View className="h-px bg-paper-300 mb-6" />
 
+          {todayOutfit ? (
+            <View className="mb-8">
+              <Text className="font-body-medium text-eyebrow text-ice mb-3">
+                TENUE DU JOUR
+              </Text>
+              <View className="h-[520px] mb-5">
+                <Image
+                  source={{ uri: todayOutfit.photo_url }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                />
+              </View>
+              {(todayOutfit.occasion || todayOutfit.rating || todayOutfit.notes) && (
+                <View className="mb-6" style={{ gap: 8 }}>
+                  {todayOutfit.occasion && (
+                    <Text className="font-body text-body-sm text-ink-700">
+                      {OUTFIT_OCCASIONS.find((o) => o.value === todayOutfit.occasion)?.label}
+                    </Text>
+                  )}
+                  {todayOutfit.rating ? (
+                    <Text className="font-body text-body-sm text-ink-700">
+                      {"★".repeat(todayOutfit.rating)}
+                      {"☆".repeat(Math.max(0, 5 - todayOutfit.rating))}
+                    </Text>
+                  ) : null}
+                  {todayOutfit.notes && (
+                    <Text className="font-body text-body-sm text-ink-500">
+                      {todayOutfit.notes}
+                    </Text>
+                  )}
+                </View>
+              )}
+              <View className="flex-row" style={{ gap: 24 }}>
+                <Pressable
+                  onPress={() => {
+                    setTodayOutfit(null);
+                    if (weather) fetchSuggestion(weather, { skipCache: true });
+                  }}
+                  hitSlop={8}
+                >
+                  <Text className="font-body-medium text-micro text-ink-300">
+                    NOUVELLE SUGGESTION
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setAdoptedOutfitId(todayOutfit.id);
+                    setRating(todayOutfit.rating ?? 0);
+                    setOccasion(todayOutfit.occasion);
+                    setNotes(todayOutfit.notes ?? "");
+                    setTodayOutfit(null);
+                    setPhotoUri(null);
+                  }}
+                  hitSlop={8}
+                >
+                  <Text className="font-body-medium text-micro text-ink-300">
+                    MODIFIER LA PHOTO
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+          <>
           {/* Suggestion */}
           <View className="mb-8">
             <Text className={`font-body-medium text-eyebrow mb-3 ${adopted ? "text-ink-900" : "text-ice"}`}>
@@ -735,6 +847,8 @@ export default function TodayScreen() {
                 </Pressable>
               </View>
             </>
+          )}
+          </>
           )}
 
           {saved && (
