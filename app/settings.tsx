@@ -318,6 +318,15 @@ export default function SettingsScreen() {
           </Pressable>
 
           <Pressable
+            onPress={() => router.push("/brands-library")}
+            className="border border-ink-900 py-4 items-center mt-2 active:bg-paper-200"
+          >
+            <Text className="font-display text-body-sm text-ink-900 uppercase tracking-widest">
+              Bibliothèque de marques
+            </Text>
+          </Pressable>
+
+          <Pressable
             onPress={resetOnboarding}
             className="border border-ink-900 py-4 items-center mt-2 active:bg-paper-200"
           >
