@@ -126,7 +126,7 @@ export default function TodayScreen() {
   ) {
     try {
       const bundle = await (profilePromiseRef.current ?? loadProfileBundle());
-      const { userId, coldness: userColdness, taste, recent_worn, recent_feedback, liked_anchors } = bundle;
+      const { userId, coldness: userColdness, taste, recent_worn, recent_feedback, liked_anchors, derived_prefs } = bundle;
       setColdness(userColdness);
 
       if (userId && !opts.skipCache) {
@@ -165,6 +165,7 @@ export default function TodayScreen() {
           steer_text: opts.steer_text,
           steer_brands: opts.steer_brands,
           liked_anchors,
+          derived_prefs,
         },
       });
       if (error) {
