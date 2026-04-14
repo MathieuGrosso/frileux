@@ -56,6 +56,17 @@ export async function writeSuggestion(
   } catch {}
 }
 
+export async function clearSuggestion(
+  params: {
+    userId: string;
+    coldness: ColdnessLevel;
+    occasion: OutfitOccasion | null;
+  }
+): Promise<void> {
+  const key = buildKey(params);
+  try { await AsyncStorage.removeItem(key); } catch {}
+}
+
 export async function patchSuggestionImage(
   params: {
     userId: string;

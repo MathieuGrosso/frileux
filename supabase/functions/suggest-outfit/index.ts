@@ -51,6 +51,7 @@ interface RequestBody {
   }>;
   occasion?: string | null;
   taste?: TasteBody;
+  avoid_reasons?: string[];
 }
 
 const BRAND_AESTHETICS: Record<string, string> = {
@@ -167,6 +168,15 @@ function validate(body: unknown): RequestBody {
   if (t !== undefined && (t === null || typeof t !== "object" || Array.isArray(t))) {
     throw new Error("taste invalid");
   }
+  const ar = b.avoid_reasons;
+  if (ar !== undefined) {
+    if (!Array.isArray(ar) || ar.length > 10) throw new Error("avoid_reasons invalid");
+    for (const item of ar) {
+      if (typeof item !== "string" || item.length > 200) {
+        throw new Error("avoid_reasons entry invalid");
+      }
+    }
+  }
   return body as RequestBody;
 }
 
@@ -193,7 +203,7 @@ Deno.serve(async (req: Request) => {
   try {
     if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
     const raw = await req.json();
-    const { weather, coldness_level, recent_worn, recent_feedback, occasion, taste } = validate(raw);
+    const { weather, coldness_level, recent_worn, recent_feedback, occasion, taste, avoid_reasons } = validate(raw);
     const tasteBlock = buildTasteBlock(taste);
 
     const coldnessDescriptions: Record<number, string> = {
@@ -222,6 +232,10 @@ Deno.serve(async (req: Request) => {
           .join("\n")}`
       : "";
 
+    const avoidBlock = avoid_reasons && avoid_reasons.length > 0
+      ? `\n\nContraintes négatives (STRICTES, à respecter en priorité) :\n${avoid_reasons.map((r) => `- ${r}`).join("\n")}`
+      : "";
+
     const occasionBlock = occasion
       ? `\n\nContexte demandé pour aujourd'hui : ${occasion}. Adapte le code vestimentaire (ex: travail = un cran plus formel, sortie = plus expressif, sport = technique).`
       : "";
@@ -234,7 +248,7 @@ Météo du jour :
 - Vent : ${weather.wind_speed} m/s
 - Humidité : ${weather.humidity}%
 ${weather.rain ? "- Il pleut" : ""}
-${weather.snow ? "- Il neige" : ""}${occasionBlock}${tasteBlock}${recentBlock}${feedbackBlock}
+${weather.snow ? "- Il neige" : ""}${occasionBlock}${tasteBlock}${recentBlock}${feedbackBlock}${avoidBlock}
 
 Donne une suggestion de tenue ULTRA COURTE en français (1 phrase, 20 mots max). Liste 4 à 6 pièces séparées par des virgules, dans l'ordre haut → bas (haut, bas, manteau si besoin, chaussures, accessoires). Sois spécifique sur les matières (ex: "pull laine épaisse" plutôt que "pull"). Adapte au fait que la personne est ${coldnessDescriptions[coldness_level]}.${recentBlock ? " Varie les matières, couleurs et coupes par rapport aux dernières tenues." : ""}
 
