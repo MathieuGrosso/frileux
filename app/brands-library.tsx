@@ -15,6 +15,7 @@ import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { supabase } from "@/lib/supabase";
 import { BRAND_CATALOG } from "@/lib/brands/catalog";
+import { confirmAction } from "@/lib/ui";
 
 interface BrandProduct {
   id: string;
@@ -126,16 +127,10 @@ export default function BrandsLibrary() {
                   {items.map((p) => (
                     <Pressable
                       key={p.id}
-                      onLongPress={() =>
-                        Alert.alert(p.name, "Supprimer cette pièce ?", [
-                          { text: "Annuler", style: "cancel" },
-                          {
-                            text: "Supprimer",
-                            style: "destructive",
-                            onPress: () => removeProduct(p.id),
-                          },
-                        ])
-                      }
+                      onLongPress={async () => {
+                        const ok = await confirmAction(p.name, "Supprimer cette pièce ?", "Supprimer", true);
+                        if (ok) removeProduct(p.id);
+                      }}
                       style={styles.card}
                     >
                       {p.image_url ? (

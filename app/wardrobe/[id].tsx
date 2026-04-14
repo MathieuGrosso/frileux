@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { View, Text, Pressable, ScrollView, Alert } from "react-native";
+import { View, Text, Pressable, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { HatchedPlaceholder } from "@/components/HatchedPlaceholder";
+import { cleanValue, confirmAction, notifyError } from "@/lib/ui";
 
 interface WardrobeItem {
   id: string;
@@ -39,25 +40,27 @@ export default function WardrobeDetail() {
   }, [id]);
 
   async function handleDelete() {
-    if (!item) return;
-    Alert.alert("Supprimer cette piece ?", "Action irreversible.", [
-      { text: "Annuler", style: "cancel" },
-      {
-        text: "Supprimer",
-        style: "destructive",
-        onPress: async () => {
-          setDeleting(true);
-          const { error } = await supabase.from("wardrobe_items").delete().eq("id", item.id);
-          setDeleting(false);
-          if (error) {
-            Alert.alert("Echec", error.message);
-            return;
-          }
-          router.back();
-        },
-      },
-    ]);
+    if (!item || deleting) return;
+    const confirmed = await confirmAction(
+      "Supprimer cette piece ?",
+      "Action irreversible.",
+      "Supprimer",
+      true,
+    );
+    if (!confirmed) return;
+    setDeleting(true);
+    const { error } = await supabase.from("wardrobe_items").delete().eq("id", item.id);
+    setDeleting(false);
+    if (error) {
+      notifyError("Echec", error.message);
+      return;
+    }
+    router.back();
   }
+
+  const material = cleanValue(item?.material);
+  const color = cleanValue(item?.color);
+  const description = cleanValue(item?.description);
 
   return (
     <View className="flex-1 bg-paper">
@@ -101,18 +104,14 @@ export default function WardrobeDetail() {
                 {labelForType(item.type).toUpperCase()}
               </Text>
               <Text className="font-display text-h1 text-ink-900 mb-4">
-                {item.color ? `${item.color} ${labelForType(item.type)}` : labelForType(item.type)}
+                {color ? `${color} ${labelForType(item.type)}` : labelForType(item.type)}
               </Text>
 
-              {item.material && (
-                <Row label="MATIERE" value={item.material} />
-              )}
+              {material && <Row label="MATIERE" value={material} />}
               {item.style_tags?.length > 0 && (
                 <Row label="STYLE" value={item.style_tags.join(" · ")} />
               )}
-              {item.description && (
-                <Row label="DESCRIPTION" value={item.description} />
-              )}
+              {description && <Row label="DESCRIPTION" value={description} />}
               <Row
                 label="AJOUTE"
                 value={new Date(item.created_at).toLocaleDateString("fr-FR", {

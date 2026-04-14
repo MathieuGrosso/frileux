@@ -6,6 +6,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { HatchedPlaceholder } from "@/components/HatchedPlaceholder";
 import { colors } from "@/lib/theme";
+import { cleanValue } from "@/lib/ui";
 
 type WardrobeType = "top" | "bottom" | "outerwear" | "shoes" | "accessory";
 
@@ -143,17 +144,23 @@ export default function WardrobeScreen() {
                   <HatchedPlaceholder style={{ width: "100%", height: "100%" }} />
                 )}
               </View>
-              <View className="py-2 px-1">
-                <Text className="font-body-medium text-caption text-ink-900" numberOfLines={1}>
-                  {item.color ? `${item.color} ` : ""}
-                  {labelForType(item.type)}
-                </Text>
-                {item.material && (
-                  <Text className="font-body text-caption text-ink-500" numberOfLines={1}>
-                    {item.material}
-                  </Text>
-                )}
-              </View>
+              {(() => {
+                const color = cleanValue(item.color);
+                const material = cleanValue(item.material);
+                return (
+                  <View className="py-2 px-1">
+                    <Text className="font-body-medium text-caption text-ink-900" numberOfLines={1}>
+                      {color ? `${color} ` : ""}
+                      {labelForType(item.type)}
+                    </Text>
+                    {material && (
+                      <Text className="font-body text-caption text-ink-500" numberOfLines={1}>
+                        {material}
+                      </Text>
+                    )}
+                  </View>
+                );
+              })()}
             </Pressable>
           )}
         />
