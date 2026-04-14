@@ -23,22 +23,33 @@ export default function SettingsScreen() {
   const [coldnessLevel, setColdnessLevel] = useState<ColdnessLevel>(3);
   const [username, setUsername] = useState("");
   const [calibration, setCalibration] = useState<CalibrationSuggestion | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [savingLevel, setSavingLevel] = useState<ColdnessLevel | null>(null);
 
   useEffect(() => {
     loadProfile();
   }, []);
 
   async function loadProfile() {
-    const { data } = await supabase
+    setLoading(true);
+    setError(null);
+    const { data, error: err } = await supabase
       .from("profiles")
       .select("coldness_level, username")
       .single();
 
+    if (err) {
+      setError("Impossible de charger ton profil.");
+      setLoading(false);
+      return;
+    }
     if (data) {
       setColdnessLevel(data.coldness_level as ColdnessLevel);
       setUsername(data.username);
       void loadCalibration(data.coldness_level as ColdnessLevel);
     }
+    setLoading(false);
   }
 
   async function loadCalibration(current: ColdnessLevel) {
@@ -67,11 +78,26 @@ export default function SettingsScreen() {
   }
 
   async function updateColdness(level: ColdnessLevel) {
+    const previous = coldnessLevel;
     setColdnessLevel(level);
-    await supabase
+    setSavingLevel(level);
+    setError(null);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setColdnessLevel(previous);
+      setSavingLevel(null);
+      setError("Session expirée. Reconnecte-toi.");
+      return;
+    }
+    const { error: err } = await supabase
       .from("profiles")
       .update({ coldness_level: level })
-      .eq("id", (await supabase.auth.getUser()).data.user?.id);
+      .eq("id", user.id);
+    if (err) {
+      setColdnessLevel(previous);
+      setError("Impossible d'enregistrer. Réessaie.");
+    }
+    setSavingLevel(null);
   }
 
   async function resetOnboarding() {
@@ -129,7 +155,11 @@ export default function SettingsScreen() {
             ]);
           });
     if (!confirmed) return;
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn("signOut failed", e);
+    }
     router.replace("/auth/login");
   }
 
@@ -144,11 +174,15 @@ export default function SettingsScreen() {
           <Pressable onPress={() => router.back()} hitSlop={12}>
             <Text className="font-body text-body-sm text-ink-500">← Retour</Text>
           </Pressable>
-          {username ? (
+          {loading ? (
+            <View className="h-3 w-24 bg-paper-200" />
+          ) : username ? (
             <Text className="font-body-medium text-eyebrow text-ink-300 uppercase">
               @{username}
             </Text>
-          ) : null}
+          ) : (
+            <Text className="font-body-medium text-eyebrow text-ink-300 uppercase">—</Text>
+          )}
         </View>
 
         {/* Page title */}
@@ -172,6 +206,12 @@ export default function SettingsScreen() {
           <Text className="font-body text-caption text-ink-300 mb-5">
             Les suggestions seront adaptées à ton niveau.
           </Text>
+
+          {error && (
+            <View className="border-l-2 border-error bg-paper-200 px-3 py-2 mb-4">
+              <Text className="font-body text-body-sm text-error">{error}</Text>
+            </View>
+          )}
 
           {calibration && (
             <View className="bg-ice-100 border-l-2 border-ice p-4 mb-4">
@@ -226,9 +266,11 @@ export default function SettingsScreen() {
                   >
                     {COLDNESS_LABELS[level]}
                   </Text>
-                  {active && (
+                  {savingLevel === level ? (
+                    <Text className="font-body text-body-sm text-ink-300">…</Text>
+                  ) : active ? (
                     <Text className="font-body-medium text-body-sm text-ice">✓</Text>
-                  )}
+                  ) : null}
                 </Pressable>
               );
             })}
@@ -262,7 +304,11 @@ export default function SettingsScreen() {
 
         {/* Session */}
         <View className="border-t border-paper-300 pt-6">
-          <Pressable onPress={handleLogout} hitSlop={8}>
+          <Pressable
+            onPress={handleLogout}
+            accessibilityRole="button"
+            className="self-start py-2 active:opacity-60"
+          >
             <Text className="font-body text-body-sm text-error underline">
               Se déconnecter
             </Text>
