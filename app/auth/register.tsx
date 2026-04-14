@@ -6,32 +6,38 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   StyleSheet,
 } from "react-native";
 import { Link } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { BrandLogo } from "@/components/BrandLogo";
+import { mapAuthError } from "@/lib/auth-errors";
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleRegister() {
+    setError(null);
     if (!username.trim() || !email.trim() || !password.trim()) {
-      Alert.alert("Erreur", "Remplis tous les champs.");
+      setError("Remplis tous les champs.");
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) { Alert.alert("Erreur", error.message); setLoading(false); return; }
+    const { data, error: err } = await supabase.auth.signUp({ email, password });
+    if (err) { setError(mapAuthError(err)); setLoading(false); return; }
     if (data.user) {
       await supabase.from("profiles").insert({ id: data.user.id, username: username.trim(), coldness_level: 3 });
     }
     // navigation handled automatically by onAuthStateChange in _layout.tsx
     setLoading(false);
+  }
+
+  function clearError() {
+    if (error) setError(null);
   }
 
   return (
@@ -46,12 +52,17 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.form}>
+          {error && (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
           <TextInput
             style={styles.input}
             placeholder="Prénom ou pseudo"
             placeholderTextColor="#9E9A96"
             value={username}
-            onChangeText={setUsername}
+            onChangeText={(v) => { setUsername(v); clearError(); }}
             selectionColor="#637D8E"
           />
           <TextInput
@@ -59,7 +70,7 @@ export default function RegisterScreen() {
             placeholder="Email"
             placeholderTextColor="#9E9A96"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(v) => { setEmail(v); clearError(); }}
             autoCapitalize="none"
             keyboardType="email-address"
             selectionColor="#637D8E"
@@ -69,7 +80,7 @@ export default function RegisterScreen() {
             placeholder="Mot de passe"
             placeholderTextColor="#9E9A96"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(v) => { setPassword(v); clearError(); }}
             secureTextEntry
             selectionColor="#637D8E"
           />
@@ -132,6 +143,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#FAFAF8",
     letterSpacing: 2.5,
+  },
+
+  errorBanner: {
+    borderLeftWidth: 2,
+    borderLeftColor: "#C0392B",
+    backgroundColor: "#F2F0EC",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 4,
+  },
+  errorText: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 13,
+    lineHeight: 18,
+    color: "#C0392B",
   },
 
   footer: { alignItems: "center" },
