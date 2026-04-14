@@ -26,6 +26,7 @@ import { loadProfileBundle, type ProfileBundle } from "@/lib/profile";
 import { clearSuggestion, patchSuggestionImage, readSuggestion, writeSuggestion } from "@/lib/suggestionCache";
 import { REJECTION_REASONS, insertRejection, type RejectionReason } from "@/lib/rejections";
 import { embedOutfitText } from "@/lib/embedOutfit";
+import { SuggestionSwipeArea } from "@/components/SuggestionSwipeArea";
 import { colors, motion } from "@/lib/theme";
 import { useRouter } from "expo-router";
 
@@ -48,6 +49,7 @@ export default function TodayScreen() {
   const [steerText, setSteerText] = useState("");
   const [steerBrands, setSteerBrands] = useState<string[]>([]);
   const [favoriteBrands, setFavoriteBrands] = useState<string[]>([]);
+  const [kept, setKept] = useState(false);
   const router = useRouter();
 
   const today = new Date();
@@ -490,19 +492,47 @@ export default function TodayScreen() {
             </View>
 
             {suggestion ? (
-              <Animated.View
-                className="bg-ice/10 border-l-2 border-ice pl-3 pr-2 py-3"
-                style={{
-                  opacity: suggestionFade,
-                  transform: [{ translateY: suggestionShift }],
+              <SuggestionSwipeArea
+                disabled={refining}
+                onPass={() => refineSuggestion({ reason: null })}
+                onKeep={() => {
+                  setKept(true);
+                  setTimeout(() => setKept(false), 2400);
                 }}
               >
-                <Text className="font-body text-body text-ink-900">
-                  {suggestion}
-                </Text>
-              </Animated.View>
+                <Animated.View
+                  className="bg-ice/10 border-l-2 border-ice pl-3 pr-2 py-3"
+                  style={{
+                    opacity: suggestionFade,
+                    transform: [{ translateY: suggestionShift }],
+                  }}
+                >
+                  <Text className="font-body text-body text-ink-900">
+                    {suggestion}
+                  </Text>
+                </Animated.View>
+              </SuggestionSwipeArea>
             ) : (
               <TodayLoader step={loaderStep} />
+            )}
+
+            {suggestion && !kept && (
+              <View className="mt-2 flex-row justify-between">
+                <Text className="font-body-medium text-micro text-ink-300">
+                  ← PASSER
+                </Text>
+                <Text className="font-body-medium text-micro text-ink-300">
+                  GARDER →
+                </Text>
+              </View>
+            )}
+
+            {kept && (
+              <View className="mt-3 items-start">
+                <Text className="font-body-medium text-micro text-ice">
+                  GARDÉE POUR AUJOURD'HUI
+                </Text>
+              </View>
             )}
 
             {suggestion && (
@@ -568,32 +598,21 @@ export default function TodayScreen() {
                   editable={!refining}
                 />
 
-                <View className="flex-row mt-4" style={{ gap: 8 }}>
-                  <Pressable
-                    onPress={() => refineSuggestion({ reason: null })}
-                    disabled={refining}
-                    className={`flex-1 py-3 items-center border border-ink-900 bg-paper ${refining ? "opacity-50" : "active:bg-paper-200"}`}
-                  >
-                    <Text className="font-body-medium text-eyebrow text-ink-900">
-                      {refining ? "…" : "PASSER"}
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() =>
-                      refineSuggestion({ reason: null, steerText, steerBrands })
-                    }
-                    disabled={refining || (!steerText.trim() && steerBrands.length === 0)}
-                    className={`flex-1 py-3 items-center ${
-                      refining || (!steerText.trim() && steerBrands.length === 0)
-                        ? "bg-ink-200"
-                        : "bg-ink-900 active:bg-ink-700"
-                    }`}
-                  >
-                    <Text className="font-body-medium text-eyebrow text-paper">
-                      RAFFINER
-                    </Text>
-                  </Pressable>
-                </View>
+                <Pressable
+                  onPress={() =>
+                    refineSuggestion({ reason: null, steerText, steerBrands })
+                  }
+                  disabled={refining || (!steerText.trim() && steerBrands.length === 0)}
+                  className={`mt-4 py-3 items-center ${
+                    refining || (!steerText.trim() && steerBrands.length === 0)
+                      ? "bg-ink-200"
+                      : "bg-ink-900 active:bg-ink-700"
+                  }`}
+                >
+                  <Text className="font-body-medium text-eyebrow text-paper">
+                    {refining ? "…" : "RAFFINER"}
+                  </Text>
+                </Pressable>
               </View>
             )}
           </View>
