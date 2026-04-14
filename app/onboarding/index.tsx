@@ -19,7 +19,7 @@ import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { decode } from "base64-arraybuffer";
 import { supabase } from "@/lib/supabase";
-import { analyzeClothingImage, analyzeClothingDescription } from "@/lib/gemini";
+import { analyzeClothingImage, analyzeClothingImageMulti, analyzeClothingDescription } from "@/lib/gemini";
 import type { WardrobeItem, ClothingAnalysis, WardrobeItemType } from "@/lib/types";
 import RefineImageModal from "@/components/RefineImageModal";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -42,6 +42,7 @@ export default function OnboardingItems() {
   const [textModal, setTextModal] = useState(false);
   const [textInput, setTextInput] = useState("");
   const [refineItem, setRefineItem] = useState<WardrobeItem | null>(null);
+  const [pendingPhoto, setPendingPhoto] = useState<{ uri: string; base64: string } | null>(null);
 
   useEffect(() => {
     loadItems();
@@ -88,20 +89,52 @@ export default function OnboardingItems() {
       return;
     }
 
+    setPendingPhoto({ uri: result.assets[0].uri, base64 });
+  }
+
+  async function uploadPendingPhoto(base64: string): Promise<string> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+    const fileName = `${user.id}/${Date.now()}.jpg`;
+    const { error: upErr } = await supabase.storage
+      .from("wardrobe")
+      .upload(fileName, decode(base64), { contentType: "image/jpeg" });
+    if (upErr) throw upErr;
+    const { data: urlData } = supabase.storage.from("wardrobe").getPublicUrl(fileName);
+    return urlData.publicUrl;
+  }
+
+  async function analyzePendingAsSingle() {
+    if (!pendingPhoto) return;
+    const { base64 } = pendingPhoto;
+    setPendingPhoto(null);
     setAnalyzing(true);
     try {
       const analysis = await analyzeClothingImage(base64);
+      const photoUrl = await uploadPendingPhoto(base64);
+      await insertItem({ ...analysis, photo_url: photoUrl });
+    } catch (e) {
+      Alert.alert("Erreur", e instanceof Error ? e.message : "Analyse impossible.");
+    } finally {
+      setAnalyzing(false);
+    }
+  }
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-      const fileName = `${user.id}/${Date.now()}.jpg`;
-      const { error: upErr } = await supabase.storage
-        .from("wardrobe")
-        .upload(fileName, decode(base64), { contentType: "image/jpeg" });
-      if (upErr) throw upErr;
-      const { data: urlData } = supabase.storage.from("wardrobe").getPublicUrl(fileName);
-
-      await insertItem({ ...analysis, photo_url: urlData.publicUrl });
+  async function analyzePendingAsMulti() {
+    if (!pendingPhoto) return;
+    const { base64 } = pendingPhoto;
+    setPendingPhoto(null);
+    setAnalyzing(true);
+    try {
+      const analyses = await analyzeClothingImageMulti(base64);
+      if (analyses.length === 0) {
+        Alert.alert("Rien trouvé", "Aucune pièce détectée sur la photo.");
+        return;
+      }
+      const photoUrl = await uploadPendingPhoto(base64);
+      for (const analysis of analyses) {
+        await insertItem({ ...analysis, photo_url: photoUrl });
+      }
     } catch (e) {
       Alert.alert("Erreur", e instanceof Error ? e.message : "Analyse impossible.");
     } finally {
@@ -304,6 +337,46 @@ export default function OnboardingItems() {
         )}
       </View>
 
+      <Modal
+        visible={!!pendingPhoto}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setPendingPhoto(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>CETTE PHOTO</Text>
+            {pendingPhoto && (
+              <Image source={{ uri: pendingPhoto.uri }} style={styles.pendingPreview} />
+            )}
+            <Text style={styles.modalHint}>
+              Une seule pièce, ou plusieurs à extraire ?
+            </Text>
+            <Pressable style={styles.choiceBtn} onPress={analyzePendingAsSingle}>
+              <Text style={styles.choiceBtnText}>GARDER COMME UNE PIÈCE</Text>
+              <Text style={styles.choiceBtnSub}>Une photo, une entrée</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.choiceBtn, styles.choiceBtnPrimary]}
+              onPress={analyzePendingAsMulti}
+            >
+              <Text style={[styles.choiceBtnText, styles.choiceBtnTextPrimary]}>
+                EXTRAIRE LES PIÈCES
+              </Text>
+              <Text style={[styles.choiceBtnSub, styles.choiceBtnSubPrimary]}>
+                Gemini sépare chaque vêtement visible
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.modalCancel, styles.choiceCancel]}
+              onPress={() => setPendingPhoto(null)}
+            >
+              <Text style={styles.modalCancelText}>ANNULER</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={textModal} animationType="slide" transparent onRequestClose={() => setTextModal(false)}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -483,6 +556,37 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalCard: { backgroundColor: "#FAFAF8", padding: 24, paddingBottom: 36 },
+  pendingPreview: {
+    width: "100%",
+    height: 220,
+    marginTop: 12,
+    marginBottom: 4,
+    backgroundColor: "#E8E5DF",
+  },
+  choiceBtn: {
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    borderWidth: 1,
+    borderColor: "#0F0F0D",
+    backgroundColor: "#FFFFFF",
+    marginTop: 8,
+  },
+  choiceBtnPrimary: { backgroundColor: "#0F0F0D" },
+  choiceBtnText: {
+    fontFamily: "BarlowCondensed_600SemiBold",
+    fontSize: 16,
+    letterSpacing: 1,
+    color: "#0F0F0D",
+  },
+  choiceBtnTextPrimary: { color: "#FAFAF8" },
+  choiceBtnSub: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 11,
+    color: "#637D8E",
+    marginTop: 2,
+  },
+  choiceBtnSubPrimary: { color: "#A8A49F" },
+  choiceCancel: { flex: 0, alignSelf: "stretch", marginTop: 12 },
   modalTitle: {
     fontFamily: "BarlowCondensed_600SemiBold",
     fontSize: 22,

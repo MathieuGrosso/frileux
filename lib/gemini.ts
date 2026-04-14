@@ -27,6 +27,18 @@ export async function analyzeClothingImage(
   });
 }
 
+export async function analyzeClothingImageMulti(
+  imageBase64: string,
+  mimeType = "image/jpeg"
+): Promise<ClothingAnalysis[]> {
+  const res = await invoke<{ items: ClothingAnalysis[] }>({
+    action: "analyze_image_multi",
+    image_base64: imageBase64,
+    mime_type: mimeType,
+  });
+  return res.items ?? [];
+}
+
 export async function analyzeClothingDescription(text: string): Promise<ClothingAnalysis> {
   const { data: { user } } = await supabase.auth.getUser();
   return invoke<ClothingAnalysis>({ action: "analyze_text", text, user_id: user?.id });
