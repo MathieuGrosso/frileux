@@ -34,21 +34,46 @@ export default function SettingsScreen() {
   async function loadProfile() {
     setLoading(true);
     setError(null);
-    const { data, error: err } = await supabase
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setError("Session expirée. Reconnecte-toi.");
+      setLoading(false);
+      return;
+    }
+
+    let { data, error: err } = await supabase
       .from("profiles")
       .select("coldness_level, username")
-      .single();
+      .eq("id", user.id)
+      .maybeSingle();
 
     if (err) {
       setError("Impossible de charger ton profil.");
       setLoading(false);
       return;
     }
-    if (data) {
-      setColdnessLevel(data.coldness_level as ColdnessLevel);
-      setUsername(data.username);
-      void loadCalibration(data.coldness_level as ColdnessLevel);
+
+    if (!data) {
+      const fallbackUsername = user.email?.split("@")[0] ?? "user";
+      const { data: created, error: upsertErr } = await supabase
+        .from("profiles")
+        .upsert(
+          { id: user.id, username: fallbackUsername, coldness_level: 3 },
+          { onConflict: "id" },
+        )
+        .select("coldness_level, username")
+        .maybeSingle();
+      if (upsertErr || !created) {
+        setError("Impossible de charger ton profil.");
+        setLoading(false);
+        return;
+      }
+      data = created;
     }
+
+    setColdnessLevel(data.coldness_level as ColdnessLevel);
+    setUsername(data.username);
+    void loadCalibration(data.coldness_level as ColdnessLevel);
     setLoading(false);
   }
 
@@ -289,6 +314,15 @@ export default function SettingsScreen() {
           >
             <Text className="font-display text-body-sm text-paper uppercase tracking-widest">
               Mettre à jour mon goût
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push("/brands-library")}
+            className="border border-ink-900 py-4 items-center mt-2 active:bg-paper-200"
+          >
+            <Text className="font-display text-body-sm text-ink-900 uppercase tracking-widest">
+              Bibliothèque de marques
             </Text>
           </Pressable>
 

@@ -3,7 +3,6 @@ import {
   View,
   Text,
   FlatList,
-  TextInput,
   Pressable,
   KeyboardAvoidingView,
   Platform,
@@ -13,7 +12,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import type { CircleMessage } from "@/lib/types";
-import { colors } from "@/lib/theme";
+import { useCircleMembers } from "@/hooks/useCircleMembers";
+import { MentionInput } from "@/components/circle/MentionInput";
+import { MessageBody } from "@/components/circle/MessageBody";
 
 const MAX_LEN = 500;
 
@@ -57,9 +58,11 @@ export default function CircleChatScreen() {
   const router = useRouter();
   const [messages, setMessages] = useState<CircleMessage[]>([]);
   const [draft, setDraft] = useState("");
+  const [mentionedIds, setMentionedIds] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const listRef = useRef<FlatList>(null);
+  const { members } = useCircleMembers(id ?? null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -167,17 +170,18 @@ export default function CircleChatScreen() {
 
   async function send() {
     const body = draft.trim();
-    if (!body || sending || !id) return;
+    if (!body || sending || !id || !userId) return;
     setSending(true);
     const { error } = await supabase
       .from("circle_messages")
-      .insert({ circle_id: id, body });
+      .insert({ circle_id: id, user_id: userId, body, mentions: mentionedIds });
     setSending(false);
     if (error) {
       Alert.alert("Erreur", "Impossible d'envoyer.");
       return;
     }
     setDraft("");
+    setMentionedIds([]);
     void markRead();
   }
 
@@ -260,9 +264,7 @@ export default function CircleChatScreen() {
                   onLongPress={isMine ? () => remove(m.id) : undefined}
                   className="active:opacity-60"
                 >
-                  <Text className="font-body text-ink-900 text-body-sm leading-5">
-                    {m.body}
-                  </Text>
+                  <MessageBody body={m.body} />
                 </Pressable>
               </View>
             );
@@ -283,15 +285,14 @@ export default function CircleChatScreen() {
         />
 
         <View className="border-t border-paper-300 px-4 py-3 flex-row items-end gap-2 bg-paper-100">
-          <TextInput
+          <MentionInput
             value={draft}
             onChangeText={(t) => setDraft(t.slice(0, MAX_LEN))}
             placeholder="Écrire un message"
-            placeholderTextColor={colors.ink[300]}
-            selectionColor={colors.ice[600]}
-            multiline
-            className="flex-1 border border-paper-300 bg-paper-200 px-3 py-2 font-body text-ink-900 text-body-sm"
-            style={{ maxHeight: 96 }}
+            maxLength={MAX_LEN}
+            members={members}
+            mentionedUserIds={mentionedIds}
+            onMentionedUserIdsChange={setMentionedIds}
           />
           <Pressable
             onPress={send}
