@@ -112,6 +112,15 @@ export const THERMAL_FEELINGS: { value: ThermalFeeling; label: string }[] = [
   { value: "too_warm", label: "Trop chaud" },
 ];
 
+export interface OutfitCritique {
+  score: number;
+  verdict: string;
+  strengths: string[];
+  improvements: string[];
+  weather_note: string | null;
+  vs_suggestion: string | null;
+}
+
 export interface Outfit {
   id: string;
   user_id: string;
@@ -124,6 +133,8 @@ export interface Outfit {
   worn_description: string | null;
   occasion: OutfitOccasion | null;
   thermal_feeling: ThermalFeeling | null;
+  critique: OutfitCritique | null;
+  critique_score: number | null;
   created_at: string;
 }
 

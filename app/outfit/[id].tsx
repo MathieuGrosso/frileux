@@ -17,6 +17,7 @@ import { OUTFIT_OCCASIONS, THERMAL_FEELINGS } from "@/lib/types";
 import { weatherEmoji } from "@/lib/weather";
 import { RatingStars } from "@/components/RatingStars";
 import { OutfitNotes } from "@/components/circle/OutfitNotes";
+import { OutfitCritique } from "@/components/OutfitCritique";
 import { colors } from "@/lib/theme";
 import { confirmAction, notifyError } from "@/lib/ui";
 
@@ -366,6 +367,12 @@ export default function OutfitDetailScreen() {
                     </Pressable>
                   </>
                 )}
+              </View>
+            )}
+
+            {outfit?.critique && (
+              <View className="-mx-6 mt-4 mb-2">
+                <OutfitCritique critique={outfit.critique} loading={false} />
               </View>
             )}
 
