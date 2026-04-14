@@ -129,7 +129,7 @@ export default function TodayScreen() {
   ) {
     try {
       const bundle = await (profilePromiseRef.current ?? loadProfileBundle());
-      const { userId, coldness: userColdness, taste, recent_worn, recent_feedback, liked_anchors, derived_prefs } = bundle;
+      const { userId, coldness: userColdness, taste, recent_worn, recent_feedback, liked_anchors, derived_prefs, wardrobe } = bundle;
       setColdness(userColdness);
       if (taste?.favorite_brands?.length) setFavoriteBrands(taste.favorite_brands);
 
@@ -170,6 +170,8 @@ export default function TodayScreen() {
           steer_brands: opts.steer_brands,
           liked_anchors,
           derived_prefs,
+          wardrobe,
+          wardrobe_mode: "priority" as const,
         },
       });
       if (error) {

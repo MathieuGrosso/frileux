@@ -23,6 +23,14 @@ export interface ProfileTaste {
   shoe_size_eu: number | null;
 }
 
+export interface WardrobePiece {
+  type: string;
+  color: string | null;
+  material: string | null;
+  style_tags: string[];
+  description: string;
+}
+
 export interface ProfileBundle {
   userId: string | null;
   coldness: ColdnessLevel;
@@ -31,6 +39,7 @@ export interface ProfileBundle {
   recent_feedback: RecentFeedback[];
   liked_anchors: string[];
   derived_prefs: string[];
+  wardrobe: WardrobePiece[];
 }
 
 const EMPTY_BUNDLE: ProfileBundle = {
@@ -41,6 +50,7 @@ const EMPTY_BUNDLE: ProfileBundle = {
   recent_feedback: [],
   liked_anchors: [],
   derived_prefs: [],
+  wardrobe: [],
 };
 
 const REJECTION_REASON_TO_PREF: Record<string, string> = {
@@ -75,7 +85,7 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const [profileRes, outfitsRes, likedRes, rejectionsRes] = await Promise.all([
+  const [profileRes, outfitsRes, likedRes, rejectionsRes, wardrobeRes] = await Promise.all([
     supabase
       .from("profiles")
       .select(
@@ -103,6 +113,11 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
       .select("reason")
       .eq("user_id", user.id)
       .gte("date", thirtyDaysAgo.toISOString().split("T")[0]),
+    supabase
+      .from("wardrobe_items")
+      .select("type, color, material, style_tags, description")
+      .eq("user_id", user.id)
+      .limit(80),
   ]);
 
   const profile = profileRes.data;
@@ -143,6 +158,14 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
     (rejectionsRes.data ?? []).map((r) => ({ reason: r.reason as string | null }))
   );
 
+  const wardrobe: WardrobePiece[] = (wardrobeRes.data ?? []).map((w) => ({
+    type: w.type as string,
+    color: (w.color as string | null) ?? null,
+    material: (w.material as string | null) ?? null,
+    style_tags: (w.style_tags as string[] | null) ?? [],
+    description: (w.description as string) ?? "",
+  }));
+
   return {
     userId: user.id,
     coldness: (profile?.coldness_level ?? 3) as ColdnessLevel,
@@ -151,5 +174,6 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
     recent_feedback,
     liked_anchors,
     derived_prefs,
+    wardrobe,
   };
 }
