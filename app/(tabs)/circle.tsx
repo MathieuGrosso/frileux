@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { SectionList, FlatList, RefreshControl, View, Text } from "react-native";
+import { SectionList, FlatList, RefreshControl, Share, View, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useCircle } from "@/hooks/useCircle";
 import type { OutfitWithProfile } from "@/lib/types";
@@ -24,6 +24,7 @@ export default function CircleScreen() {
     circles,
     circle,
     outfits,
+    memberCount,
     loading,
     refreshing,
     refresh,
@@ -64,6 +65,15 @@ export default function CircleScreen() {
     );
   }
 
+  const isAlone = memberCount <= 1;
+  const inviteCode = circle?.invite_code ?? "";
+  const shareInvite = () => {
+    if (!inviteCode) return;
+    void Share.share({
+      message: `Rejoins mon cercle Frileuse — code : ${inviteCode}`,
+    });
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-paper-100">
       {circle && <CircleFeedHeader circle={circle} />}
@@ -92,10 +102,18 @@ export default function CircleScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#637D8E" />
           }
           ListEmptyComponent={
-            <EmptyState
-              title="Personne aujourd'hui"
-              subtitle="Aucun membre du cercle n'a encore partagé sa tenue. Sois la première."
-            />
+            isAlone ? (
+              <EmptyState
+                title="Cercle vide"
+                subtitle={`Personne d'autre ici. Partage le code ${inviteCode} pour inviter quelqu'un.`}
+                cta={{ label: "Partager le code", onPress: shareInvite }}
+              />
+            ) : (
+              <EmptyState
+                title="Rien partagé aujourd'hui"
+                subtitle="Les autres membres n'ont pas encore posté leur tenue."
+              />
+            )
           }
         />
       ) : (
@@ -124,10 +142,18 @@ export default function CircleScreen() {
             </View>
           )}
           ListEmptyComponent={
-            <EmptyState
-              title="Rien cette semaine"
-              subtitle="Aucune tenue partagée ces 7 derniers jours."
-            />
+            isAlone ? (
+              <EmptyState
+                title="Cercle vide"
+                subtitle={`Personne d'autre ici. Partage le code ${inviteCode} pour inviter quelqu'un.`}
+                cta={{ label: "Partager le code", onPress: shareInvite }}
+              />
+            ) : (
+              <EmptyState
+                title="Rien cette semaine"
+                subtitle="Aucune tenue partagée ces 7 derniers jours."
+              />
+            )
           }
         />
       )}
