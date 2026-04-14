@@ -16,8 +16,8 @@ import { supabase } from "@/lib/supabase";
 import { getWeatherCached } from "@/lib/weather";
 import { generateOutfitImage } from "@/lib/gemini";
 import { comfortVerdict } from "@/lib/comfort";
-import type { ColdnessLevel, DayForecast, OutfitOccasion, ThermalFeeling, WeatherData } from "@/lib/types";
-import { OUTFIT_OCCASIONS, THERMAL_FEELINGS } from "@/lib/types";
+import type { ColdnessLevel, DayForecast, OutfitOccasion, WeatherData } from "@/lib/types";
+import { OUTFIT_OCCASIONS } from "@/lib/types";
 import { RatingStars } from "@/components/RatingStars";
 import { Skeleton } from "@/components/Skeleton";
 import { TodayLoader, type LoaderStep } from "@/components/TodayLoader";
@@ -41,7 +41,6 @@ export default function TodayScreen() {
   const [rating, setRating] = useState(0);
   const [occasion, setOccasion] = useState<OutfitOccasion | null>(null);
   const [coldness, setColdness] = useState<ColdnessLevel | null>(null);
-  const [thermal, setThermal] = useState<ThermalFeeling | null>(null);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -54,8 +53,6 @@ export default function TodayScreen() {
   const [adoptedOutfitId, setAdoptedOutfitId] = useState<string | null>(null);
   const [adopting, setAdopting] = useState(false);
   const [refineOpen, setRefineOpen] = useState(false);
-  const photoSectionY = useRef(0);
-  const scrollRef = useRef<ScrollView>(null);
   const router = useRouter();
 
   const today = new Date();
@@ -332,9 +329,6 @@ export default function TodayScreen() {
     }
   }
 
-  function scrollToPhoto() {
-    scrollRef.current?.scrollTo({ y: photoSectionY.current, animated: true });
-  }
 
   function stripMarkdown(text: string): string {
     return text
@@ -413,7 +407,6 @@ export default function TodayScreen() {
         ai_suggestion: suggestion,
         worn_description,
         occasion,
-        thermal_feeling: thermal,
         notes: notes.trim() || null,
         embedding,
         embedding_source: embedding ? (worn_description ? "worn" : "suggested") : null,
@@ -434,7 +427,6 @@ export default function TodayScreen() {
       setPhotoUri(null);
       setRating(0);
       setOccasion(null);
-      setThermal(null);
       setNotes("");
       setAdoptedOutfitId(null);
       setTimeout(() => setSaved(false), 3000);
@@ -477,7 +469,7 @@ export default function TodayScreen() {
   return (
     <View className="flex-1 bg-paper">
       <SafeAreaView className="flex-1">
-        <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} contentContainerClassName="px-6 pt-2 pb-10">
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="px-6 pt-2 pb-10">
 
           {/* Header */}
           <View className="flex-row justify-between items-start mb-6">
@@ -592,13 +584,13 @@ export default function TodayScreen() {
                 onKeep={() => adoptSuggestion()}
               >
                 <Animated.View
-                  className={`pl-3 pr-2 py-3 border-l-2 ${adopted ? "bg-ink-900/5 border-ink-900" : "bg-ice/10 border-ice"}`}
+                  className={`pl-3 pr-3 py-3 border-l-2 ${adopted ? "bg-ink-900 border-ink-900" : "bg-ice/10 border-ice"}`}
                   style={{
                     opacity: suggestionFade,
                     transform: [{ translateY: suggestionShift }],
                   }}
                 >
-                  <Text className="font-body text-body text-ink-900">
+                  <Text className={`font-body text-body ${adopted ? "text-paper" : "text-ink-900"}`}>
                     {suggestion}
                   </Text>
                   {suggestion === "Suggestion indisponible." && weather && (
@@ -626,25 +618,15 @@ export default function TodayScreen() {
                     {adopting ? "…" : "JE LA PORTE"}
                   </Text>
                 </Pressable>
-                <View className="flex-row" style={{ gap: 8 }}>
-                  <Pressable
-                    onPress={() => setRefineOpen(true)}
-                    disabled={refining}
-                    className="flex-1 py-[14px] items-center border border-ink-900 bg-paper active:bg-paper-200"
-                  >
-                    <Text className="font-body-medium text-eyebrow text-ink-900">
-                      RAFFINER
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={scrollToPhoto}
-                    className="flex-1 py-[14px] items-center border border-paper-300 bg-paper-50 active:bg-paper-200"
-                  >
-                    <Text className="font-body-medium text-eyebrow text-ink-500">
-                      AUTRE CHOIX
-                    </Text>
-                  </Pressable>
-                </View>
+                <Pressable
+                  onPress={() => setRefineOpen(true)}
+                  disabled={refining}
+                  className="py-[14px] items-center border border-ink-900 bg-paper active:bg-paper-200"
+                >
+                  <Text className="font-body-medium text-eyebrow text-ink-900">
+                    RAFFINER
+                  </Text>
+                </Pressable>
               </View>
             )}
 
@@ -662,12 +644,9 @@ export default function TodayScreen() {
           <View className="h-px bg-paper-300 mb-8" />
 
           {/* Photo */}
-          <View
-            className="mb-6"
-            onLayout={(e) => { photoSectionY.current = e.nativeEvent.layout.y; }}
-          >
+          <View className="mb-6">
             <Text className="font-body-medium text-micro text-ink-300 mb-4">
-              TENUE DU JOUR
+              {adopted ? "PHOTO DE LA TENUE" : "OU PHOTOGRAPHIE TA TENUE"}
             </Text>
             {photoUri ? (
               <View className="h-[440px] relative overflow-hidden">
@@ -718,26 +697,6 @@ export default function TodayScreen() {
                       <Pressable
                         key={opt.value}
                         onPress={() => setOccasion(active ? null : opt.value)}
-                        className={`py-2 px-3 border ${active ? "bg-ink-900 border-ink-900" : "bg-paper-50 border-paper-300"}`}
-                      >
-                        <Text className={`font-body text-xs ${active ? "text-paper" : "text-ink-900"}`}>
-                          {opt.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-
-                <Text className="font-body-medium text-micro text-ink-300 mt-6 mb-4">
-                  RESSENTI
-                </Text>
-                <View className="flex-row flex-wrap" style={{ gap: 6 }}>
-                  {THERMAL_FEELINGS.map((opt) => {
-                    const active = thermal === opt.value;
-                    return (
-                      <Pressable
-                        key={opt.value}
-                        onPress={() => setThermal(active ? null : opt.value)}
                         className={`py-2 px-3 border ${active ? "bg-ink-900 border-ink-900" : "bg-paper-50 border-paper-300"}`}
                       >
                         <Text className={`font-body text-xs ${active ? "text-paper" : "text-ink-900"}`}>
