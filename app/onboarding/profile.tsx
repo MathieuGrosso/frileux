@@ -4,7 +4,6 @@ import {
   Text,
   Pressable,
   ScrollView,
-  StyleSheet,
   ActivityIndicator,
   Alert,
 } from "react-native";
@@ -22,14 +21,6 @@ const COLDNESS_LABELS: Record<ColdnessLevel, string> = {
   3: "Très frileuse",
   4: "Ultra frileuse",
   5: "Je vis en doudoune",
-};
-
-const COLDNESS_EMOJIS: Record<ColdnessLevel, string> = {
-  1: "🌤️",
-  2: "🧥",
-  3: "🧣",
-  4: "🧤",
-  5: "🥶",
 };
 
 type GeoStatus = "idle" | "asking" | "granted" | "denied";
@@ -110,232 +101,135 @@ export default function OnboardingProfile() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <View style={styles.topBar}>
-        <View style={styles.progressWrap}>
-          <View style={[styles.progressDot, styles.progressDotActive]} />
-          <View style={[styles.progressDot, styles.progressDotActive]} />
-          <View style={[styles.progressDot, styles.progressDotActive]} />
-          <View style={styles.progressDot} />
+    <SafeAreaView className="flex-1 bg-paper" edges={["top", "bottom"]}>
+      <View className="flex-row items-center justify-between px-6 pt-2 pb-4">
+        <View className="flex-row gap-1.5">
+          <View className="h-[2px] w-6 bg-ink-900" />
+          <View className="h-[2px] w-6 bg-ink-900" />
+          <View className="h-[2px] w-6 bg-ink-900" />
+          <View className="h-[2px] w-6 bg-paper-300" />
         </View>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Text style={styles.backText}>← GOÛT</Text>
+          <Text className="font-body-medium text-eyebrow text-ice uppercase">← Goût</Text>
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.kicker}>ÉTAPE 03 / 04</Text>
-        <Text style={styles.title}>TOI</Text>
-        <Text style={styles.subtitle}>
+      <ScrollView
+        contentContainerClassName="px-6 pb-8"
+        showsVerticalScrollIndicator={false}
+      >
+        <Text className="font-body-medium text-eyebrow text-ice uppercase mb-2">
+          Étape 03 / 04
+        </Text>
+        <Text className="font-display text-display-xl text-ink-900">TOI</Text>
+        <Text className="font-body text-body-sm text-ink-900 mt-3 mb-7">
           Deux infos pour t'habiller juste : ton seuil de froid, et où tu vis.
         </Text>
 
-        <Text style={styles.sectionLabel}>NIVEAU DE FRILOSITÉ</Text>
-        {([1, 2, 3, 4, 5] as ColdnessLevel[]).map((level) => (
-          <Pressable
-            key={level}
-            onPress={() => selectColdness(level)}
-            style={[styles.row, coldness === level && styles.rowActive]}
-          >
-            <Text style={styles.rowEmoji}>{COLDNESS_EMOJIS[level]}</Text>
-            <Text style={[styles.rowLabel, coldness === level && styles.rowLabelActive]}>
-              {COLDNESS_LABELS[level]}
+        <View className="flex-row items-baseline justify-between mb-1">
+          <Text className="font-body-medium text-eyebrow text-ink-500 uppercase">
+            Niveau de frilosité
+          </Text>
+          {coldness && (
+            <Text className="font-display text-h3 text-ice">
+              0{coldness}
             </Text>
-            {coldness === level && <Text style={styles.rowCheck}>✓</Text>}
-          </Pressable>
-        ))}
+          )}
+        </View>
+        <Text className="font-body text-caption text-ink-300 mb-5">
+          Les suggestions seront adaptées à ton niveau.
+        </Text>
 
-        <View style={styles.divider} />
+        <View className="border-t border-paper-300 mb-8">
+          {([1, 2, 3, 4, 5] as ColdnessLevel[]).map((level) => {
+            const active = coldness === level;
+            return (
+              <Pressable
+                key={level}
+                onPress={() => selectColdness(level)}
+                className="flex-row items-center py-4 border-b border-paper-300"
+              >
+                <Text
+                  className={`font-display text-body-sm w-10 ${
+                    active ? "text-ice" : "text-ink-300"
+                  }`}
+                >
+                  0{level}
+                </Text>
+                <Text
+                  className={`flex-1 ${
+                    active
+                      ? "font-body-medium text-body text-ink-900"
+                      : "font-body text-body text-ink-500"
+                  }`}
+                >
+                  {COLDNESS_LABELS[level]}
+                </Text>
+                {active && (
+                  <Text className="font-body-medium text-body-sm text-ice">✓</Text>
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
 
-        <Text style={styles.sectionLabel}>MÉTÉO LOCALE</Text>
-        <Text style={styles.geoHint}>
+        <Text className="font-body-medium text-eyebrow text-ink-500 uppercase mb-2">
+          Météo locale
+        </Text>
+        <Text className="font-body text-caption text-ink-300 mb-5">
           On utilise ta position pour la météo du matin. Pas de tracking.
         </Text>
 
         {geo === "granted" ? (
-          <View style={[styles.geoBtn, styles.geoBtnGranted]}>
-            <Text style={styles.geoBtnGrantedText}>✓ POSITION CAPTÉE</Text>
+          <View className="border border-ice py-4 items-center">
+            <Text className="font-display text-body-sm text-ice uppercase tracking-widest">
+              ✓ Position captée
+            </Text>
           </View>
         ) : (
           <Pressable
-            style={[styles.geoBtn, geo === "asking" && styles.geoBtnDisabled]}
+            className={`border border-ink-900 py-4 items-center active:bg-paper-200 ${
+              geo === "asking" ? "opacity-40" : ""
+            }`}
             onPress={askLocation}
             disabled={geo === "asking"}
           >
             {geo === "asking" ? (
               <ActivityIndicator color={colors.ice[600]} size="small" />
             ) : (
-              <Text style={styles.geoBtnText}>
-                {geo === "denied" ? "RÉESSAYER LA POSITION" : "AUTORISER LA POSITION"}
+              <Text className="font-display text-body-sm text-ink-900 uppercase tracking-widest">
+                {geo === "denied" ? "Réessayer la position" : "Autoriser la position"}
               </Text>
             )}
           </Pressable>
         )}
         {geo === "denied" && (
-          <Text style={styles.geoDenied}>
+          <Text className="font-body text-caption text-ink-300 mt-2">
             Refusé. Tu pourras réessayer dans Réglages.
           </Text>
         )}
       </ScrollView>
 
-      <View style={styles.bottomBar}>
+      <View className="px-6 pt-3 pb-3 border-t border-paper-300 bg-paper">
         <Pressable
-          style={[styles.continueBtn, !coldness && styles.continueBtnDisabled]}
+          className={`py-4 items-center ${coldness ? "bg-ink-900 active:bg-ink-700" : "bg-paper-300"}`}
           onPress={goNext}
           disabled={!coldness || saving}
         >
-          <Text style={[styles.continueText, !coldness && styles.continueTextDisabled]}>
-            CONTINUER →
+          <Text
+            className={`font-display text-body uppercase tracking-widest ${
+              coldness ? "text-paper" : "text-ink-300"
+            }`}
+          >
+            Continuer →
           </Text>
         </Pressable>
         {!coldness && (
-          <Text style={styles.bottomHint}>Choisis ton niveau pour continuer</Text>
+          <Text className="font-body text-caption text-ink-300 text-center mt-2">
+            Choisis ton niveau pour continuer
+          </Text>
         )}
       </View>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FAFAF8" },
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    paddingBottom: 16,
-  },
-  progressWrap: { flexDirection: "row", gap: 6 },
-  progressDot: { width: 24, height: 2, backgroundColor: "#E8E5DF" },
-  progressDotActive: { backgroundColor: "#0F0F0D" },
-  backText: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 11,
-    letterSpacing: 1.2,
-    color: "#637D8E",
-  },
-  scroll: { paddingHorizontal: 24, paddingBottom: 32 },
-  kicker: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 10,
-    letterSpacing: 1.6,
-    color: "#637D8E",
-    marginBottom: 8,
-  },
-  title: {
-    fontFamily: "BarlowCondensed_600SemiBold",
-    fontSize: 56,
-    letterSpacing: -1,
-    color: "#0F0F0D",
-    lineHeight: 56,
-  },
-  subtitle: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 14,
-    lineHeight: 20,
-    color: "#0F0F0D",
-    marginTop: 12,
-    marginBottom: 28,
-  },
-  sectionLabel: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 11,
-    letterSpacing: 1.4,
-    color: "#637D8E",
-    marginBottom: 12,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: "#E8E5DF",
-    marginBottom: 6,
-    backgroundColor: "#FFFFFF",
-  },
-  rowActive: {
-    backgroundColor: "#E8F1F6",
-    borderColor: "#637D8E",
-  },
-  rowEmoji: { fontSize: 20 },
-  rowLabel: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 14,
-    color: "#0F0F0D",
-    flex: 1,
-  },
-  rowLabelActive: {
-    fontFamily: "Jost_500Medium",
-    color: "#0F0F0D",
-  },
-  rowCheck: {
-    fontFamily: "Jost_500Medium",
-    fontSize: 14,
-    color: "#637D8E",
-  },
-  divider: { height: 1, backgroundColor: "#E8E5DF", marginTop: 32, marginBottom: 24 },
-  geoHint: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 13,
-    lineHeight: 18,
-    color: "#0F0F0D",
-    marginBottom: 14,
-  },
-  geoBtn: {
-    paddingVertical: 16,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#0F0F0D",
-    backgroundColor: "#FFFFFF",
-  },
-  geoBtnDisabled: { opacity: 0.4 },
-  geoBtnGranted: {
-    borderColor: "#637D8E",
-    backgroundColor: "#E8F1F6",
-  },
-  geoBtnText: {
-    fontFamily: "BarlowCondensed_600SemiBold",
-    fontSize: 14,
-    letterSpacing: 1.4,
-    color: "#0F0F0D",
-  },
-  geoBtnGrantedText: {
-    fontFamily: "BarlowCondensed_600SemiBold",
-    fontSize: 14,
-    letterSpacing: 1.4,
-    color: "#637D8E",
-  },
-  geoDenied: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 12,
-    color: "#A8A49F",
-    marginTop: 8,
-  },
-  bottomBar: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#E8E5DF",
-    backgroundColor: "#FAFAF8",
-  },
-  continueBtn: { paddingVertical: 18, alignItems: "center", backgroundColor: "#0F0F0D" },
-  continueBtnDisabled: { backgroundColor: "#E8E5DF" },
-  continueText: {
-    fontFamily: "BarlowCondensed_600SemiBold",
-    fontSize: 18,
-    letterSpacing: 1.4,
-    color: "#FAFAF8",
-  },
-  continueTextDisabled: { color: "#A8A49F" },
-  bottomHint: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 11,
-    color: "#A8A49F",
-    textAlign: "center",
-    marginTop: 8,
-  },
-});
