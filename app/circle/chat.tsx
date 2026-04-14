@@ -166,11 +166,11 @@ export default function CircleChatScreen() {
 
   async function send() {
     const body = draft.trim();
-    if (!body || sending || !id) return;
+    if (!body || sending || !id || !userId) return;
     setSending(true);
     const { error } = await supabase
       .from("circle_messages")
-      .insert({ circle_id: id, body });
+      .insert({ circle_id: id, user_id: userId, body });
     setSending(false);
     if (error) {
       Alert.alert("Erreur", "Impossible d'envoyer.");
