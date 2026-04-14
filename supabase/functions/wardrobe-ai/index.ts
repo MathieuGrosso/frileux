@@ -76,6 +76,8 @@ const ANALYSIS_MULTI_SCHEMA = {
   properties: {
     items: {
       type: "ARRAY",
+      minItems: 1,
+      maxItems: 6,
       items: {
         type: "OBJECT",
         properties: {
@@ -287,6 +289,7 @@ Règles :
 - Sépare les pièces par catégorie (un t-shirt + un jean = 2 pièces distinctes).
 - Ignore le fond, la peau, les cheveux, les meubles.
 - Si une seule pièce est visible, renvoie un tableau d'un seul élément.
+- Tu DOIS renvoyer au moins 1 item. Si aucun vêtement n'est identifiable avec certitude, renvoie quand même 1 item avec ta meilleure hypothèse (type accessory si vraiment incertain).
 - Maximum 6 pièces.`;
 }
 
