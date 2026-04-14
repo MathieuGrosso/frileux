@@ -15,6 +15,7 @@ import { makeRedirectUri } from "expo-auth-session";
 import { supabase } from "@/lib/supabase";
 import { BrandLogo } from "@/components/BrandLogo";
 import { mapAuthError } from "@/lib/auth-errors";
+import { colors } from "@/lib/theme";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -98,7 +99,7 @@ export default function LoginScreen() {
           <TextInput
             style={styles.input}
             placeholder="Email"
-            placeholderTextColor="#9E9A96"
+            placeholderTextColor={colors.ink[300]}
             value={email}
             onChangeText={(v) => {
               setEmail(v);
@@ -107,12 +108,12 @@ export default function LoginScreen() {
             autoCapitalize="none"
             keyboardType="email-address"
             returnKeyType="next"
-            selectionColor="#637D8E"
+            selectionColor={colors.ice[600]}
           />
           <TextInput
             style={styles.input}
             placeholder="Mot de passe"
-            placeholderTextColor="#9E9A96"
+            placeholderTextColor={colors.ink[300]}
             value={password}
             onChangeText={(v) => {
               setPassword(v);
@@ -121,7 +122,7 @@ export default function LoginScreen() {
             secureTextEntry
             returnKeyType="done"
             onSubmitEditing={handleLogin}
-            selectionColor="#637D8E"
+            selectionColor={colors.ice[600]}
           />
 
           <Pressable

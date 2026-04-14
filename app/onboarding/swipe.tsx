@@ -19,6 +19,7 @@ import type {
   SwipeCardPayload,
   WardrobeItemType,
 } from "@/lib/types";
+import { colors } from "@/lib/theme";
 
 const TYPE_LABELS: Record<WardrobeItemType, string> = {
   top: "Haut",
@@ -147,7 +148,7 @@ export default function OnboardingSwipe() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
-          <ActivityIndicator color="#637D8E" />
+          <ActivityIndicator color={colors.ice[600]} />
           <Text style={styles.loadingText}>Gemini compose tes tenues…</Text>
         </View>
       </SafeAreaView>
