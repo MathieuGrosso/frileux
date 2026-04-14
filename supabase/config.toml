@@ -302,7 +302,7 @@ enabled = false
 # domain = "example.clerk.accounts.dev"
 
 [functions.get-weather]
-verify_jwt = true
+verify_jwt = false
 
 [functions.suggest-outfit]
 verify_jwt = true

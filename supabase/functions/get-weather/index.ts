@@ -1,6 +1,6 @@
 // Supabase Edge Function: get-weather
 // Proxy OpenWeather pour eviter d'embarquer la cle API dans le bundle client.
-// Auth requise (verify_jwt = true).
+// Pas d'auth : proxy public, protégé par CORS (ALLOWED_ORIGIN) et secret serveur.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 

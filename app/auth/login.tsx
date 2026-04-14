@@ -6,7 +6,6 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ScrollView,
   StyleSheet,
 } from "react-native";
@@ -15,6 +14,7 @@ import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";
 import { supabase } from "@/lib/supabase";
 import { BrandLogo } from "@/components/BrandLogo";
+import { mapAuthError } from "@/lib/auth-errors";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -23,36 +23,39 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleLogin() {
+    setError(null);
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) Alert.alert("Erreur", error.message);
+    const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+    if (err) setError(mapAuthError(err));
     setLoading(false);
   }
 
   async function handleGoogleLogin() {
+    setError(null);
     setGoogleLoading(true);
 
     if (Platform.OS === "web") {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error: err } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo: window.location.origin },
       });
-      if (error) Alert.alert("Erreur", error.message);
+      if (err) setError(mapAuthError(err));
       setGoogleLoading(false);
       return;
     }
 
     const redirectUri = makeRedirectUri({ path: "auth/callback" });
 
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { data, error: err } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: redirectUri, skipBrowserRedirect: true },
     });
 
-    if (error || !data.url) {
-      Alert.alert("Erreur", error?.message ?? "Google sign-in unavailable");
+    if (err || !data.url) {
+      setError(err ? mapAuthError(err) : "Google indisponible pour le moment.");
       setGoogleLoading(false);
       return;
     }
@@ -64,7 +67,7 @@ export default function LoginScreen() {
       const code = url.searchParams.get("code");
       if (code) {
         const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
-        if (sessionError) Alert.alert("Erreur", sessionError.message);
+        if (sessionError) setError(mapAuthError(sessionError));
       }
     }
 
@@ -87,12 +90,20 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.form}>
+          {error && (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
           <TextInput
             style={styles.input}
             placeholder="Email"
             placeholderTextColor="#9E9A96"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(v) => {
+              setEmail(v);
+              if (error) setError(null);
+            }}
             autoCapitalize="none"
             keyboardType="email-address"
             returnKeyType="next"
@@ -103,7 +114,10 @@ export default function LoginScreen() {
             placeholder="Mot de passe"
             placeholderTextColor="#9E9A96"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(v) => {
+              setPassword(v);
+              if (error) setError(null);
+            }}
             secureTextEntry
             returnKeyType="done"
             onSubmitEditing={handleLogin}
@@ -232,6 +246,21 @@ const styles = StyleSheet.create({
     fontFamily: "Jost_400Regular",
     fontSize: 14,
     color: "#3C3A36",
+  },
+
+  errorBanner: {
+    borderLeftWidth: 2,
+    borderLeftColor: "#C0392B",
+    backgroundColor: "#F2F0EC",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 4,
+  },
+  errorText: {
+    fontFamily: "Jost_400Regular",
+    fontSize: 13,
+    lineHeight: 18,
+    color: "#C0392B",
   },
 
   footer: { alignItems: "center" },
