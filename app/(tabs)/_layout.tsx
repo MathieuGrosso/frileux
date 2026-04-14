@@ -14,6 +14,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useEffect } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "@/lib/theme";
 
 type FeatherName = React.ComponentProps<typeof Feather>["name"];
@@ -105,9 +106,11 @@ function TabItem({
     >
       <Animated.View
         style={pressStyle}
-        className="items-center justify-center gap-1.5 py-1"
+        className="items-center justify-center gap-1"
       >
-        <AnimatedFeather name={tab.icon} size={22} style={iconStyle} />
+        <View style={{ height: 22, justifyContent: "center", alignItems: "center" }}>
+          <AnimatedFeather name={tab.icon} size={22} style={iconStyle} />
+        </View>
         <Animated.Text
           numberOfLines={1}
           style={[
@@ -115,7 +118,9 @@ function TabItem({
             {
               fontFamily: "Jost_500Medium",
               fontSize: 9,
+              lineHeight: 12,
               letterSpacing: 1.2,
+              textAlign: "center",
             },
           ]}
         >
@@ -128,6 +133,7 @@ function TabItem({
 
 function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const reducedMotion = useReducedMotion() ?? false;
+  const insets = useSafeAreaInsets();
   const [barWidth, setBarWidth] = useState(0);
 
   const indicatorIndex = useSharedValue(state.index);
@@ -154,7 +160,7 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
         borderTopWidth: 1,
         borderTopColor: colors.paper[300],
         paddingTop: 10,
-        paddingBottom: 10,
+        paddingBottom: 10 + insets.bottom,
       }}
     >
       {tabWidth > 0 && (
@@ -163,7 +169,7 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
           style={[
             {
               position: "absolute",
-              top: -1,
+              top: 0,
               left: 0,
               width: INDICATOR_WIDTH,
               height: 1,
