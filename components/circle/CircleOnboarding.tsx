@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { View, Text, Pressable, TextInput, Alert } from "react-native";
 import type { Circle } from "@/lib/types";
+import { colors } from "@/lib/theme";
 
 interface Props {
   onCreate: () => Promise<Circle | null>;
@@ -63,12 +64,12 @@ export function CircleOnboarding({ onCreate, onJoin }: Props) {
         className="border border-paper-300 bg-paper-200 px-5 py-4 text-center font-display text-ink-900 mb-3"
         style={{ fontSize: 20, letterSpacing: 6 }}
         placeholder="CODE D'INVITATION"
-        placeholderTextColor="#9E9A96"
+        placeholderTextColor={colors.ink[300]}
         value={inviteCode}
         onChangeText={setInviteCode}
         autoCapitalize="characters"
         maxLength={6}
-        selectionColor="#637D8E"
+        selectionColor={colors.ice[600]}
       />
 
       <Pressable

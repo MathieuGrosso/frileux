@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { refineClothingImage } from "@/lib/gemini";
 import { supabase } from "@/lib/supabase";
+import { colors } from "@/lib/theme";
 
 type QuestionKey = "color" | "fit" | "material" | "style";
 
@@ -203,7 +204,7 @@ export default function RefineImageModal({
             )}
             {working && (
               <View style={styles.imageOverlay}>
-                <ActivityIndicator color="#FAFAF8" />
+                <ActivityIndicator color={colors.paper[100]} />
                 <Text style={styles.overlayText}>Gemini régénère…</Text>
               </View>
             )}
@@ -244,7 +245,7 @@ export default function RefineImageModal({
               value={freeText}
               onChangeText={setFreeText}
               placeholder="Ex: col roulé, boutons dorés, manches raglan…"
-              placeholderTextColor="#A8A49F"
+              placeholderTextColor={colors.ink[300]}
               style={styles.freeText}
               multiline
             />
