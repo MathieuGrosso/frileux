@@ -38,6 +38,7 @@ export interface ProfileBundle {
   recent_worn: string[];
   recent_feedback: RecentFeedback[];
   liked_anchors: string[];
+  derived_prefs: string[];
   wardrobe: WardrobePiece[];
 }
 
@@ -48,8 +49,32 @@ const EMPTY_BUNDLE: ProfileBundle = {
   recent_worn: [],
   recent_feedback: [],
   liked_anchors: [],
+  derived_prefs: [],
   wardrobe: [],
 };
+
+const REJECTION_REASON_TO_PREF: Record<string, string> = {
+  too_warm: "tendance à proposer trop chaud → baisse d'un cran la warmth par défaut",
+  too_cold: "tendance à proposer trop froid → monte d'un cran la warmth par défaut",
+  too_formal: "tendance à proposer trop formel → va plus casual par défaut",
+  too_casual: "tendance à proposer trop casual → monte d'un cran la formalité",
+  deja_vu: "tendance à proposer des silhouettes répétitives → varie matières et coupes",
+};
+
+function buildDerivedPrefs(rejections: { reason: string | null }[]): string[] {
+  const counts: Record<string, number> = {};
+  for (const r of rejections) {
+    if (!r.reason) continue;
+    counts[r.reason] = (counts[r.reason] ?? 0) + 1;
+  }
+  const out: string[] = [];
+  for (const [reason, count] of Object.entries(counts)) {
+    if (count < 3) continue;
+    const pref = REJECTION_REASON_TO_PREF[reason];
+    if (pref) out.push(`${count}× rejet "${reason}" ce mois → ${pref}`);
+  }
+  return out;
+}
 
 export async function loadProfileBundle(): Promise<ProfileBundle> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -57,8 +82,10 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
 
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const [profileRes, outfitsRes, likedRes, wardrobeRes] = await Promise.all([
+  const [profileRes, outfitsRes, likedRes, rejectionsRes, wardrobeRes] = await Promise.all([
     supabase
       .from("profiles")
       .select(
@@ -81,6 +108,11 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
       .gte("rating", 4)
       .order("date", { ascending: false })
       .limit(5),
+    supabase
+      .from("outfit_rejections")
+      .select("reason")
+      .eq("user_id", user.id)
+      .gte("date", thirtyDaysAgo.toISOString().split("T")[0]),
     supabase
       .from("wardrobe_items")
       .select("type, color, material, style_tags, description")
@@ -122,6 +154,10 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
     .map((o) => (o.worn_description ?? o.ai_suggestion) as string | null)
     .filter((v): v is string => !!v && v.trim().length > 0);
 
+  const derived_prefs = buildDerivedPrefs(
+    (rejectionsRes.data ?? []).map((r) => ({ reason: r.reason as string | null }))
+  );
+
   const wardrobe: WardrobePiece[] = (wardrobeRes.data ?? []).map((w) => ({
     type: w.type as string,
     color: (w.color as string | null) ?? null,
@@ -137,6 +173,7 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
     recent_worn,
     recent_feedback,
     liked_anchors,
+    derived_prefs,
     wardrobe,
   };
 }
