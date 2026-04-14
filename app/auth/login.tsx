@@ -9,6 +9,7 @@ import {
   ScrollView,
   StyleSheet,
 } from "react-native";
+import { PressableScale } from "@/components/ui/PressableScale";
 import { Link } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";
@@ -125,7 +126,7 @@ export default function LoginScreen() {
             selectionColor={colors.ice[600]}
           />
 
-          <Pressable
+          <PressableScale
             onPress={handleLogin}
             disabled={loading || googleLoading}
             style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
@@ -133,7 +134,7 @@ export default function LoginScreen() {
             <Text style={styles.btnText}>
               {loading ? "CONNEXION…" : "SE CONNECTER"}
             </Text>
-          </Pressable>
+          </PressableScale>
 
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
@@ -141,7 +142,7 @@ export default function LoginScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          <Pressable
+          <PressableScale
             onPress={handleGoogleLogin}
             disabled={loading || googleLoading}
             style={({ pressed }) => [styles.btnGoogle, pressed && styles.btnGooglePressed]}
@@ -152,16 +153,16 @@ export default function LoginScreen() {
             <Text style={styles.btnGoogleText}>
               {googleLoading ? "Connexion…" : "Continuer avec Google"}
             </Text>
-          </Pressable>
+          </PressableScale>
         </View>
 
         <Link href="/auth/register" asChild>
-          <Pressable style={styles.footer}>
+          <PressableScale style={styles.footer}>
             <Text style={styles.footerText}>
               Pas encore de compte ?{" "}
               <Text style={styles.footerLink}>S'inscrire</Text>
             </Text>
-          </Pressable>
+          </PressableScale>
         </Link>
       </ScrollView>
     </KeyboardAvoidingView>

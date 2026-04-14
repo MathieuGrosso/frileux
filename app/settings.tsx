@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { View, Text, Pressable, Alert, Platform, ScrollView } from "react-native";
+import { PressableScale } from "@/components/ui/PressableScale";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -196,9 +197,9 @@ export default function SettingsScreen() {
       >
         {/* Top bar */}
         <View className="flex-row items-center justify-between pt-2 pb-10">
-          <Pressable onPress={() => router.back()} hitSlop={12}>
+          <PressableScale onPress={() => router.back()} hitSlop={12}>
             <Text className="font-body text-body-sm text-ink-500">← Retour</Text>
-          </Pressable>
+          </PressableScale>
           {loading ? (
             <View className="h-3 w-24 bg-paper-200" />
           ) : username ? (
@@ -249,19 +250,19 @@ export default function SettingsScreen() {
                 {calibration.reason}
               </Text>
               <View className="flex-row items-center gap-4">
-                <Pressable
+                <PressableScale
                   onPress={acceptCalibration}
                   className="bg-ink-900 px-3.5 py-2"
                 >
                   <Text className="font-body-medium text-micro text-paper uppercase">
                     Passer à 0{calibration.suggested}
                   </Text>
-                </Pressable>
-                <Pressable onPress={() => setCalibration(null)} hitSlop={8}>
+                </PressableScale>
+                <PressableScale onPress={() => setCalibration(null)} hitSlop={8}>
                   <Text className="font-body-medium text-micro text-ice uppercase underline">
                     Ignorer
                   </Text>
-                </Pressable>
+                </PressableScale>
               </View>
             </View>
           )}
@@ -270,7 +271,7 @@ export default function SettingsScreen() {
             {([1, 2, 3, 4, 5] as ColdnessLevel[]).map((level) => {
               const active = coldnessLevel === level;
               return (
-                <Pressable
+                <PressableScale
                   key={level}
                   onPress={() => updateColdness(level)}
                   className="flex-row items-center py-4 border-b border-paper-300"
@@ -296,7 +297,7 @@ export default function SettingsScreen() {
                   ) : active ? (
                     <Text className="font-body-medium text-body-sm text-ice">✓</Text>
                   ) : null}
-                </Pressable>
+                </PressableScale>
               );
             })}
           </View>
@@ -308,37 +309,37 @@ export default function SettingsScreen() {
             Personnalisation
           </Text>
 
-          <Pressable
+          <PressableScale
             onPress={redoTaste}
             className="bg-ink-900 py-4 items-center active:bg-ink-700"
           >
             <Text className="font-display text-body-sm text-paper uppercase tracking-widest">
               Mettre à jour mon goût
             </Text>
-          </Pressable>
+          </PressableScale>
 
-          <Pressable
+          <PressableScale
             onPress={() => router.push("/brands-library")}
             className="border border-ink-900 py-4 items-center mt-2 active:bg-paper-200"
           >
             <Text className="font-display text-body-sm text-ink-900 uppercase tracking-widest">
               Bibliothèque de marques
             </Text>
-          </Pressable>
+          </PressableScale>
 
-          <Pressable
+          <PressableScale
             onPress={resetOnboarding}
             className="border border-ink-900 py-4 items-center mt-2 active:bg-paper-200"
           >
             <Text className="font-display text-body-sm text-ink-900 uppercase tracking-widest">
               Recommencer l'onboarding
             </Text>
-          </Pressable>
+          </PressableScale>
         </View>
 
         {/* Session */}
         <View className="border-t border-paper-300 pt-6">
-          <Pressable
+          <PressableScale
             onPress={handleLogout}
             accessibilityRole="button"
             className="self-start py-2 active:opacity-60"
@@ -346,7 +347,7 @@ export default function SettingsScreen() {
             <Text className="font-body text-body-sm text-error underline">
               Se déconnecter
             </Text>
-          </Pressable>
+          </PressableScale>
         </View>
 
         <View className="items-center mt-20 opacity-30">

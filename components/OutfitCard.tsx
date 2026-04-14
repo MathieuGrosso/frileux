@@ -1,18 +1,24 @@
-import { View, Text, Image, Pressable } from "react-native";
+import { View, Text, Image } from "react-native";
+import Animated, { useReducedMotion } from "react-native-reanimated";
 import type { Outfit } from "@/lib/types";
 import { weatherEmoji } from "@/lib/weather";
+import { enterFadeUp } from "@/lib/animations";
 import { RatingStars } from "./RatingStars";
+import { PressableScale } from "./ui/PressableScale";
 
 interface OutfitCardProps {
   outfit: Outfit;
   onPress?: () => void;
+  index?: number;
 }
 
-export function OutfitCard({ outfit, onPress }: OutfitCardProps) {
+export function OutfitCard({ outfit, onPress, index = 0 }: OutfitCardProps) {
+  const reducedMotion = useReducedMotion();
   return (
-    <Pressable
+    <Animated.View entering={enterFadeUp(index, reducedMotion)}>
+    <PressableScale
       onPress={onPress}
-      className="bg-paper-200 overflow-hidden active:opacity-80"
+      className="bg-paper-200 overflow-hidden"
     >
       <Image
         source={{ uri: outfit.photo_url }}
@@ -45,6 +51,7 @@ export function OutfitCard({ outfit, onPress }: OutfitCardProps) {
           </View>
         )}
       </View>
-    </Pressable>
+    </PressableScale>
+    </Animated.View>
   );
 }

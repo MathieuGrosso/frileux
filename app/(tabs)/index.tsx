@@ -9,6 +9,7 @@ import {
   Animated,
   TextInput,
 } from "react-native";
+import { PressableScale } from "@/components/ui/PressableScale";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
@@ -546,11 +547,11 @@ export default function TodayScreen() {
               </Text>
               <Text className="font-body text-body-sm text-ink-900 mt-1">{dateLabel}</Text>
             </View>
-            <Pressable onPress={() => router.push("/settings")} hitSlop={12}>
+            <PressableScale onPress={() => router.push("/settings")} hitSlop={12}>
               <Text className="font-body-medium text-eyebrow text-ink-300">
                 RÉGLAGES
               </Text>
-            </Pressable>
+            </PressableScale>
           </View>
 
           {/* Weather */}
@@ -659,7 +660,7 @@ export default function TodayScreen() {
                 </View>
               )}
               <View className="flex-row" style={{ gap: 24 }}>
-                <Pressable
+                <PressableScale
                   onPress={() => {
                     setTodayOutfit(null);
                     setCritique(null);
@@ -672,8 +673,8 @@ export default function TodayScreen() {
                   <Text className="font-body-medium text-micro text-ink-300">
                     NOUVELLE SUGGESTION
                   </Text>
-                </Pressable>
-                <Pressable
+                </PressableScale>
+                <PressableScale
                   onPress={() => {
                     setAdoptedOutfitId(todayOutfit.id);
                     setRating(todayOutfit.rating ?? 0);
@@ -687,7 +688,7 @@ export default function TodayScreen() {
                   <Text className="font-body-medium text-micro text-ink-300">
                     MODIFIER LA PHOTO
                   </Text>
-                </Pressable>
+                </PressableScale>
               </View>
               {critiqueOutfitId === todayOutfit.id && (
                 <View className="mt-8 -mx-6">
@@ -732,12 +733,12 @@ export default function TodayScreen() {
                     {suggestion}
                   </Text>
                   {suggestion === "Suggestion indisponible." && weather && (
-                    <Pressable
+                    <PressableScale
                       onPress={() => fetchSuggestion(weather, { skipCache: true })}
                       className="mt-3 self-start py-2 px-3 border border-ink-900 bg-paper active:bg-paper-200"
                     >
                       <Text className="font-body-medium text-eyebrow text-ink-900">RÉESSAYER</Text>
-                    </Pressable>
+                    </PressableScale>
                   )}
                 </Animated.View>
               </SuggestionSwipeArea>
@@ -747,7 +748,7 @@ export default function TodayScreen() {
 
             {suggestion && suggestion !== "Suggestion indisponible." && !adopted && (
               <View className="mt-5" style={{ gap: 8 }}>
-                <Pressable
+                <PressableScale
                   onPress={adoptSuggestion}
                   disabled={adopting}
                   className={`py-[18px] items-center ${adopting ? "bg-ink-200" : "bg-ink-900 active:bg-ink-700"}`}
@@ -755,8 +756,8 @@ export default function TodayScreen() {
                   <Text className="font-body-semibold text-eyebrow text-paper">
                     {adopting ? "…" : "JE LA PORTE"}
                   </Text>
-                </Pressable>
-                <Pressable
+                </PressableScale>
+                <PressableScale
                   onPress={() => setRefineOpen(true)}
                   disabled={refining}
                   className="py-[14px] items-center border border-ink-900 bg-paper active:bg-paper-200"
@@ -764,17 +765,17 @@ export default function TodayScreen() {
                   <Text className="font-body-medium text-eyebrow text-ink-900">
                     RAFFINER
                   </Text>
-                </Pressable>
+                </PressableScale>
               </View>
             )}
 
             {adopted && (
               <View className="mt-4 items-start">
-                <Pressable onPress={unadoptSuggestion} hitSlop={8}>
+                <PressableScale onPress={unadoptSuggestion} hitSlop={8}>
                   <Text className="font-body-medium text-micro text-ink-300">
                     CHANGER D'AVIS
                   </Text>
-                </Pressable>
+                </PressableScale>
               </View>
             )}
           </View>
@@ -789,33 +790,33 @@ export default function TodayScreen() {
             {photoUri ? (
               <View className="h-[440px] relative overflow-hidden">
                 <Image source={{ uri: photoUri }} className="w-full h-full" resizeMode="cover" />
-                <Pressable
+                <PressableScale
                   onPress={() => setPhotoUri(null)}
                   className="absolute bottom-4 right-4 bg-paper/95 px-3.5 py-2 border border-paper-300"
                 >
                   <Text className="font-body-medium text-eyebrow text-ink-900">
                     CHANGER
                   </Text>
-                </Pressable>
+                </PressableScale>
               </View>
             ) : (
               <View className="flex-row" style={{ gap: 12 }}>
-                <Pressable
+                <PressableScale
                   onPress={takePhoto}
                   className="flex-1 border border-paper-300 py-6 items-center bg-paper active:bg-paper-200"
                 >
                   <Text className="font-body-medium text-eyebrow text-ink-500">
                     CAMÉRA
                   </Text>
-                </Pressable>
-                <Pressable
+                </PressableScale>
+                <PressableScale
                   onPress={pickPhoto}
                   className="flex-1 border border-paper-300 py-6 items-center bg-paper active:bg-paper-200"
                 >
                   <Text className="font-body-medium text-eyebrow text-ink-500">
                     GALERIE
                   </Text>
-                </Pressable>
+                </PressableScale>
               </View>
             )}
           </View>
@@ -832,7 +833,7 @@ export default function TodayScreen() {
                   {OUTFIT_OCCASIONS.map((opt) => {
                     const active = occasion === opt.value;
                     return (
-                      <Pressable
+                      <PressableScale
                         key={opt.value}
                         onPress={() => setOccasion(active ? null : opt.value)}
                         className={`py-2 px-3 border ${active ? "bg-ink-900 border-ink-900" : "bg-paper-50 border-paper-300"}`}
@@ -840,7 +841,7 @@ export default function TodayScreen() {
                         <Text className={`font-body text-xs ${active ? "text-paper" : "text-ink-900"}`}>
                           {opt.label}
                         </Text>
-                      </Pressable>
+                      </PressableScale>
                     );
                   })}
                 </View>
@@ -862,7 +863,7 @@ export default function TodayScreen() {
                   style={{ minHeight: 70, textAlignVertical: "top" }}
                   multiline
                 />
-                <Pressable
+                <PressableScale
                   onPress={saveOutfit}
                   disabled={saving}
                   className={`py-[18px] items-center mt-6 ${saving ? "bg-ink-200" : "bg-ink-900 active:bg-ink-700"}`}
@@ -870,7 +871,7 @@ export default function TodayScreen() {
                   <Text className="font-body-semibold text-eyebrow text-paper">
                     {saving ? "SAUVEGARDE…" : "SAUVEGARDER"}
                   </Text>
-                </Pressable>
+                </PressableScale>
               </View>
             </>
           )}
