@@ -34,6 +34,35 @@ export default function OutfitDetailScreen() {
 
   useEffect(() => { loadOutfit(); }, [id]);
 
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`outfit-detail-${id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "outfits",
+          filter: `id=eq.${id}`,
+        },
+        (payload) => {
+          const row = payload.new as Outfit;
+          setOutfit(row);
+          if (!editing) {
+            setRating(row.rating ?? 0);
+            setNotes(row.notes ?? "");
+            setOccasion(row.occasion ?? null);
+            setThermal(row.thermal_feeling ?? null);
+          }
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [id, editing]);
+
   async function loadOutfit() {
     const { data } = await supabase.from("outfits").select("*").eq("id", id).single();
     if (data) {

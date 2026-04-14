@@ -192,6 +192,31 @@ export function useCircle(): UseCircleResult {
           });
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "outfits" },
+        async (payload) => {
+          const row = payload.new as { id: string; user_id: string };
+          if (row.user_id === userId) return;
+
+          setOutfits((prev) => {
+            if (!prev.some((o) => o.id === row.id)) return prev;
+            return prev.map((o) =>
+              o.id === row.id
+                ? ({ ...o, ...(payload.new as Partial<OutfitWithProfile>) })
+                : o,
+            );
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "outfits" },
+        (payload) => {
+          const row = payload.old as { id: string };
+          setOutfits((prev) => prev.filter((o) => o.id !== row.id));
+        },
+      )
       .subscribe();
 
     return () => {

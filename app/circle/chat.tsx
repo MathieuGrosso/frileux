@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
   View,
   Text,
@@ -61,7 +62,11 @@ export default function CircleChatScreen() {
   const [mentionedIds, setMentionedIds] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [typingUserIds, setTypingUserIds] = useState<string[]>([]);
   const listRef = useRef<FlatList>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingStateRef = useRef(false);
   const { members } = useCircleMembers(id ?? null);
 
   const load = useCallback(async () => {
@@ -97,9 +102,9 @@ export default function CircleChatScreen() {
   }, [userId, markRead, messages.length]);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !userId) return;
     const channel = supabase
-      .channel(`circle-chat-${id}`)
+      .channel(`circle-chat-${id}`, { config: { presence: { key: userId } } })
       .on(
         "postgres_changes",
         {
@@ -136,11 +141,67 @@ export default function CircleChatScreen() {
           setMessages((prev) => prev.filter((m) => m.id !== row.id));
         },
       )
-      .subscribe();
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState<{ typing: boolean; user_id: string }>();
+        const ids: string[] = [];
+        for (const key of Object.keys(state)) {
+          if (key === userId) continue;
+          const entries = state[key];
+          if (entries.some((e) => e.typing)) ids.push(key);
+        }
+        setTypingUserIds(ids);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({ user_id: userId, typing: false });
+        }
+      });
+    channelRef.current = channel;
     return () => {
+      channelRef.current = null;
       void supabase.removeChannel(channel);
     };
-  }, [id]);
+  }, [id, userId]);
+
+  const setTyping = useCallback((next: boolean) => {
+    if (typingStateRef.current === next) return;
+    typingStateRef.current = next;
+    const ch = channelRef.current;
+    if (!ch || !userId) return;
+    void ch.track({ user_id: userId, typing: next });
+  }, [userId]);
+
+  const onDraftChange = useCallback((t: string) => {
+    setDraft(t.slice(0, MAX_LEN));
+    if (t.trim().length === 0) {
+      setTyping(false);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      return;
+    }
+    setTyping(true);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => setTyping(false), 2500);
+  }, [setTyping]);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, []);
+
+  const typingLabel = useMemo(() => {
+    if (typingUserIds.length === 0) return null;
+    const names = typingUserIds
+      .map((uid) => members.find((m) => m.user_id === uid)?.username ?? null)
+      .filter((n): n is string => !!n);
+    if (names.length === 0) return null;
+    if (names.length === 1) return `${names[0]} écrit…`;
+    if (names.length === 2) return `${names[0]} et ${names[1]} écrivent…`;
+    return `${names[0]}, ${names[1]} +${names.length - 2} écrivent…`;
+  }, [typingUserIds, members]);
 
   const rows = useMemo<Row[]>(() => {
     // messages are newest first (FlatList inverted)
@@ -182,6 +243,11 @@ export default function CircleChatScreen() {
     }
     setDraft("");
     setMentionedIds([]);
+    setTyping(false);
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
     void markRead();
   }
 
@@ -284,10 +350,18 @@ export default function CircleChatScreen() {
           }
         />
 
+        {typingLabel && (
+          <View className="px-6 pb-1 pt-1">
+            <Text className="font-body text-caption text-ink-500">
+              {typingLabel}
+            </Text>
+          </View>
+        )}
+
         <View className="border-t border-paper-300 px-4 py-3 flex-row items-end gap-2 bg-paper-100">
           <MentionInput
             value={draft}
-            onChangeText={(t) => setDraft(t.slice(0, MAX_LEN))}
+            onChangeText={onDraftChange}
             placeholder="Écrire un message"
             maxLength={MAX_LEN}
             members={members}
