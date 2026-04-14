@@ -267,7 +267,14 @@ export default function CircleChatScreen() {
     <SafeAreaView className="flex-1 bg-paper-100" edges={["top"]}>
       <View className="px-6 pt-2 pb-4 border-b border-paper-300 flex-row items-end justify-between">
         <View>
-          <Pressable onPress={() => router.back()} className="active:opacity-50 mb-1">
+          <Pressable
+            onPress={() => {
+              if (router.canGoBack()) router.back();
+              else router.replace("/(tabs)/circle");
+            }}
+            hitSlop={16}
+            className="active:opacity-50 mb-1"
+          >
             <Text
               className="font-body text-ink-300 text-eyebrow"
               style={{ letterSpacing: 1.5 }}
