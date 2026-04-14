@@ -16,6 +16,9 @@ import type { CircleMessage } from "@/lib/types";
 import { useCircleMembers } from "@/hooks/useCircleMembers";
 import { MentionInput } from "@/components/circle/MentionInput";
 import { MessageBody } from "@/components/circle/MessageBody";
+import { MessageReactions } from "@/components/circle/MessageReactions";
+import { ReactionPicker } from "@/components/circle/ReactionPicker";
+import { useMessageReactions, type ReactionKey } from "@/hooks/useMessageReactions";
 
 const MAX_LEN = 500;
 
@@ -68,6 +71,10 @@ export default function CircleChatScreen() {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingStateRef = useRef(false);
   const { members } = useCircleMembers(id ?? null);
+  const messageIds = useMemo(() => messages.map((m) => m.id), [messages]);
+  const { rows: reactionRows, userId: reactionUserId, toggle: toggleReaction } =
+    useMessageReactions(id ?? null, messageIds);
+  const [pickerTarget, setPickerTarget] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -334,11 +341,16 @@ export default function CircleChatScreen() {
                   </View>
                 )}
                 <Pressable
-                  onLongPress={isMine ? () => remove(m.id) : undefined}
+                  onLongPress={() => setPickerTarget(m.id)}
                   className="active:opacity-60"
                 >
                   <MessageBody body={m.body} />
                 </Pressable>
+                <MessageReactions
+                  rows={reactionRows.filter((r) => r.message_id === m.id)}
+                  userId={reactionUserId}
+                  onToggle={(k) => { void toggleReaction(m.id, k); }}
+                />
               </View>
             );
           }}
@@ -389,6 +401,22 @@ export default function CircleChatScreen() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      <ReactionPicker
+        visible={pickerTarget !== null}
+        onClose={() => setPickerTarget(null)}
+        onPick={(k: ReactionKey) => {
+          if (pickerTarget) void toggleReaction(pickerTarget, k);
+        }}
+        onDelete={
+          pickerTarget &&
+          messages.find((m) => m.id === pickerTarget)?.user_id === userId
+            ? () => {
+                if (pickerTarget) void remove(pickerTarget);
+              }
+            : undefined
+        }
+      />
     </SafeAreaView>
   );
 }
