@@ -71,6 +71,27 @@ interface ItemLite {
   style_tags: string[];
 }
 
+const ANALYSIS_MULTI_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    items: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          type: { type: "STRING", enum: ["top", "bottom", "outerwear", "shoes", "accessory"] },
+          color: { type: "STRING" },
+          material: { type: "STRING" },
+          style_tags: { type: "ARRAY", items: { type: "STRING" } },
+          description: { type: "STRING" },
+        },
+        required: ["type", "color", "style_tags", "description"],
+      },
+    },
+  },
+  required: ["items"],
+};
+
 const ANALYSIS_SCHEMA = {
   type: "OBJECT",
   properties: {
@@ -252,6 +273,23 @@ function analyzeImagePrompt(): string {
 - description: une ligne concise en français décrivant le vêtement (ex: "Pull oversize beige en laine épaisse")`;
 }
 
+function analyzeImageMultiPrompt(): string {
+  return `Tu es un expert en vêtements. Cette photo peut contenir UNE ou PLUSIEURS pièces de vêtement (ex: flatlay, outfit posé, tenue portée sur une personne, plusieurs articles côte à côte).
+Identifie chaque pièce distincte et retourne un tableau JSON strictement conforme au schéma.
+Pour chaque pièce :
+- type: top, bottom, outerwear, shoes ou accessory
+- color: couleur principale en français
+- material: matière perçue si identifiable, sinon null
+- style_tags: 2 à 4 tags en français
+- description: une ligne concise en français
+
+Règles :
+- Sépare les pièces par catégorie (un t-shirt + un jean = 2 pièces distinctes).
+- Ignore le fond, la peau, les cheveux, les meubles.
+- Si une seule pièce est visible, renvoie un tableau d'un seul élément.
+- Maximum 6 pièces.`;
+}
+
 function analyzeTextPrompt(text: string): string {
   return `L'utilisateur décrit un vêtement qu'il possède : "${text}".
 Structure cette description dans un JSON strict conforme au schéma.
@@ -308,6 +346,14 @@ Deno.serve(async (req: Request) => {
         { inlineData: { mimeType: img.mime, data: img.data } },
       ];
       result = (await callGemini(parts, ANALYSIS_SCHEMA)) as ClothingAnalysis;
+    } else if (action === "analyze_image_multi") {
+      const { image_base64, mime_type } = body;
+      const img = assertImageBase64(image_base64, mime_type);
+      const parts = [
+        { text: analyzeImageMultiPrompt() },
+        { inlineData: { mimeType: img.mime, data: img.data } },
+      ];
+      result = (await callGemini(parts, ANALYSIS_MULTI_SCHEMA)) as { items: ClothingAnalysis[] };
     } else if (action === "analyze_text") {
       const { text, user_id } = body;
       if (typeof text !== "string" || text.length === 0 || text.length > 1000) {
