@@ -18,6 +18,7 @@ import { weatherEmoji } from "@/lib/weather";
 import { RatingStars } from "@/components/RatingStars";
 import { OutfitNotes } from "@/components/circle/OutfitNotes";
 import { OutfitCritique } from "@/components/OutfitCritique";
+import { fetchOutfitCritique } from "@/lib/critique";
 import { colors } from "@/lib/theme";
 import { confirmAction, notifyError } from "@/lib/ui";
 
@@ -32,6 +33,7 @@ export default function OutfitDetailScreen() {
   const [editing, setEditing] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [critiqueLoading, setCritiqueLoading] = useState(false);
 
   useEffect(() => { loadOutfit(); }, [id]);
 
@@ -73,7 +75,17 @@ export default function OutfitDetailScreen() {
       setOccasion(data.occasion ?? null);
       setThermal(data.thermal_feeling ?? null);
       const { data: { user } } = await supabase.auth.getUser();
-      setIsOwner(!!user && user.id === data.user_id);
+      const owner = !!user && user.id === data.user_id;
+      setIsOwner(owner);
+
+      if (owner && !data.critique && data.photo_url) {
+        setCritiqueLoading(true);
+        fetchOutfitCritique(data.id)
+          .then((c) => {
+            if (c) setOutfit((prev) => (prev ? { ...prev, critique: c, critique_score: c.score } : prev));
+          })
+          .finally(() => setCritiqueLoading(false));
+      }
     }
   }
 
@@ -174,6 +186,15 @@ export default function OutfitDetailScreen() {
                 <WeatherStat label="Humidité" value={`${weather.humidity}%`} />
                 <View className="w-px bg-paper-300 my-1" />
                 <WeatherStat label="Ciel" value={weather.description} />
+              </View>
+            )}
+
+            {isOwner && (critiqueLoading || outfit.critique) && (
+              <View className="-mx-6 mb-6">
+                <OutfitCritique
+                  critique={outfit.critique ?? null}
+                  loading={critiqueLoading}
+                />
               </View>
             )}
 
@@ -367,12 +388,6 @@ export default function OutfitDetailScreen() {
                     </Pressable>
                   </>
                 )}
-              </View>
-            )}
-
-            {outfit?.critique && (
-              <View className="-mx-6 mt-4 mb-2">
-                <OutfitCritique critique={outfit.critique} loading={false} />
               </View>
             )}
 
