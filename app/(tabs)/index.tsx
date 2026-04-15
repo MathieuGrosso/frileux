@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -33,7 +33,14 @@ import { RefineSheet } from "@/components/RefineSheet";
 import { OutfitCritique } from "@/components/OutfitCritique";
 import { fetchOutfitCritique } from "@/lib/critique";
 import { colors, motion } from "@/lib/theme";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
+
+function getLocalDateISO(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 export default function TodayScreen() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -82,14 +89,20 @@ export default function TodayScreen() {
     loadTodayOutfit();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      loadTodayOutfit();
+    }, [])
+  );
+
   async function loadTodayOutfit() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const todayStr = today.toISOString().split("T")[0];
+      const todayStr = getLocalDateISO(today);
       const { data } = await supabase
         .from("outfits")
-        .select("id, photo_url, occasion, rating, notes")
+        .select("id, photo_url, occasion, rating, notes, critique")
         .eq("user_id", user.id)
         .eq("date", todayStr)
         .not("photo_url", "is", null)
@@ -102,6 +115,20 @@ export default function TodayScreen() {
           rating: data.rating ?? null,
           notes: data.notes ?? null,
         });
+        setCritiqueOutfitId(data.id);
+        critiqueTargetRef.current = data.id;
+        if (data.critique) {
+          setCritique(data.critique as import("@/lib/types").OutfitCritique);
+          setCritiqueLoading(false);
+        } else {
+          setCritique(null);
+          setCritiqueLoading(true);
+          const targetId = data.id;
+          fetchOutfitCritique(targetId)
+            .then((c) => { if (critiqueTargetRef.current === targetId) setCritique(c); })
+            .catch((err) => { if (__DEV__) console.warn("critique fetch:", err); })
+            .finally(() => { if (critiqueTargetRef.current === targetId) setCritiqueLoading(false); });
+        }
       }
     } catch (e) { if (__DEV__) console.warn("loadTodayOutfit:", e); }
   }
@@ -323,7 +350,7 @@ export default function TodayScreen() {
         .insert({
           user_id: user.id,
           photo_url: null,
-          date: today.toISOString().split("T")[0],
+          date: getLocalDateISO(today),
           weather_data: weather,
           ai_suggestion: suggestion,
           occasion,
@@ -449,7 +476,7 @@ export default function TodayScreen() {
       const payload = {
         user_id: user.id,
         photo_url: urlData.publicUrl,
-        date: today.toISOString().split("T")[0],
+        date: getLocalDateISO(today),
         weather_data: weather,
         rating: rating || null,
         ai_suggestion: suggestion,
