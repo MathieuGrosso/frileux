@@ -214,7 +214,7 @@ export interface CircleMessage {
 }
 
 export interface OutfitWithProfile extends Outfit {
-  profile: Pick<Profile, "username" | "avatar_url">;
+  profile: Pick<Profile, "username" | "avatar_url"> | null;
   notes_count?: number;
 }
 

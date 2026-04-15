@@ -73,12 +73,36 @@ export default function CircleSettingsScreen() {
     setNameDraft(c.name);
     setDescDraft(c.description ?? "");
 
-    const { data: rows } = await supabase
+    const { data: rows, error: rowsErr } = await supabase
       .from("circle_members")
-      .select("user_id, joined_at, profile:profiles(username, avatar_url)")
+      .select("user_id, joined_at")
       .eq("circle_id", c.id)
       .order("joined_at", { ascending: true });
-    setMembers((rows as unknown as MemberRow[]) ?? []);
+    if (rowsErr) console.warn("settings members", rowsErr);
+
+    const memberIds = (rows ?? []).map((r) => (r as { user_id: string }).user_id);
+    const profById = new Map<string, Pick<Profile, "username" | "avatar_url">>();
+    if (memberIds.length > 0) {
+      const { data: profs, error: profsErr } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .in("id", memberIds);
+      if (profsErr) console.warn("settings profiles", profsErr);
+      (profs ?? []).forEach((p) => {
+        const row = p as { id: string; username: string | null; avatar_url: string | null };
+        profById.set(row.id, { username: row.username ?? "", avatar_url: row.avatar_url });
+      });
+    }
+
+    const enriched: MemberRow[] = (rows ?? []).map((r) => {
+      const row = r as { user_id: string; joined_at: string };
+      return {
+        user_id: row.user_id,
+        joined_at: row.joined_at,
+        profile: profById.get(row.user_id) ?? null,
+      };
+    });
+    setMembers(enriched);
     setLoading(false);
   }, []);
 
@@ -199,6 +223,21 @@ export default function CircleSettingsScreen() {
 
   async function leave() {
     if (!circle || !currentUserId) return;
+    const owner = circle.created_by === currentUserId;
+
+    if (owner && members.length > 1) {
+      Alert.alert(
+        "Tu es le créateur",
+        "Retire les autres membres d'abord, ou supprime le cercle.",
+      );
+      return;
+    }
+
+    if (owner) {
+      void deleteCircle();
+      return;
+    }
+
     Alert.alert(
       "Quitter ce cercle ?",
       "Tu ne verras plus les tenues des membres.",
@@ -208,19 +247,56 @@ export default function CircleSettingsScreen() {
           text: "Quitter",
           style: "destructive",
           onPress: async () => {
-            const { error } = await supabase
+            const { data, error } = await supabase
               .from("circle_members")
               .delete()
               .eq("circle_id", circle.id)
-              .eq("user_id", currentUserId);
+              .eq("user_id", currentUserId)
+              .select();
             if (error) {
+              console.warn("leave circle", error);
               Alert.alert("Erreur", "Impossible de quitter.");
               return;
             }
+            if (!data || data.length === 0) {
+              Alert.alert("Erreur", "Rien n'a été supprimé.");
+              return;
+            }
+            await AsyncStorage.removeItem("frileux.circle.active");
             router.back();
           },
         },
       ]
+    );
+  }
+
+  async function deleteCircle() {
+    if (!circle || !currentUserId) return;
+    const multipleMembers = members.length > 1;
+    Alert.alert(
+      "Supprimer ce cercle ?",
+      multipleMembers
+        ? "Tous les membres perdront l'accès. Les tenues restent la propriété de leurs auteurs."
+        : "Le cercle et ses partages seront supprimés.",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: async () => {
+            const { data, error } = await supabase.rpc("delete_circle", {
+              target_circle_id: circle.id,
+            });
+            if (error || data !== true) {
+              console.warn("delete circle", error);
+              Alert.alert("Erreur", error?.message ?? "Suppression refusée.");
+              return;
+            }
+            await AsyncStorage.removeItem("frileux.circle.active");
+            router.back();
+          },
+        },
+      ],
     );
   }
 
@@ -480,18 +556,33 @@ export default function CircleSettingsScreen() {
           );
         }}
         ListFooterComponent={
-          <View className="px-6 pt-8">
-            <Pressable
-              onPress={leave}
-              className="border border-error active:bg-error/10 py-4 items-center"
-            >
-              <Text
-                className="font-body-semibold text-error text-eyebrow"
-                style={{ letterSpacing: 2 }}
+          <View className="px-6 pt-8 gap-3">
+            {!isOwner && (
+              <Pressable
+                onPress={leave}
+                className="border border-error active:bg-error/10 py-4 items-center"
               >
-                QUITTER LE CERCLE
-              </Text>
-            </Pressable>
+                <Text
+                  className="font-body-semibold text-error text-eyebrow"
+                  style={{ letterSpacing: 2 }}
+                >
+                  QUITTER LE CERCLE
+                </Text>
+              </Pressable>
+            )}
+            {isOwner && (
+              <Pressable
+                onPress={deleteCircle}
+                className="bg-error active:opacity-80 py-4 items-center"
+              >
+                <Text
+                  className="font-body-semibold text-paper-100 text-eyebrow"
+                  style={{ letterSpacing: 2 }}
+                >
+                  SUPPRIMER LE CERCLE
+                </Text>
+              </Pressable>
+            )}
           </View>
         }
       />

@@ -84,7 +84,7 @@ export function useCircle(): UseCircleResult {
 
     let query = supabase
       .from("outfits")
-      .select("*, profile:profiles(username, avatar_url)")
+      .select("*")
       .in("id", sharedIds)
       .order("created_at", { ascending: false });
 
@@ -94,13 +94,31 @@ export function useCircle(): UseCircleResult {
       query = query.gte("date", weekAgoIso()).lte("date", todayIso());
     }
 
-    const { data } = await query;
-    const list = (data as unknown as OutfitWithProfile[]) ?? [];
+    const { data, error: outfitsErr } = await query;
+    if (outfitsErr) console.warn("circle outfits", outfitsErr);
+    const rows = (data ?? []) as Array<OutfitWithProfile & { user_id: string }>;
 
-    if (list.length === 0) {
+    if (rows.length === 0) {
       setOutfits([]);
       return;
     }
+
+    const authorIds = [...new Set(rows.map((o) => o.user_id))];
+    const { data: profs, error: profsErr } = await supabase
+      .from("profiles")
+      .select("id, username, avatar_url")
+      .in("id", authorIds);
+    if (profsErr) console.warn("circle profiles", profsErr);
+    const profById = new Map(
+      (profs ?? []).map((p) => {
+        const r = p as { id: string; username: string | null; avatar_url: string | null };
+        return [r.id, { username: r.username ?? "", avatar_url: r.avatar_url }] as const;
+      }),
+    );
+    const list: OutfitWithProfile[] = rows.map((o) => ({
+      ...o,
+      profile: profById.get(o.user_id) ?? null,
+    }));
 
     const ids = list.map((o) => o.id);
     const { data: comments } = await supabase
@@ -203,16 +221,29 @@ export function useCircle(): UseCircleResult {
             .maybeSingle();
           if (!membership) return;
 
-          const { data: full } = await supabase
+          const { data: full, error: fullErr } = await supabase
             .from("outfits")
-            .select("*, profile:profiles(username, avatar_url)")
+            .select("*")
             .eq("id", row.id)
             .single();
+          if (fullErr) console.warn("circle realtime outfit", fullErr);
           if (!full) return;
 
+          const { data: prof } = await supabase
+            .from("profiles")
+            .select("username, avatar_url")
+            .eq("id", row.user_id)
+            .maybeSingle();
+
+          const p = prof as { username: string | null; avatar_url: string | null } | null;
+          const enriched: OutfitWithProfile = {
+            ...(full as OutfitWithProfile),
+            profile: p ? { username: p.username ?? "", avatar_url: p.avatar_url } : null,
+          };
+
           setOutfits((prev) => {
-            if (prev.some((o) => o.id === full.id)) return prev;
-            return [full as unknown as OutfitWithProfile, ...prev];
+            if (prev.some((o) => o.id === enriched.id)) return prev;
+            return [enriched, ...prev];
           });
         }
       )
