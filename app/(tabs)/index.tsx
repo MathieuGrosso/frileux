@@ -16,8 +16,8 @@ import { supabase } from "@/lib/supabase";
 import { getWeatherCached } from "@/lib/weather";
 import { generateOutfitImage } from "@/lib/gemini";
 import { comfortVerdict } from "@/lib/comfort";
-import type { ColdnessLevel, DayForecast, OutfitOccasion, WeatherData } from "@/lib/types";
-import { OUTFIT_OCCASIONS } from "@/lib/types";
+import type { ColdnessLevel, DayForecast, OutfitIntention, OutfitOccasion, WeatherData } from "@/lib/types";
+import { OUTFIT_INTENTIONS, OUTFIT_OCCASIONS } from "@/lib/types";
 import { RatingStars } from "@/components/RatingStars";
 import { Skeleton } from "@/components/Skeleton";
 import { TodayLoader, type LoaderStep } from "@/components/TodayLoader";
@@ -54,6 +54,7 @@ export default function TodayScreen() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [rating, setRating] = useState(0);
   const [occasion, setOccasion] = useState<OutfitOccasion | null>(null);
+  const [intention, setIntention] = useState<OutfitIntention | null>(null);
   const [coldness, setColdness] = useState<ColdnessLevel | null>(null);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
@@ -515,29 +516,49 @@ export default function TodayScreen() {
       const embedRes2 = embeddingSource ? await embedOutfitTextWithHash(embeddingSource).catch(() => null) : null;
       const embedding = embedRes2?.embedding ?? null;
 
+      const todayIso = getLocalDateISO(today);
       const payload = {
         user_id: user.id,
         photo_url: urlData.publicUrl,
-        date: getLocalDateISO(today),
+        date: todayIso,
         weather_data: weather,
         rating: rating || null,
         ai_suggestion: suggestion,
         worn_description,
         occasion,
+        intention,
         notes: notes.trim() || null,
         embedding,
         embedding_text_hash: embedRes2?.textHash ?? null,
         embedding_source: embedding ? (worn_description ? "worn" : "suggested") : null,
         adopted: adopted || adoptedOutfitId !== null,
       };
+
+      // Relog même jour : si une tenue existe déjà pour aujourd'hui, on UPDATE
+      // (nouvelle photo = nouvelle critique) plutôt que d'insérer une deuxième row.
+      let targetUpdateId = adoptedOutfitId;
+      if (!targetUpdateId) {
+        const { data: existingToday } = await supabase
+          .from("outfits")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("date", todayIso)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (existingToday?.id) {
+          targetUpdateId = existingToday.id;
+        }
+      }
+
       let savedId: string | null = null;
-      if (adoptedOutfitId) {
+      if (targetUpdateId) {
         const { error: updateError } = await supabase
           .from("outfits")
-          .update(payload)
-          .eq("id", adoptedOutfitId);
+          .update({ ...payload, critique: null, critique_score: null })
+          .eq("id", targetUpdateId);
         if (updateError) throw updateError;
-        savedId = adoptedOutfitId;
+        savedId = targetUpdateId;
       } else {
         const { data: inserted, error: insertError } = await supabase
           .from("outfits")
@@ -548,7 +569,7 @@ export default function TodayScreen() {
         savedId = inserted?.id ?? null;
       }
 
-      if (savedId && !adoptedOutfitId) {
+      if (savedId && !targetUpdateId) {
         const { data: myCircles } = await supabase
           .from("circle_members")
           .select("circle_id, circles(id, visibility)")
@@ -595,6 +616,7 @@ export default function TodayScreen() {
       setPhotoUri(null);
       setRating(0);
       setOccasion(null);
+      setIntention(null);
       setNotes("");
       setAdoptedOutfitId(null);
       setTimeout(() => setSaved(false), 3000);
@@ -936,6 +958,26 @@ export default function TodayScreen() {
                       <Pressable
                         key={opt.value}
                         onPress={() => setOccasion(active ? null : opt.value)}
+                        className={`py-2 px-3 border ${active ? "bg-ink-900 border-ink-900" : "bg-paper-50 border-paper-300"}`}
+                      >
+                        <Text className={`font-body text-xs ${active ? "text-paper" : "text-ink-900"}`}>
+                          {opt.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                <Text className="font-body-medium text-micro text-ink-300 mt-6 mb-4">
+                  INTENTION
+                </Text>
+                <View className="flex-row flex-wrap" style={{ gap: 6 }}>
+                  {OUTFIT_INTENTIONS.map((opt) => {
+                    const active = intention === opt.value;
+                    return (
+                      <Pressable
+                        key={opt.value}
+                        onPress={() => setIntention(active ? null : opt.value)}
                         className={`py-2 px-3 border ${active ? "bg-ink-900 border-ink-900" : "bg-paper-50 border-paper-300"}`}
                       >
                         <Text className={`font-body text-xs ${active ? "text-paper" : "text-ink-900"}`}>
