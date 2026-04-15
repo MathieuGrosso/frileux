@@ -49,13 +49,24 @@ export default function WardrobeDetail() {
     );
     if (!confirmed) return;
     setDeleting(true);
-    const { error } = await supabase.from("wardrobe_items").delete().eq("id", item.id);
+    const { error, count } = await supabase
+      .from("wardrobe_items")
+      .delete({ count: "exact" })
+      .eq("id", item.id);
     setDeleting(false);
     if (error) {
       notifyError("Echec", error.message);
       return;
     }
-    router.back();
+    if (!count) {
+      notifyError(
+        "Suppression refusee",
+        "Cette piece n'a pas pu etre supprimee (permissions).",
+      );
+      return;
+    }
+    if (router.canGoBack()) router.back();
+    else router.replace("/(tabs)");
   }
 
   const material = cleanValue(item?.material);
