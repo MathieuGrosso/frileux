@@ -16,7 +16,7 @@ import type { Outfit, OutfitIntention, OutfitOccasion, ThermalFeeling } from "@/
 import { OUTFIT_INTENTIONS, OUTFIT_OCCASIONS, THERMAL_FEELINGS } from "@/lib/types";
 import { weatherEmoji } from "@/lib/weather";
 import { RatingStars } from "@/components/RatingStars";
-import { OutfitNotes } from "@/components/circle/OutfitNotes";
+import { OutfitNotes } from "@/components/outfit/OutfitNotes";
 import { OutfitCritique } from "@/components/OutfitCritique";
 import { fetchOutfitCritique } from "@/lib/critique";
 import { colors } from "@/lib/theme";

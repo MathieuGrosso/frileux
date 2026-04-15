@@ -29,7 +29,7 @@ const TABS: TabDef[] = [
   { name: "index", icon: "sun", label: "AUJOURD'HUI" },
   { name: "wardrobe", icon: "grid", label: "GARDE-ROBE" },
   { name: "history", icon: "clock", label: "HISTORIQUE" },
-  { name: "circle", icon: "users", label: "CERCLE" },
+  { name: "feed", icon: "globe", label: "FEED" },
 ];
 
 const EASE = Easing.bezier(0.23, 1, 0.32, 1);
