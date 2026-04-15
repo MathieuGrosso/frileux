@@ -30,6 +30,7 @@ import { extractItemsFromOutfitPhoto } from "@/lib/wardrobe-extract";
 import { SuggestionSwipeArea } from "@/components/SuggestionSwipeArea";
 import { WardrobeNudge } from "@/components/WardrobeNudge";
 import { WardrobeCombos } from "@/components/WardrobeCombos";
+import { BrandInspiration } from "@/components/BrandInspiration";
 import type { ComboItem } from "@/lib/wardrobe-combos";
 import { RefineSheet } from "@/components/RefineSheet";
 import { OutfitCritique } from "@/components/OutfitCritique";
@@ -945,6 +946,12 @@ export default function TodayScreen() {
                 feelsLike={weather.feels_like}
                 coldness={coldness}
               />
+            </View>
+          )}
+
+          {favoriteBrands.length > 0 && (
+            <View className="-mx-6">
+              <BrandInspiration favoriteBrands={favoriteBrands} />
             </View>
           )}
 
