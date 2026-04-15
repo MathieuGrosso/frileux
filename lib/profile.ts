@@ -24,6 +24,8 @@ export interface ProfileTaste {
 }
 
 export interface WardrobePiece {
+  id?: string;
+  photo_url?: string | null;
   type: string;
   color: string | null;
   material: string | null;
@@ -117,7 +119,7 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
       .gte("date", thirtyDaysAgo.toISOString().split("T")[0]),
     supabase
       .from("wardrobe_items")
-      .select("type, color, material, style_tags, description")
+      .select("id, photo_url, type, color, material, style_tags, description")
       .eq("user_id", user.id)
       .limit(80),
   ]);
@@ -161,6 +163,8 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
   );
 
   const wardrobe: WardrobePiece[] = (wardrobeRes.data ?? []).map((w) => ({
+    id: w.id as string,
+    photo_url: (w.photo_url as string | null) ?? null,
     type: w.type as string,
     color: (w.color as string | null) ?? null,
     material: (w.material as string | null) ?? null,
