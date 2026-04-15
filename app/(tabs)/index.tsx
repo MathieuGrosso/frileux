@@ -118,12 +118,16 @@ export default function TodayScreen() {
       if (!user) return;
       setCurrentUserId(user.id);
       const todayStr = getLocalDateISO(today);
+      // Tenue du jour = la plus récente loggée aujourd'hui (on autorise
+      // plusieurs rows par jour pour le feed/cercles, mais la home n'en affiche qu'une).
       const { data } = await supabase
         .from("outfits")
         .select("id, photo_url, occasion, rating, notes, critique")
         .eq("user_id", user.id)
         .eq("date", todayStr)
         .not("photo_url", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
       if (data?.photo_url) {
         setTodayOutfit({
@@ -516,11 +520,10 @@ export default function TodayScreen() {
       const embedRes2 = embeddingSource ? await embedOutfitTextWithHash(embeddingSource).catch(() => null) : null;
       const embedding = embedRes2?.embedding ?? null;
 
-      const todayIso = getLocalDateISO(today);
       const payload = {
         user_id: user.id,
         photo_url: urlData.publicUrl,
-        date: todayIso,
+        date: getLocalDateISO(today),
         weather_data: weather,
         rating: rating || null,
         ai_suggestion: suggestion,
@@ -533,32 +536,14 @@ export default function TodayScreen() {
         embedding_source: embedding ? (worn_description ? "worn" : "suggested") : null,
         adopted: adopted || adoptedOutfitId !== null,
       };
-
-      // Relog même jour : si une tenue existe déjà pour aujourd'hui, on UPDATE
-      // (nouvelle photo = nouvelle critique) plutôt que d'insérer une deuxième row.
-      let targetUpdateId = adoptedOutfitId;
-      if (!targetUpdateId) {
-        const { data: existingToday } = await supabase
-          .from("outfits")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("date", todayIso)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (existingToday?.id) {
-          targetUpdateId = existingToday.id;
-        }
-      }
-
       let savedId: string | null = null;
-      if (targetUpdateId) {
+      if (adoptedOutfitId) {
         const { error: updateError } = await supabase
           .from("outfits")
-          .update({ ...payload, critique: null, critique_score: null })
-          .eq("id", targetUpdateId);
+          .update(payload)
+          .eq("id", adoptedOutfitId);
         if (updateError) throw updateError;
-        savedId = targetUpdateId;
+        savedId = adoptedOutfitId;
       } else {
         const { data: inserted, error: insertError } = await supabase
           .from("outfits")
@@ -569,7 +554,7 @@ export default function TodayScreen() {
         savedId = inserted?.id ?? null;
       }
 
-      if (savedId && !targetUpdateId) {
+      if (savedId && !adoptedOutfitId) {
         const { data: myCircles } = await supabase
           .from("circle_members")
           .select("circle_id, circles(id, visibility)")
