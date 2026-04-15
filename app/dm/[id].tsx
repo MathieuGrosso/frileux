@@ -222,8 +222,12 @@ export default function DMThreadScreen() {
             <PressableScale
               onPress={send}
               disabled={!draft.trim() || sending}
-              className="bg-ink-900 px-5 py-3.5"
-              style={{ opacity: !draft.trim() || sending ? 0.4 : 1 }}
+              style={{
+                backgroundColor: colors.ink[900],
+                paddingHorizontal: 20,
+                paddingVertical: 14,
+                opacity: !draft.trim() || sending ? 0.4 : 1,
+              }}
             >
               <Text
                 className="font-body-semibold text-paper-100"
