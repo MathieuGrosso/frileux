@@ -88,12 +88,16 @@ export default function CircleChatScreen() {
 
   const load = useCallback(async () => {
     if (!id) return;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("circle_messages")
-      .select("*, profile:profiles(username, avatar_url)")
+      .select("*")
       .eq("circle_id", id)
       .order("created_at", { ascending: false })
       .limit(200);
+    if (error) {
+      console.warn("circle_messages load failed", error);
+      return;
+    }
     setMessages((data as unknown as CircleMessage[]) ?? []);
   }, [id]);
 
@@ -132,11 +136,15 @@ export default function CircleChatScreen() {
         },
         async (payload) => {
           const row = payload.new as { id: string };
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from("circle_messages")
-            .select("*, profile:profiles(username, avatar_url)")
+            .select("*")
             .eq("id", row.id)
             .single();
+          if (error) {
+            console.warn("circle_messages realtime reload failed", error);
+            return;
+          }
           if (!data) return;
           setMessages((prev) =>
             prev.some((m) => m.id === data.id)
@@ -372,6 +380,8 @@ export default function CircleChatScreen() {
             }
             const m = item.message;
             const isMine = m.user_id === userId;
+            const authorName =
+              members.find((mem) => mem.user_id === m.user_id)?.username ?? "—";
             return (
               <View className="mb-2">
                 {item.showAuthor && (
@@ -380,7 +390,7 @@ export default function CircleChatScreen() {
                       className="font-display text-ink-900"
                       style={{ fontSize: 13, letterSpacing: 1 }}
                     >
-                      {(m.profile?.username ?? "—").toUpperCase()}
+                      {authorName.toUpperCase()}
                     </Text>
                     <Text className="font-body text-ink-300 text-eyebrow">
                       {formatTime(m.created_at)}
