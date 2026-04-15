@@ -162,6 +162,18 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
     (rejectionsRes.data ?? []).map((r) => ({ reason: r.reason as string | null }))
   );
 
+  const { data: regrettedRows } = await supabase
+    .from("outfits")
+    .select("worn_description")
+    .eq("user_id", user.id)
+    .eq("regretted", true)
+    .order("date", { ascending: false })
+    .limit(5);
+  const regret_prefs = (regrettedRows ?? [])
+    .map((r) => r.worn_description as string | null)
+    .filter((v): v is string => !!v && v.trim().length > 0)
+    .map((d) => `regretté récemment (à éviter de réitérer) : ${d.slice(0, 140)}`);
+
   const { data: memoryRows } = await supabase
     .from("style_memory")
     .select("id, fact, kind, created_at")
@@ -172,7 +184,7 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
     const tag = m.kind === "strength" ? "fonctionne bien" : m.kind === "avoid" ? "à éviter" : "pattern";
     return `mémoire (${tag}) : ${m.fact}`;
   });
-  const derived_prefs = [...base_prefs, ...memory_prefs];
+  const derived_prefs = [...base_prefs, ...memory_prefs, ...regret_prefs];
 
   const wardrobe: WardrobePiece[] = (wardrobeRes.data ?? []).map((w) => ({
     id: w.id as string,

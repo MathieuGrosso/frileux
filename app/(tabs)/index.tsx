@@ -132,7 +132,12 @@ export default function TodayScreen() {
           fetchOutfitCritique(targetId)
             .then((c) => {
               if (critiqueTargetRef.current === targetId) setCritique(c);
-              if (c) void recordCritiqueFacts(targetId, c);
+              if (c) {
+                void recordCritiqueFacts(targetId, c);
+                if (c.score <= 4) {
+                  void supabase.from("outfits").update({ regretted: true }).eq("id", targetId);
+                }
+              }
             })
             .catch((err) => { if (__DEV__) console.warn("critique fetch:", err); })
             .finally(() => { if (critiqueTargetRef.current === targetId) setCritiqueLoading(false); });
