@@ -9,21 +9,15 @@ import {
   ScrollView,
   StyleSheet,
 } from "react-native";
-import { Link } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
-import { makeRedirectUri } from "expo-auth-session";
 import { supabase } from "@/lib/supabase";
 import { BrandLogo } from "@/components/BrandLogo";
 import { mapAuthError } from "@/lib/auth-errors";
 import { colors } from "@/lib/theme";
 
-WebBrowser.maybeCompleteAuthSession();
-
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleLogin() {
@@ -32,47 +26,6 @@ export default function LoginScreen() {
     const { error: err } = await supabase.auth.signInWithPassword({ email, password });
     if (err) setError(mapAuthError(err));
     setLoading(false);
-  }
-
-  async function handleGoogleLogin() {
-    setError(null);
-    setGoogleLoading(true);
-
-    if (Platform.OS === "web") {
-      const { error: err } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: window.location.origin },
-      });
-      if (err) setError(mapAuthError(err));
-      setGoogleLoading(false);
-      return;
-    }
-
-    const redirectUri = makeRedirectUri({ path: "auth/callback" });
-
-    const { data, error: err } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: redirectUri, skipBrowserRedirect: true },
-    });
-
-    if (err || !data.url) {
-      setError(err ? mapAuthError(err) : "Google indisponible pour le moment.");
-      setGoogleLoading(false);
-      return;
-    }
-
-    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
-
-    if (result.type === "success" && result.url) {
-      const url = new URL(result.url);
-      const code = url.searchParams.get("code");
-      if (code) {
-        const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
-        if (sessionError) setError(mapAuthError(sessionError));
-      }
-    }
-
-    setGoogleLoading(false);
   }
 
   return (
@@ -127,42 +80,14 @@ export default function LoginScreen() {
 
           <Pressable
             onPress={handleLogin}
-            disabled={loading || googleLoading}
+            disabled={loading}
             style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
           >
             <Text style={styles.btnText}>
               {loading ? "CONNEXION…" : "SE CONNECTER"}
             </Text>
           </Pressable>
-
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>ou</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <Pressable
-            onPress={handleGoogleLogin}
-            disabled={loading || googleLoading}
-            style={({ pressed }) => [styles.btnGoogle, pressed && styles.btnGooglePressed]}
-          >
-            <View style={styles.googleIcon}>
-              <Text style={styles.googleIconText}>G</Text>
-            </View>
-            <Text style={styles.btnGoogleText}>
-              {googleLoading ? "Connexion…" : "Continuer avec Google"}
-            </Text>
-          </Pressable>
         </View>
-
-        <Link href="/auth/register" asChild>
-          <Pressable style={styles.footer}>
-            <Text style={styles.footerText}>
-              Pas encore de compte ?{" "}
-              <Text style={styles.footerLink}>S'inscrire</Text>
-            </Text>
-          </Pressable>
-        </Link>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -213,42 +138,6 @@ const styles = StyleSheet.create({
     letterSpacing: 2.5,
   },
 
-  divider: { flexDirection: "row", alignItems: "center", gap: 12, marginVertical: 4 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: "#E8E5DF" },
-  dividerText: { fontFamily: "Jost_400Regular", fontSize: 12, color: "#C5C2BC" },
-
-  btnGoogle: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#E8E5DF",
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    backgroundColor: "#FFFFFF",
-    gap: 12,
-  },
-  btnGooglePressed: { backgroundColor: "#F5F3EF" },
-  googleIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 2,
-    backgroundColor: "#4285F4",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  googleIconText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontFamily: "Jost_600SemiBold",
-    lineHeight: 14,
-  },
-  btnGoogleText: {
-    fontFamily: "Jost_400Regular",
-    fontSize: 14,
-    color: "#3C3A36",
-  },
-
   errorBanner: {
     borderLeftWidth: 2,
     borderLeftColor: "#C0392B",
@@ -263,8 +152,4 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: "#C0392B",
   },
-
-  footer: { alignItems: "center" },
-  footerText: { fontFamily: "Jost_400Regular", fontSize: 14, color: "#9E9A96" },
-  footerLink: { fontFamily: "Jost_500Medium", color: "#637D8E" },
 });
