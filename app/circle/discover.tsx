@@ -12,21 +12,13 @@ export default function DiscoverScreen() {
     <SafeAreaView className="flex-1 bg-paper-100" edges={["top"]}>
       <Stack.Screen options={{ headerShown: false }} />
       <View className="px-6 pt-2 pb-6 border-b border-ink-100">
-        <View className="flex-row items-center justify-between mb-4">
+        <View className="flex-row items-center mb-4">
           <PressableScale onPress={() => router.back()}>
             <Text
               className="font-body-medium text-ink-900"
               style={{ fontSize: 12, letterSpacing: 2 }}
             >
               ← RETOUR
-            </Text>
-          </PressableScale>
-          <PressableScale onPress={() => router.replace("/circle/feed")}>
-            <Text
-              className="font-body-medium text-ice-600"
-              style={{ fontSize: 11, letterSpacing: 2 }}
-            >
-              POUR TOI →
             </Text>
           </PressableScale>
         </View>

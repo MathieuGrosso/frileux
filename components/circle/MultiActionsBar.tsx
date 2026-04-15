@@ -18,24 +18,13 @@ export function MultiActionsBar() {
       </PressableScale>
       <PressableScale
         onPress={() => router.push("/circle/discover")}
-        className="flex-1 py-3 items-center border-r border-ink-100"
-      >
-        <Text
-          className="font-body-semibold text-ice-600"
-          style={{ fontSize: 11, letterSpacing: 2.5 }}
-        >
-          EXPLORER
-        </Text>
-      </PressableScale>
-      <PressableScale
-        onPress={() => router.push("/circle/feed")}
         className="flex-1 py-3 items-center"
       >
         <Text
           className="font-body-semibold text-ice-600"
           style={{ fontSize: 11, letterSpacing: 2.5 }}
         >
-          POUR TOI
+          EXPLORER
         </Text>
       </PressableScale>
     </View>
