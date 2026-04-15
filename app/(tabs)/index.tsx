@@ -496,6 +496,7 @@ export default function TodayScreen() {
           userId: user.id,
           imageBase64: base64,
           mimeType,
+          photoUri,
         }).catch((err) => {
           if (__DEV__) console.warn("wardrobe extract skipped:", err);
         });

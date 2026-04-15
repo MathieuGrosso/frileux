@@ -86,8 +86,14 @@ const ANALYSIS_MULTI_SCHEMA = {
           material: { type: "STRING" },
           style_tags: { type: "ARRAY", items: { type: "STRING" } },
           description: { type: "STRING" },
+          bbox: {
+            type: "ARRAY",
+            items: { type: "INTEGER" },
+            minItems: 4,
+            maxItems: 4,
+          },
         },
-        required: ["type", "color", "style_tags", "description"],
+        required: ["type", "color", "style_tags", "description", "bbox"],
       },
     },
   },
@@ -284,6 +290,7 @@ Pour chaque pièce :
 - material: matière perçue si identifiable, sinon null
 - style_tags: 2 à 4 tags en français
 - description: une ligne concise en français
+- bbox: bounding box de la pièce sur la photo, au format [ymin, xmin, ymax, xmax] en coordonnées normalisées 0-1000 (0,0 = coin haut-gauche, 1000,1000 = coin bas-droit). Serre au plus près du vêtement, mais inclus TOUTE la pièce visible.
 
 Règles :
 - Sépare les pièces par catégorie (un t-shirt + un jean = 2 pièces distinctes).
