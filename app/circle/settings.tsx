@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import type { Circle, Profile } from "@/lib/types";
 import { MemberAvatar } from "@/components/circle/MemberAvatar";
@@ -42,18 +43,32 @@ export default function CircleSettingsScreen() {
     if (!user) return;
     setCurrentUserId(user.id);
 
-    const { data: membership } = await supabase
-      .from("circle_members")
-      .select("circle_id, circles(*)")
-      .eq("user_id", user.id)
-      .limit(1)
-      .single();
+    const activeId = await AsyncStorage.getItem("frileux.circle.active");
 
-    if (!membership?.circles) {
+    let c: Circle | null = null;
+    if (activeId) {
+      const { data: activeRow } = await supabase
+        .from("circle_members")
+        .select("circle_id, circles(*)")
+        .eq("user_id", user.id)
+        .eq("circle_id", activeId)
+        .maybeSingle();
+      c = (activeRow?.circles as unknown as Circle) ?? null;
+    }
+    if (!c) {
+      const { data: fallback } = await supabase
+        .from("circle_members")
+        .select("circle_id, circles(*)")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+      c = (fallback?.circles as unknown as Circle) ?? null;
+    }
+
+    if (!c) {
       setLoading(false);
       return;
     }
-    const c = membership.circles as unknown as Circle;
     setCircle(c);
     setNameDraft(c.name);
     setDescDraft(c.description ?? "");
