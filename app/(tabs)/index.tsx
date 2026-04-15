@@ -179,7 +179,7 @@ export default function TodayScreen() {
   ) {
     try {
       const bundle = await (profilePromiseRef.current ?? loadProfileBundle());
-      const { userId, coldness: userColdness, taste, recent_worn, recent_feedback, liked_anchors, derived_prefs, wardrobe } = bundle;
+      const { userId, coldness: userColdness, taste, recent_worn, recent_feedback, liked_anchors, derived_prefs, wardrobe, wardrobeOnlyMode } = bundle;
       setColdness(userColdness);
       if (taste?.favorite_brands?.length) setFavoriteBrands(taste.favorite_brands);
 
@@ -225,7 +225,7 @@ export default function TodayScreen() {
           liked_anchors,
           derived_prefs,
           wardrobe,
-          wardrobe_mode: "priority" as const,
+          wardrobe_mode: wardrobeOnlyMode ? ("strict" as const) : ("priority" as const),
         },
       });
       if (error) {

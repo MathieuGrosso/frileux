@@ -26,6 +26,8 @@ export default function SettingsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingLevel, setSavingLevel] = useState<ColdnessLevel | null>(null);
+  const [wardrobeOnlyMode, setWardrobeOnlyMode] = useState(false);
+  const [togglingWardrobeMode, setTogglingWardrobeMode] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -43,7 +45,7 @@ export default function SettingsScreen() {
 
     let { data, error: err } = await supabase
       .from("profiles")
-      .select("coldness_level, username")
+      .select("coldness_level, username, wardrobe_only_mode")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -61,7 +63,7 @@ export default function SettingsScreen() {
           { id: user.id, username: fallbackUsername, coldness_level: 3 },
           { onConflict: "id" },
         )
-        .select("coldness_level, username")
+        .select("coldness_level, username, wardrobe_only_mode")
         .maybeSingle();
       if (upsertErr || !created) {
         setError("Impossible de charger ton profil.");
@@ -73,6 +75,7 @@ export default function SettingsScreen() {
 
     setColdnessLevel(data.coldness_level as ColdnessLevel);
     setUsername(data.username);
+    setWardrobeOnlyMode(Boolean(data.wardrobe_only_mode));
     void loadCalibration(data.coldness_level as ColdnessLevel);
     setLoading(false);
   }
@@ -149,6 +152,28 @@ export default function SettingsScreen() {
     await AsyncStorage.removeItem("@onboarding/last-step");
     await refreshOnboarding();
     router.replace("/onboarding");
+  }
+
+  async function toggleWardrobeOnlyMode() {
+    const next = !wardrobeOnlyMode;
+    setWardrobeOnlyMode(next);
+    setTogglingWardrobeMode(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setWardrobeOnlyMode(!next);
+      setTogglingWardrobeMode(false);
+      setError("Session expirée. Reconnecte-toi.");
+      return;
+    }
+    const { error: err } = await supabase
+      .from("profiles")
+      .update({ wardrobe_only_mode: next })
+      .eq("id", user.id);
+    if (err) {
+      setWardrobeOnlyMode(!next);
+      setError("Impossible d'enregistrer. Réessaie.");
+    }
+    setTogglingWardrobeMode(false);
   }
 
   async function redoTaste() {
@@ -324,6 +349,32 @@ export default function SettingsScreen() {
             <Text className="font-display text-body-sm text-ink-900 uppercase tracking-widest">
               Ma garde-robe
             </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={toggleWardrobeOnlyMode}
+            disabled={togglingWardrobeMode}
+            className="border border-ink-900 mt-2 px-4 py-4 flex-row items-center justify-between active:bg-paper-200"
+          >
+            <View className="flex-1 pr-4">
+              <Text className="font-display text-body-sm text-ink-900 uppercase tracking-widest">
+                Uniquement ma garde-robe
+              </Text>
+              <Text className="font-body text-caption text-ink-500 mt-1">
+                Les suggestions n'utilisent que tes pièces. Active quand ton placard est bien rempli.
+              </Text>
+            </View>
+            <View
+              className={`border border-ink-900 w-10 h-5 ${
+                wardrobeOnlyMode ? "bg-ink-900" : "bg-paper"
+              }`}
+            >
+              <View
+                className={`w-4 h-4 ${
+                  wardrobeOnlyMode ? "bg-paper self-end mt-[1px] mr-[1px]" : "bg-ink-900 mt-[1px] ml-[1px]"
+                }`}
+              />
+            </View>
           </Pressable>
 
           <Pressable
