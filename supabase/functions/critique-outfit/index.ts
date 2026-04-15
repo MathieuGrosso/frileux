@@ -186,6 +186,8 @@ Deno.serve(async (req: Request) => {
 
     const prompt = `Tu es un observateur éditorial type Ssense — précis, cultivé, curieux. Tu n'es pas juge, tu es styliste. Tu poses des hypothèses sur ce que la personne a cherché à faire, tu proposes des pistes. Précision > sévérité : ne rabaisse pas, éclaire.
 
+Tu reçois la photo de la tenue portée. Si la description textuelle et la photo divergent, fais confiance à la photo.
+
 ${wornLine}
 ${suggestionLine}
 ${occasionLine}
@@ -214,6 +216,27 @@ Règles :
 - vs_suggestion : tourne la phrase vers l'écart et sa justification, pas vers la conformité. Null si pas de suggestion initiale ou si la tenue est proche.
 - Aucun texte en dehors du JSON.`;
 
+    let imageBlock: { type: "image"; source: { type: "base64"; media_type: string; data: string } } | null = null;
+    try {
+      const imgRes = await fetch(outfit.photo_url);
+      if (imgRes.ok) {
+        const contentType = imgRes.headers.get("content-type") ?? "image/jpeg";
+        const mediaType = contentType.split(";")[0].trim();
+        const buf = new Uint8Array(await imgRes.arrayBuffer());
+        let binary = "";
+        for (let i = 0; i < buf.length; i++) binary += String.fromCharCode(buf[i]);
+        const b64 = btoa(binary);
+        imageBlock = {
+          type: "image",
+          source: { type: "base64", media_type: mediaType, data: b64 },
+        };
+      }
+    } catch (_) { /* fallback to text-only */ }
+
+    const userContent = imageBlock
+      ? [imageBlock, { type: "text", text: prompt }]
+      : [{ type: "text", text: prompt }];
+
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -224,7 +247,7 @@ Règles :
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 500,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: "user", content: userContent }],
       }),
     });
 
