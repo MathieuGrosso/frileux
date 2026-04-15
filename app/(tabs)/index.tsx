@@ -34,6 +34,7 @@ import { WardrobeCombos } from "@/components/WardrobeCombos";
 import { BrandInspiration } from "@/components/BrandInspiration";
 import type { ComboItem } from "@/lib/wardrobe-combos";
 import { RefineSheet } from "@/components/RefineSheet";
+import { SharePickerSheet } from "@/components/outfit/SharePickerSheet";
 import { OutfitCritique } from "@/components/OutfitCritique";
 import { fetchOutfitCritique } from "@/lib/critique";
 import { colors, motion } from "@/lib/theme";
@@ -69,6 +70,9 @@ export default function TodayScreen() {
   const [adoptedOutfitId, setAdoptedOutfitId] = useState<string | null>(null);
   const [adopting, setAdopting] = useState(false);
   const [refineOpen, setRefineOpen] = useState(false);
+  const [sharePickerOpen, setSharePickerOpen] = useState(false);
+  const [sharePickerOutfitId, setSharePickerOutfitId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [critique, setCritique] = useState<import("@/lib/types").OutfitCritique | null>(null);
   const [critiqueLoading, setCritiqueLoading] = useState(false);
   const [critiqueOutfitId, setCritiqueOutfitId] = useState<string | null>(null);
@@ -104,6 +108,7 @@ export default function TodayScreen() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      setCurrentUserId(user.id);
       const todayStr = getLocalDateISO(today);
       const { data } = await supabase
         .from("outfits")
@@ -529,6 +534,26 @@ export default function TodayScreen() {
           .single();
         if (insertError) throw insertError;
         savedId = inserted?.id ?? null;
+      }
+
+      if (savedId && !adoptedOutfitId) {
+        const { data: myCircles } = await supabase
+          .from("circle_members")
+          .select("circle_id, circles(id, visibility)")
+          .eq("user_id", user.id);
+        const circleRows = ((myCircles ?? []) as unknown as {
+          circle_id: string;
+          circles: { id: string; visibility: "public" | "private" } | null;
+        }[]).filter((r) => !!r.circles);
+        if (circleRows.length === 1) {
+          await supabase.from("outfit_shares").insert({
+            outfit_id: savedId,
+            circle_id: circleRows[0].circle_id,
+          });
+        } else if (circleRows.length > 1) {
+          setSharePickerOutfitId(savedId);
+          setSharePickerOpen(true);
+        }
       }
 
       if (savedId) {
@@ -969,6 +994,22 @@ export default function TodayScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      {currentUserId && (
+        <SharePickerSheet
+          visible={sharePickerOpen}
+          outfitId={sharePickerOutfitId}
+          userId={currentUserId}
+          onClose={() => {
+            setSharePickerOpen(false);
+            setSharePickerOutfitId(null);
+          }}
+          onDone={() => {
+            setSharePickerOpen(false);
+            setSharePickerOutfitId(null);
+          }}
+        />
+      )}
 
       <RefineSheet
         visible={refineOpen}
