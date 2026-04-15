@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { View, Text, TextInput, Pressable } from "react-native";
 import { supabase } from "@/lib/supabase";
 import type { OutfitComment } from "@/lib/types";
-import { MemberAvatar } from "./MemberAvatar";
+import { MemberAvatar } from "@/components/MemberAvatar";
 import { colors } from "@/lib/theme";
 import { notifyError } from "@/lib/ui";
 
@@ -124,7 +124,7 @@ export function OutfitNotes({ outfitId }: Props) {
         className="font-body-semibold text-ink-300 text-eyebrow mb-4"
         style={{ letterSpacing: 1.5 }}
       >
-        NOTES DU CERCLE ({notes.length})
+        NOTES ({notes.length})
       </Text>
       {notes.length === 0 && (
         <Text className="font-body text-ink-300 text-body-sm mb-4">

@@ -5,7 +5,7 @@ import { router, Stack } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useDMThreads, openDMThread } from "@/hooks/useDMThreads";
 import { PressableScale } from "@/components/ui/PressableScale";
-import { MemberAvatar } from "@/components/circle/MemberAvatar";
+import { MemberAvatar } from "@/components/MemberAvatar";
 import { PresenceDot } from "@/components/PresenceDot";
 
 function relTime(iso: string): string {
@@ -34,23 +34,18 @@ export default function DMListScreen() {
 
   const loadCoMembers = useCallback(async () => {
     if (!userId) return;
-    const { data: myCircles } = await supabase
-      .from("circle_members")
-      .select("circle_id")
-      .eq("user_id", userId);
-    const circleIds = ((myCircles as { circle_id: string }[]) ?? []).map((c) => c.circle_id);
-    if (circleIds.length === 0) {
-      setCoMembers([]);
-      return;
-    }
-    const { data: others } = await supabase
-      .from("circle_members")
-      .select("user_id, profile:profiles(id, username, avatar_url)")
-      .in("circle_id", circleIds)
-      .neq("user_id", userId);
-    type Row = { user_id: string; profile: { id: string; username: string; avatar_url: string | null } };
+    const sinceIso = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString();
+    const { data: recent } = await supabase
+      .from("outfits")
+      .select("user_id, created_at, profile:profiles!outfits_user_id_fkey(id, username, avatar_url)")
+      .eq("is_public", true)
+      .gte("created_at", sinceIso)
+      .neq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    type Row = { user_id: string; profile: { id: string; username: string; avatar_url: string | null } | null };
     const unique = new Map<string, CoMember>();
-    for (const row of (others as unknown as Row[]) ?? []) {
+    for (const row of (recent as unknown as Row[]) ?? []) {
       if (row.profile && !unique.has(row.profile.id)) {
         unique.set(row.profile.id, { ...row.profile, status: null });
       }
@@ -124,14 +119,14 @@ export default function DMListScreen() {
                 className="font-body-medium text-ink-500 mt-6"
                 style={{ fontSize: 10, letterSpacing: 2.5 }}
               >
-                MEMBRES DE TES CERCLES
+                RÉCENTS SUR LE FEED
               </Text>
             </View>
           }
           ListEmptyComponent={
             <View className="px-6 pt-2">
               <Text className="font-body text-ink-500" style={{ fontSize: 13 }}>
-                Tes cercles sont vides. Invite quelqu&apos;un pour commencer à chatter.
+                Personne de récent sur le feed. Poste une tenue pour lancer la conversation.
               </Text>
             </View>
           }

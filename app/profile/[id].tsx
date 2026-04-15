@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams, Stack } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { PressableScale } from "@/components/ui/PressableScale";
-import { MemberAvatar } from "@/components/circle/MemberAvatar";
+import { MemberAvatar } from "@/components/MemberAvatar";
 import { openDMThread } from "@/hooks/useDMThreads";
 import { useFollow } from "@/hooks/useFollow";
 import { PresenceDot } from "@/components/PresenceDot";

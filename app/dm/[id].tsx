@@ -14,7 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router, Stack } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { PressableScale } from "@/components/ui/PressableScale";
-import { MemberAvatar } from "@/components/circle/MemberAvatar";
+import { MemberAvatar } from "@/components/MemberAvatar";
 import { colors } from "@/lib/theme";
 
 interface DMMessage {

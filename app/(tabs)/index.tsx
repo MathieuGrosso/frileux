@@ -34,7 +34,6 @@ import { WardrobeCombos } from "@/components/WardrobeCombos";
 import { BrandInspiration } from "@/components/BrandInspiration";
 import type { ComboItem } from "@/lib/wardrobe-combos";
 import { RefineSheet } from "@/components/RefineSheet";
-import { SharePickerSheet } from "@/components/outfit/SharePickerSheet";
 import { OutfitCritique } from "@/components/OutfitCritique";
 import { fetchOutfitCritique } from "@/lib/critique";
 import { colors, motion } from "@/lib/theme";
@@ -43,7 +42,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { localDateISO } from "@/lib/dates";
 
 const getLocalDateISO = localDateISO;
-const ACTIVE_CIRCLE_KEY = "frileux.circle.active";
 
 export default function TodayScreen() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -69,8 +67,7 @@ export default function TodayScreen() {
   const [adoptedOutfitId, setAdoptedOutfitId] = useState<string | null>(null);
   const [adopting, setAdopting] = useState(false);
   const [refineOpen, setRefineOpen] = useState(false);
-  const [sharePickerOpen, setSharePickerOpen] = useState(false);
-  const [sharePickerOutfitId, setSharePickerOutfitId] = useState<string | null>(null);
+  const [postPublic, setPostPublic] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [critique, setCritique] = useState<import("@/lib/types").OutfitCritique | null>(null);
   const [critiqueLoading, setCritiqueLoading] = useState(false);
@@ -117,6 +114,16 @@ export default function TodayScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setCurrentUserId(user.id);
+      void supabase
+        .from("profiles")
+        .select("default_post_public")
+        .eq("id", user.id)
+        .maybeSingle()
+        .then(({ data: p }) => {
+          if (p && typeof p.default_post_public === "boolean") {
+            setPostPublic(p.default_post_public);
+          }
+        });
       const todayStr = getLocalDateISO(today);
       // Tenue du jour = la plus récente loggée aujourd'hui (on autorise
       // plusieurs rows par jour pour le feed/cercles, mais la home n'en affiche qu'une).
@@ -535,6 +542,7 @@ export default function TodayScreen() {
         embedding_text_hash: embedRes2?.textHash ?? null,
         embedding_source: embedding ? (worn_description ? "worn" : "suggested") : null,
         adopted: adopted || adoptedOutfitId !== null,
+        is_public: postPublic,
       };
       let savedId: string | null = null;
       if (adoptedOutfitId) {
@@ -552,27 +560,6 @@ export default function TodayScreen() {
           .single();
         if (insertError) throw insertError;
         savedId = inserted?.id ?? null;
-      }
-
-      if (savedId && !adoptedOutfitId) {
-        const { data: myCircles } = await supabase
-          .from("circle_members")
-          .select("circle_id, circles(id, visibility)")
-          .eq("user_id", user.id);
-        const circleRows = ((myCircles ?? []) as unknown as {
-          circle_id: string;
-          circles: { id: string; visibility: "public" | "private" } | null;
-        }[]).filter((r) => !!r.circles);
-        if (circleRows.length > 0) {
-          const storedActive = await AsyncStorage.getItem(ACTIVE_CIRCLE_KEY);
-          const target =
-            (storedActive && circleRows.find((r) => r.circle_id === storedActive)?.circle_id) ||
-            circleRows[0].circle_id;
-          await supabase.from("outfit_shares").insert({
-            outfit_id: savedId,
-            circle_id: target,
-          });
-        }
       }
 
       if (savedId) {
@@ -991,9 +978,27 @@ export default function TodayScreen() {
                   multiline
                 />
                 <Pressable
+                  onPress={() => setPostPublic((v) => !v)}
+                  className="flex-row items-center justify-between mt-6 py-3 border-t border-b border-paper-300"
+                >
+                  <View className="flex-1 pr-4">
+                    <Text className="font-body-medium text-micro text-ink-300" style={{ letterSpacing: 1.5 }}>
+                      PUBLIER SUR LE FEED
+                    </Text>
+                    <Text className="font-body text-body-sm text-ink-500 mt-1">
+                      {postPublic ? "Visible par tous les users." : "Privé — toi seul."}
+                    </Text>
+                  </View>
+                  <View
+                    className={`w-10 h-6 ${postPublic ? "bg-ink-900" : "bg-paper-300"} items-${postPublic ? "end" : "start"} justify-center px-0.5`}
+                  >
+                    <View className="w-5 h-5 bg-paper-100" />
+                  </View>
+                </Pressable>
+                <Pressable
                   onPress={saveOutfit}
                   disabled={saving}
-                  className={`py-[18px] items-center mt-6 ${saving ? "bg-ink-200" : "bg-ink-900 active:bg-ink-700"}`}
+                  className={`py-[18px] items-center mt-4 ${saving ? "bg-ink-200" : "bg-ink-900 active:bg-ink-700"}`}
                 >
                   <Text className="font-body-semibold text-eyebrow text-paper">
                     {saving ? "SAUVEGARDE…" : "SAUVEGARDER"}
@@ -1034,22 +1039,6 @@ export default function TodayScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
-
-      {currentUserId && (
-        <SharePickerSheet
-          visible={sharePickerOpen}
-          outfitId={sharePickerOutfitId}
-          userId={currentUserId}
-          onClose={() => {
-            setSharePickerOpen(false);
-            setSharePickerOutfitId(null);
-          }}
-          onDone={() => {
-            setSharePickerOpen(false);
-            setSharePickerOutfitId(null);
-          }}
-        />
-      )}
 
       <RefineSheet
         visible={refineOpen}
