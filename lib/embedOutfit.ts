@@ -1,6 +1,16 @@
 import { supabase } from "./supabase";
 
+export interface EmbedResult {
+  embedding: number[];
+  textHash: string | null;
+}
+
 export async function embedOutfitText(text: string): Promise<number[] | null> {
+  const res = await embedOutfitTextWithHash(text);
+  return res?.embedding ?? null;
+}
+
+export async function embedOutfitTextWithHash(text: string): Promise<EmbedResult | null> {
   const clean = text.trim();
   if (!clean) return null;
   const { data, error } = await supabase.functions.invoke("embed-outfit", {
@@ -12,7 +22,7 @@ export async function embedOutfitText(text: string): Promise<number[] | null> {
   }
   const values = data?.embedding;
   if (!Array.isArray(values)) return null;
-  return values as number[];
+  return { embedding: values as number[], textHash: typeof data?.text_hash === "string" ? data.text_hash : null };
 }
 
 export function cosineSimilarity(a: number[], b: number[]): number {

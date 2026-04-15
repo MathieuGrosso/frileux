@@ -4,12 +4,20 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { enforceQuota } from "../_shared/quota.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 const EMBED_MODEL = "text-embedding-004";
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${EMBED_MODEL}:embedContent`;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+async function sha256Hex(s: string): Promise<string> {
+  const buf = new TextEncoder().encode(s);
+  const digest = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") ?? "*";
 
 async function requireUser(req: Request): Promise<string | null> {
@@ -47,6 +55,29 @@ Deno.serve(async (req: Request) => {
       throw new Error("text must be a non-empty string ≤ 2000 chars");
     }
 
+    const guard = await enforceQuota(userId, "embed-outfit");
+    if (!guard.ok) return guard.response(cors);
+
+    // Dedup: if we've already embedded an outfit with the same text for this user,
+    // reuse that embedding instead of hitting Gemini again.
+    const textHash = await sha256Hex(text);
+    if (SERVICE_ROLE) {
+      const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+      const { data: existing } = await admin
+        .from("outfits")
+        .select("embedding")
+        .eq("user_id", userId)
+        .eq("embedding_text_hash", textHash)
+        .not("embedding", "is", null)
+        .limit(1)
+        .maybeSingle();
+      if (existing?.embedding && Array.isArray(existing.embedding)) {
+        return new Response(JSON.stringify({ embedding: existing.embedding, cached: true, text_hash: textHash }), {
+          headers: { "Content-Type": "application/json", ...cors },
+        });
+      }
+    }
+
     const res = await fetch(ENDPOINT, {
       method: "POST",
       headers: {
@@ -68,7 +99,7 @@ Deno.serve(async (req: Request) => {
     const values = json?.embedding?.values;
     if (!Array.isArray(values)) throw new Error("embedding missing in response");
 
-    return new Response(JSON.stringify({ embedding: values }), {
+    return new Response(JSON.stringify({ embedding: values, text_hash: textHash }), {
       headers: { "Content-Type": "application/json", ...cors },
     });
   } catch (e) {
