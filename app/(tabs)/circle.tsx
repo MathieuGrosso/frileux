@@ -10,7 +10,6 @@ import { CircleFeedSkeleton } from "@/components/circle/CircleFeedSkeleton";
 import { CircleSwitcher } from "@/components/circle/CircleSwitcher";
 import { ViewModeToggle } from "@/components/circle/ViewModeToggle";
 import { StoriesBar } from "@/components/stories/StoriesBar";
-import { MultiActionsBar } from "@/components/circle/MultiActionsBar";
 import { ChallengeBanner } from "@/components/circle/ChallengeBanner";
 import { EmptyState } from "@/components/EmptyState";
 
@@ -54,7 +53,6 @@ export default function CircleScreen() {
   if (!circle && !loading) {
     return (
       <SafeAreaView className="flex-1 bg-paper-100">
-        <MultiActionsBar />
         <CircleOnboarding onCreate={createCircle} onJoin={joinCircle} />
       </SafeAreaView>
     );
@@ -86,7 +84,6 @@ export default function CircleScreen() {
         activeId={circle?.id ?? null}
         onSelect={(id) => { void setActiveCircleId(id); }}
       />
-      <MultiActionsBar />
       <ChallengeBanner />
       {circle && <StoriesBar circleId={circle.id} />}
       <ViewModeToggle
