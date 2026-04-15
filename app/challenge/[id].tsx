@@ -68,17 +68,26 @@ export default function ChallengeScreen() {
   );
 
   async function openPicker() {
-    if (!me) return;
+    let userId = me;
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id ?? null;
+      setMe(userId);
+    }
+    if (!userId) {
+      Alert.alert("Erreur", "Session expirée, reconnecte-toi.");
+      return;
+    }
     const from = new Date();
     from.setDate(from.getDate() - 6);
     const { data } = await supabase
       .from("outfits")
       .select("id, photo_url, date")
-      .eq("user_id", me)
+      .eq("user_id", userId)
       .gte("date", from.toISOString().slice(0, 10))
       .order("created_at", { ascending: false })
       .limit(15);
-    const entryIds = new Set(entries.filter((e) => e.user_id === me).map((e) => e.outfit_id));
+    const entryIds = new Set(entries.filter((e) => e.user_id === userId).map((e) => e.outfit_id));
     const list = ((data as RecentOutfit[]) ?? []).filter((o) => !entryIds.has(o.id));
     setRecent(list);
     setPickerOpen(true);
@@ -131,7 +140,7 @@ export default function ChallengeScreen() {
           </Text>
         ) : null}
 
-        {!loading && me && (
+        {!loading && (
           <PressableScale
             onPress={openPicker}
             disabled={iParticipated}
