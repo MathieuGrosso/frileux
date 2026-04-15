@@ -65,8 +65,9 @@ export function useDMThreads() {
 
   useEffect(() => {
     if (!userId) return;
+    const name = `dm-threads-${userId}-${Math.random().toString(36).slice(2, 8)}`;
     const channel = supabase
-      .channel(`dm-threads-${userId}`)
+      .channel(name)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "dm_threads" },

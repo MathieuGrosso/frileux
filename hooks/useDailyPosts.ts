@@ -68,7 +68,7 @@ export function useDailyPosts(circleId: string | null) {
   useEffect(() => {
     if (!userId) return;
     const ch = supabase
-      .channel(`daily-posts-${circleId ?? "all"}`)
+      .channel(`daily-posts-${circleId ?? "all"}-${Math.random().toString(36).slice(2, 8)}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "daily_posts" },

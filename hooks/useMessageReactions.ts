@@ -43,7 +43,7 @@ export function useMessageReactions(circleId: string | null, messageIds: string[
   useEffect(() => {
     if (!circleId) return;
     const ch = supabase
-      .channel(`reactions-${circleId}`)
+      .channel(`reactions-${circleId}-${Math.random().toString(36).slice(2, 8)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "message_reactions" },

@@ -112,7 +112,7 @@ export function usePolls(circleId: string | null) {
   useEffect(() => {
     if (!circleId) return;
     const ch = supabase
-      .channel(`polls-${circleId}`)
+      .channel(`polls-${circleId}-${Math.random().toString(36).slice(2, 8)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "polls" }, () => {
         void load();
       })
