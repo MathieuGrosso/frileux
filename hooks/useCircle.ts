@@ -21,8 +21,15 @@ export interface UseCircleResult {
   setActiveCircleId: (id: string) => Promise<void>;
   reload: () => Promise<void>;
   refresh: () => Promise<void>;
-  createCircle: () => Promise<Circle | null>;
+  createCircle: (opts?: CreateCircleOptions) => Promise<Circle | null>;
   joinCircle: (code: string) => Promise<Circle | null>;
+}
+
+export interface CreateCircleOptions {
+  name?: string;
+  visibility?: "private" | "public";
+  description?: string;
+  accentHue?: number;
 }
 
 function generateInviteCode(): string {
@@ -161,7 +168,7 @@ export function useCircle(): UseCircleResult {
     if (!circle || !userId) return;
     const today = todayIso();
     const channel = supabase
-      .channel(`circle-outfits-${circle.id}`)
+      .channel(`circle-outfits-${circle.id}-${Math.random().toString(36).slice(2, 8)}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "outfits" },
@@ -247,14 +254,23 @@ export function useCircle(): UseCircleResult {
     await reload();
   }, [reload]);
 
-  const createCircle = useCallback(async (): Promise<Circle | null> => {
+  const createCircle = useCallback(async (opts?: CreateCircleOptions): Promise<Circle | null> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
     const code = generateInviteCode();
+    const insert: Record<string, unknown> = {
+      name: opts?.name?.trim() || "Mon cercle",
+      invite_code: code,
+      created_by: user.id,
+      visibility: opts?.visibility ?? "private",
+    };
+    if (opts?.description) insert.description = opts.description.trim().slice(0, 280);
+    if (opts?.accentHue != null) insert.accent_hue = Math.max(0, Math.min(359, opts.accentHue));
+
     const { data, error } = await supabase
       .from("circles")
-      .insert({ name: "Mon cercle", invite_code: code, created_by: user.id })
+      .insert(insert)
       .select()
       .single();
 

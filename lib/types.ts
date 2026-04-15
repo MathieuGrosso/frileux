@@ -163,12 +163,26 @@ export interface WeatherData {
   uv_index: number;
 }
 
+export type CircleVisibility = "private" | "public";
+
 export interface Circle {
   id: string;
   name: string;
   invite_code: string;
   created_by: string;
   created_at: string;
+  visibility?: CircleVisibility;
+  slug?: string | null;
+  description?: string | null;
+  accent_hue?: number | null;
+  member_count?: number;
+  last_activity_at?: string;
+  is_featured?: boolean;
+}
+
+export interface PublicCirclePreview extends Circle {
+  members_preview: Pick<Profile, "id" | "username" | "avatar_url">[];
+  recent_outfits: { id: string; photo_url: string }[];
 }
 
 export interface CircleMember {

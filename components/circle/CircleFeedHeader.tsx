@@ -1,10 +1,16 @@
-import { View, Text, Pressable, Share } from "react-native";
+import { View, Text, Share } from "react-native";
+import { PressableScale } from "@/components/ui/PressableScale";
 import { useRouter } from "expo-router";
 import type { Circle } from "@/lib/types";
 import { useCircleUnread } from "@/hooks/useCircleUnread";
 
 interface Props {
   circle: Circle;
+}
+
+function hueToHsl(hue: number | null | undefined): string {
+  if (hue == null) return "#0F0F0D";
+  return `hsl(${hue}, 28%, 28%)`;
 }
 
 export function CircleFeedHeader({ circle }: Props) {
@@ -14,60 +20,117 @@ export function CircleFeedHeader({ circle }: Props) {
   function handleShare() {
     if (!circle.invite_code) return;
     void Share.share({
-      message: `Rejoins mon cercle Frileuse — code : ${circle.invite_code}`,
+      message: `Rejoins mon cercle Frileux — code : ${circle.invite_code}`,
     });
   }
 
   return (
-    <View className="px-6 pt-2 pb-5 border-b border-paper-300 mb-2 flex-row items-end justify-between">
-      <View>
-        <Text
-          className="font-display text-ink-900 mb-0.5"
-          style={{ fontSize: 36, letterSpacing: 1 }}
+    <View className="border-b border-ink-100">
+      <View className="px-5 pt-3 pb-2 flex-row items-center">
+        <PressableScale
+          onPress={() => router.push("/circle/mine")}
+          hitSlop={6}
+          className="flex-row items-center flex-1"
+          scaleTo={0.98}
         >
-          CERCLE
-        </Text>
-        <Pressable onPress={handleShare}>
-          <Text
-            className="font-body text-ink-300 text-eyebrow"
-            style={{ letterSpacing: 1 }}
+          <View
+            style={{
+              width: 36,
+              height: 36,
+              backgroundColor: hueToHsl(circle.accent_hue),
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
-            Code : {circle.invite_code}  ↗
-          </Text>
-        </Pressable>
-      </View>
-      <View className="flex-row items-end gap-4 pb-1">
-        <Pressable
-          onPress={() => router.push({ pathname: "/circle/chat", params: { id: circle.id } })}
-          className="active:opacity-50 flex-row items-center gap-1"
-        >
-          <Text
-            className="font-body-semibold text-ink-900 text-eyebrow"
-            style={{ letterSpacing: 2 }}
-          >
-            CHAT
-          </Text>
-          {unread > 0 && (
             <Text
-              className="font-body-semibold text-ice text-eyebrow"
-              style={{ letterSpacing: 1 }}
+              className="font-display text-paper-100"
+              style={{ fontSize: 18, letterSpacing: 0 }}
             >
-              · {unread > 99 ? "99+" : unread}
+              {circle.name.slice(0, 1).toUpperCase()}
             </Text>
-          )}
-        </Pressable>
-        <Pressable
-          onPress={() => router.push("/circle/settings")}
-          className="active:opacity-50"
-        >
+          </View>
+          <View className="flex-1 ml-3">
+            <Text
+              className="font-display text-ink-900"
+              style={{ fontSize: 22, letterSpacing: -0.3, lineHeight: 24 }}
+              numberOfLines={1}
+            >
+              {circle.name.toUpperCase()}
+            </Text>
+            <Text
+              className="font-body text-ink-300"
+              style={{ fontSize: 10, letterSpacing: 1.5 }}
+            >
+              {circle.visibility === "public" ? "PUBLIC" : "PRIVÉ"} · {circle.member_count ?? "—"} MEMBRE{(circle.member_count ?? 1) > 1 ? "S" : ""}
+            </Text>
+          </View>
+        </PressableScale>
+        <PressableScale onPress={handleShare} hitSlop={6} className="ml-2">
           <Text
-            className="font-body-semibold text-ink-900 text-eyebrow"
-            style={{ letterSpacing: 2 }}
+            className="font-body-medium text-ink-500"
+            style={{ fontSize: 10, letterSpacing: 2 }}
           >
-            RÉGLAGES
+            ↗
           </Text>
-        </Pressable>
+        </PressableScale>
+      </View>
+
+      <View className="flex-row border-t border-ink-100">
+        <HeaderAction
+          label="CHAT"
+          badge={unread > 0 ? (unread > 99 ? "99+" : String(unread)) : null}
+          onPress={() => router.push({ pathname: "/circle/chat", params: { id: circle.id } })}
+          border
+        />
+        <HeaderAction
+          label="MP"
+          onPress={() => router.push("/dm")}
+          border
+        />
+        <HeaderAction
+          label="EXPLORER"
+          onPress={() => router.push("/circle/discover")}
+          border
+          accent
+        />
+        <HeaderAction
+          label="RÉGLAGES"
+          onPress={() => router.push("/circle/settings")}
+        />
       </View>
     </View>
+  );
+}
+
+interface ActionProps {
+  label: string;
+  onPress: () => void;
+  border?: boolean;
+  badge?: string | null;
+  accent?: boolean;
+}
+
+function HeaderAction({ label, onPress, border, badge, accent }: ActionProps) {
+  return (
+    <PressableScale
+      onPress={onPress}
+      className={`flex-1 py-3 items-center flex-row justify-center gap-1 ${border ? "border-r border-ink-100" : ""}`}
+      scaleTo={0.98}
+    >
+      <Text
+        className={`font-body-semibold ${accent ? "text-ice-600" : "text-ink-900"}`}
+        style={{ fontSize: 11, letterSpacing: 2.5 }}
+      >
+        {label}
+      </Text>
+      {badge ? (
+        <Text
+          className="font-body-semibold text-ice-600"
+          style={{ fontSize: 10, letterSpacing: 1 }}
+        >
+          · {badge}
+        </Text>
+      ) : null}
+    </PressableScale>
   );
 }
