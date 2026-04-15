@@ -4,7 +4,7 @@
 //
 // Source de verite : tailwind.config.js. Modifier les deux ensemble.
 
-import { Easing } from "react-native";
+import { Easing } from "react-native-reanimated";
 
 export const colors = {
   paper: {

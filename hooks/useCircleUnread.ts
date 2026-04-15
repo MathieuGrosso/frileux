@@ -43,21 +43,21 @@ export function useCircleUnread(circleId: string | null | undefined): {
 
   useEffect(() => {
     if (!circleId) return;
-    const channel = supabase
-      .channel(`circle-unread-${circleId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "circle_messages",
-          filter: `circle_id=eq.${circleId}`,
-        },
-        () => {
-          void compute();
-        },
-      )
-      .subscribe();
+    const name = `circle-unread-${circleId}-${Math.random().toString(36).slice(2, 8)}`;
+    const channel = supabase.channel(name);
+    channel.on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "circle_messages",
+        filter: `circle_id=eq.${circleId}`,
+      },
+      () => {
+        void compute();
+      },
+    );
+    channel.subscribe();
     return () => {
       void supabase.removeChannel(channel);
     };

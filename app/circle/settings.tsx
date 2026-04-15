@@ -33,6 +33,9 @@ export default function CircleSettingsScreen() {
   const [loading, setLoading] = useState(true);
   const [nameDraft, setNameDraft] = useState("");
   const [renaming, setRenaming] = useState(false);
+  const [descDraft, setDescDraft] = useState("");
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [savingVisibility, setSavingVisibility] = useState(false);
 
   const load = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -53,6 +56,7 @@ export default function CircleSettingsScreen() {
     const c = membership.circles as unknown as Circle;
     setCircle(c);
     setNameDraft(c.name);
+    setDescDraft(c.description ?? "");
 
     const { data: rows } = await supabase
       .from("circle_members")
@@ -85,6 +89,43 @@ export default function CircleSettingsScreen() {
     }
     setCircle({ ...circle, name: trimmed });
     setRenaming(false);
+  }
+
+  async function setVisibility(next: "private" | "public") {
+    if (!circle || !isOwner) return;
+    setSavingVisibility(true);
+    const { data, error } = await supabase.rpc("set_circle_visibility", {
+      target_circle_id: circle.id,
+      new_visibility: next,
+      new_description: descDraft.trim() ? descDraft.trim().slice(0, 280) : null,
+      new_slug: null,
+      new_accent_hue: null,
+    });
+    setSavingVisibility(false);
+    if (error || !data) {
+      Alert.alert("Erreur", error?.message ?? "Impossible de modifier la visibilité.");
+      return;
+    }
+    setCircle(data as Circle);
+    setEditingDesc(false);
+  }
+
+  async function saveDescription() {
+    if (!circle || !isOwner) return;
+    const clean = descDraft.trim().slice(0, 280);
+    const { data, error } = await supabase.rpc("set_circle_visibility", {
+      target_circle_id: circle.id,
+      new_visibility: circle.visibility ?? "private",
+      new_description: clean,
+      new_slug: null,
+      new_accent_hue: null,
+    });
+    if (error || !data) {
+      Alert.alert("Erreur", error?.message ?? "Impossible d'enregistrer.");
+      return;
+    }
+    setCircle(data as Circle);
+    setEditingDesc(false);
   }
 
   async function regenerateCode() {
@@ -268,6 +309,118 @@ export default function CircleSettingsScreen() {
                 </Pressable>
               )}
             </View>
+
+            <Text
+              className="font-body-semibold text-ink-300 text-eyebrow mb-2"
+              style={{ letterSpacing: 1.5 }}
+            >
+              VISIBILITÉ
+            </Text>
+            {isOwner ? (
+              <View className="flex-row border border-ink-900 mb-3">
+                <Pressable
+                  onPress={() => setVisibility("private")}
+                  disabled={savingVisibility}
+                  className={`flex-1 py-3 items-center ${(circle.visibility ?? "private") === "private" ? "bg-ink-900" : ""}`}
+                >
+                  <Text
+                    className="font-body-semibold"
+                    style={{
+                      fontSize: 11,
+                      letterSpacing: 2.5,
+                      color: (circle.visibility ?? "private") === "private" ? "#FAFAF8" : "#0F0F0D",
+                    }}
+                  >
+                    PRIVÉ
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setVisibility("public")}
+                  disabled={savingVisibility}
+                  className={`flex-1 py-3 items-center ${circle.visibility === "public" ? "bg-ink-900" : ""}`}
+                >
+                  <Text
+                    className="font-body-semibold"
+                    style={{
+                      fontSize: 11,
+                      letterSpacing: 2.5,
+                      color: circle.visibility === "public" ? "#FAFAF8" : "#0F0F0D",
+                    }}
+                  >
+                    PUBLIC
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              <Text className="font-body text-ink-500 mb-3" style={{ fontSize: 13 }}>
+                {circle.visibility === "public" ? "Cercle public" : "Cercle privé"}
+              </Text>
+            )}
+            <Text className="font-body text-ink-300 mb-6" style={{ fontSize: 11, letterSpacing: 1 }}>
+              {circle.visibility === "public"
+                ? "Visible dans Explorer · rejoignable sans code."
+                : "Rejoignable uniquement via le code d'invitation."}
+            </Text>
+
+            {isOwner && circle.visibility === "public" && (
+              <View className="mb-6">
+                <Text
+                  className="font-body-semibold text-ink-300 text-eyebrow mb-2"
+                  style={{ letterSpacing: 1.5 }}
+                >
+                  DESCRIPTION · {280 - descDraft.length} CAR.
+                </Text>
+                {editingDesc ? (
+                  <View>
+                    <TextInput
+                      value={descDraft}
+                      onChangeText={(t) => setDescDraft(t.slice(0, 280))}
+                      multiline
+                      placeholder="Pour quoi ce cercle existe ?"
+                      placeholderTextColor={colors.ink[300]}
+                      className="border border-paper-300 bg-paper-200 px-3 py-2 font-body text-ink-900 mb-2"
+                      style={{ fontSize: 14, minHeight: 80, textAlignVertical: "top" }}
+                      autoFocus
+                    />
+                    <View className="flex-row gap-2">
+                      <Pressable
+                        onPress={saveDescription}
+                        className="bg-ink-900 active:bg-ink-700 px-4 py-2"
+                      >
+                        <Text
+                          className="font-body-semibold text-paper-100 text-eyebrow"
+                          style={{ letterSpacing: 1.5 }}
+                        >
+                          ENREGISTRER
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => {
+                          setDescDraft(circle.description ?? "");
+                          setEditingDesc(false);
+                        }}
+                        className="border border-ink-900 px-4 py-2"
+                      >
+                        <Text
+                          className="font-body-semibold text-ink-900 text-eyebrow"
+                          style={{ letterSpacing: 1.5 }}
+                        >
+                          ANNULER
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : (
+                  <Pressable onPress={() => setEditingDesc(true)}>
+                    <Text className="font-body text-ink-900" style={{ fontSize: 14 }}>
+                      {circle.description ?? (
+                        <Text className="font-body text-ink-300">Aucune description (modifier)</Text>
+                      )}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
 
             <Text
               className="font-body-semibold text-ink-300 text-eyebrow mb-3"
