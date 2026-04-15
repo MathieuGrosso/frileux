@@ -2,7 +2,7 @@
   "expo": {
     "name": "Frileuse",
     "slug": "frileuse",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1a1a2e"
+      "backgroundColor": "#FAFAF8"
     },
     "ios": {
       "supportsTablet": false,
@@ -28,7 +28,7 @@
       "package": "com.frileuse.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1a1a2e"
+        "backgroundColor": "#FAFAF8"
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
@@ -66,7 +66,7 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#1a1a2e"
+          "color": "#FAFAF8"
         }
       ],
       "expo-font"
