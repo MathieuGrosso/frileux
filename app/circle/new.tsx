@@ -14,7 +14,7 @@ function generateInviteCode(): string {
 export default function NewCircleScreen() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [visibility, setVisibility] = useState<CircleVisibility>("private");
+  const [visibility, setVisibility] = useState<CircleVisibility>("public");
   const [creating, setCreating] = useState(false);
 
   async function handleCreate() {
