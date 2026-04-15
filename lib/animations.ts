@@ -1,5 +1,4 @@
-import { Easing } from "react-native";
-import { FadeIn, FadeInDown } from "react-native-reanimated";
+import { Easing, FadeIn, FadeInDown } from "react-native-reanimated";
 
 import { motion } from "./theme";
 
