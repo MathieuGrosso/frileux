@@ -236,3 +236,14 @@ Format par session :
 - typecheck vert à chaque commit.
 - PR #102 en **ready for review** (non-draft) + merge de main.
 - Feedback PR workflow respecté : merge main fait avant passage ready.
+
+### Deuxième extension (post-debug)
+- Bug critique trouvé : le worktree n'avait pas le `.env` (gitignored, pas copié à la création). Expo chargeait `supabase.ts` sans `EXPO_PUBLIC_SUPABASE_URL` → tout crashait. Résolu en copiant `.env` depuis la main repo.
+- UX pass : hit-zones boutons augmentées (hitSlop 8), purge actions écrasées dans CircleFeedHeader (garde CHAT + SONDAGES + RÉGLAGES). Nouveau `MultiActionsBar` plein largeur (3×44px) MESSAGES / EXPLORER / POUR TOI.
+- Migrations 023-029 appliquées sur prod via `supabase db push`.
+- F13 ✅ Sondages : migration `028`, hook `usePolls` (realtime polls + poll_votes, agrège votes), `PollCard` (barres de résultats ink-900 pour ma vote / E5E3DC pour autres, % Barlow, support images), écrans `/circle/poll/new` (2-4 options avec photo + label) et `/circle/polls/[circleId]`.
+- F14 ✅ Challenge du jour : migration `029` (daily_challenges seedée avec 5 thèmes éditoriaux, challenge_entries, profiles.challenge_streak, trigger streak auto). Hook `useDailyChallenge`. `ChallengeBanner` ink-900 dans feed cercle. Écran `/challenge/[id]` grille 2 col participants.
+- F24 ✅ Section CURATED dans Explorer : filtre is_featured en tête de liste avec header dédié.
+
+### Fichiers touchés (session complète)
+13 features · 8 migrations · 19 commits · typecheck vert à chaque push.
