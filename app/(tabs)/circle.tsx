@@ -10,6 +10,7 @@ import { CircleFeedSkeleton } from "@/components/circle/CircleFeedSkeleton";
 import { ViewModeToggle } from "@/components/circle/ViewModeToggle";
 import { StoriesBar } from "@/components/stories/StoriesBar";
 import { ChallengeBanner } from "@/components/circle/ChallengeBanner";
+import { ShareTodayBanner } from "@/components/circle/ShareTodayBanner";
 import { EmptyState } from "@/components/EmptyState";
 
 function formatDayHeader(dateIso: string): string {
@@ -29,6 +30,7 @@ export default function CircleScreen() {
     loading,
     refreshing,
     refresh,
+    userId,
     viewMode,
     setViewMode,
     setActiveCircleId,
@@ -99,6 +101,15 @@ export default function CircleScreen() {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#637D8E" />
           }
+          ListHeaderComponent={
+            circle && userId ? (
+              <ShareTodayBanner
+                circleId={circle.id}
+                userId={userId}
+                onShared={() => { void refresh(); }}
+              />
+            ) : null
+          }
           ListEmptyComponent={
             isAlone ? (
               <EmptyState
@@ -123,6 +134,15 @@ export default function CircleScreen() {
           stickySectionHeadersEnabled
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#637D8E" />
+          }
+          ListHeaderComponent={
+            circle && userId ? (
+              <ShareTodayBanner
+                circleId={circle.id}
+                userId={userId}
+                onShared={() => { void refresh(); }}
+              />
+            ) : null
           }
           renderSectionHeader={({ section }) => (
             <View className="bg-paper-100 py-3 border-b border-paper-300">
