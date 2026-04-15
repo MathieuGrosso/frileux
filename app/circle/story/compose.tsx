@@ -10,10 +10,12 @@ import { PressableScale } from "@/components/ui/PressableScale";
 import { colors } from "@/lib/theme";
 
 export default function ComposeStoryScreen() {
-  const { circleId } = useLocalSearchParams<{ circleId?: string }>();
+  const { circleId, circleName } = useLocalSearchParams<{ circleId?: string; circleName?: string }>();
   const [localUri, setLocalUri] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [allCircles, setAllCircles] = useState(false);
+  const targetCircleId = allCircles ? null : (circleId || null);
 
   async function pick() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -57,7 +59,7 @@ export default function ComposeStoryScreen() {
 
       const { error: insErr } = await supabase.from("daily_posts").insert({
         user_id: user.id,
-        circle_id: circleId || null,
+        circle_id: targetCircleId,
         image_path: filename,
         caption: caption.trim() ? caption.trim().slice(0, 60) : null,
       });
@@ -92,13 +94,52 @@ export default function ComposeStoryScreen() {
         </PressableScale>
       </View>
 
-      <View className="flex-1 px-6 pt-8">
+      <View className="flex-1 px-6 pt-6">
         <Text
-          className="font-display text-ink-900 mb-8"
-          style={{ fontSize: 44, letterSpacing: -0.8, lineHeight: 46 }}
+          className="font-display text-ink-900"
+          style={{ fontSize: 36, letterSpacing: -0.6, lineHeight: 38 }}
         >
-          POST DU{"\n"}JOUR
+          POST DU JOUR
         </Text>
+
+        <Text
+          className="font-body-medium text-ice-600 mt-4 mb-1"
+          style={{ fontSize: 10, letterSpacing: 3 }}
+        >
+          POSTER DANS
+        </Text>
+        <PressableScale
+          onPress={() => setAllCircles((v) => !v)}
+          className="pb-4 border-b border-ink-900 mb-6"
+          hitSlop={4}
+        >
+          <Text
+            className="font-display text-ink-900"
+            style={{ fontSize: 22, letterSpacing: -0.3 }}
+            numberOfLines={1}
+          >
+            {allCircles
+              ? "TOUS MES CERCLES"
+              : (circleName || "—").toString().toUpperCase()}
+          </Text>
+          {circleId ? (
+            <Text
+              className="font-body text-ink-300 mt-1"
+              style={{ fontSize: 11, letterSpacing: 1 }}
+            >
+              {allCircles
+                ? "↳ tap pour limiter à ce cercle"
+                : "↳ tap pour partager avec tous tes cercles"}
+            </Text>
+          ) : (
+            <Text
+              className="font-body text-ink-300 mt-1"
+              style={{ fontSize: 11, letterSpacing: 1 }}
+            >
+              par défaut · visible par tes cercles
+            </Text>
+          )}
+        </PressableScale>
 
         {localUri ? (
           <PressableScale onPress={pick}>
@@ -142,7 +183,7 @@ export default function ComposeStoryScreen() {
           className="font-body text-ink-300 mt-4"
           style={{ fontSize: 11, letterSpacing: 1 }}
         >
-          EXPIRE DANS 24H · {circleId ? "VISIBLE PAR CE CERCLE" : "VISIBLE PAR TES CERCLES"}
+          EXPIRE DANS 24H
         </Text>
       </View>
     </SafeAreaView>

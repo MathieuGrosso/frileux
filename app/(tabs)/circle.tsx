@@ -79,7 +79,7 @@ export default function CircleScreen() {
     <SafeAreaView className="flex-1 bg-paper-100">
       {circle && <CircleFeedHeader circle={circle} />}
       <ChallengeBanner />
-      {circle && <StoriesBar circleId={circle.id} />}
+      {circle && <StoriesBar circleId={circle.id} circleName={circle.name} />}
       <ViewModeToggle
         mode={viewMode}
         onChange={(m) => { void setViewMode(m); }}

@@ -1,7 +1,9 @@
-import { FlatList, Text, View, ActivityIndicator } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { FlatList, Text, View, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, Stack } from "expo-router";
-import { useDMThreads } from "@/hooks/useDMThreads";
+import { supabase } from "@/lib/supabase";
+import { useDMThreads, openDMThread } from "@/hooks/useDMThreads";
 import { PressableScale } from "@/components/ui/PressableScale";
 import { MemberAvatar } from "@/components/circle/MemberAvatar";
 import { PresenceDot } from "@/components/PresenceDot";
@@ -18,8 +20,72 @@ function relTime(iso: string): string {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
 }
 
+interface CoMember {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+  status: string | null;
+}
+
 export default function DMListScreen() {
-  const { threads, loading } = useDMThreads();
+  const { threads, loading, userId } = useDMThreads();
+  const [coMembers, setCoMembers] = useState<CoMember[]>([]);
+  const [opening, setOpening] = useState<string | null>(null);
+
+  const loadCoMembers = useCallback(async () => {
+    if (!userId) return;
+    const { data: myCircles } = await supabase
+      .from("circle_members")
+      .select("circle_id")
+      .eq("user_id", userId);
+    const circleIds = ((myCircles as { circle_id: string }[]) ?? []).map((c) => c.circle_id);
+    if (circleIds.length === 0) {
+      setCoMembers([]);
+      return;
+    }
+    const { data: others } = await supabase
+      .from("circle_members")
+      .select("user_id, profile:profiles(id, username, avatar_url)")
+      .in("circle_id", circleIds)
+      .neq("user_id", userId);
+    type Row = { user_id: string; profile: { id: string; username: string; avatar_url: string | null } };
+    const unique = new Map<string, CoMember>();
+    for (const row of (others as unknown as Row[]) ?? []) {
+      if (row.profile && !unique.has(row.profile.id)) {
+        unique.set(row.profile.id, { ...row.profile, status: null });
+      }
+    }
+    const ids = Array.from(unique.keys());
+    if (ids.length > 0) {
+      const { data: statuses } = await supabase
+        .from("user_statuses")
+        .select("user_id, text, expires_at")
+        .in("user_id", ids)
+        .gt("expires_at", new Date().toISOString());
+      for (const s of ((statuses as { user_id: string; text: string }[]) ?? [])) {
+        const m = unique.get(s.user_id);
+        if (m) m.status = s.text;
+      }
+    }
+    setCoMembers(Array.from(unique.values()));
+  }, [userId]);
+
+  useEffect(() => {
+    void loadCoMembers();
+  }, [loadCoMembers]);
+
+  async function openWith(peerId: string) {
+    setOpening(peerId);
+    const threadId = await openDMThread(peerId);
+    setOpening(null);
+    if (!threadId) {
+      Alert.alert("Erreur", "Impossible d'ouvrir la conversation.");
+      return;
+    }
+    router.push({ pathname: "/dm/[id]", params: { id: threadId } });
+  }
+
+  const showEmpty = !loading && threads.length === 0;
 
   return (
     <SafeAreaView className="flex-1 bg-paper-100" edges={["top"]}>
@@ -42,18 +108,73 @@ export default function DMListScreen() {
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color="#637D8E" />
         </View>
-      ) : threads.length === 0 ? (
-        <View className="flex-1 items-center justify-center px-10">
-          <Text
-            className="font-display text-ink-300"
-            style={{ fontSize: 32, letterSpacing: -0.5 }}
-          >
-            AUCUN MESSAGE
-          </Text>
-          <Text className="font-body text-ink-500 mt-3 text-center" style={{ fontSize: 13 }}>
-            Ouvre le profil d&apos;un membre de tes cercles pour commencer.
-          </Text>
-        </View>
+      ) : showEmpty ? (
+        <FlatList
+          data={coMembers}
+          keyExtractor={(m) => m.id}
+          ListHeaderComponent={
+            <View className="px-6 pt-8 pb-4">
+              <Text
+                className="font-display text-ink-300"
+                style={{ fontSize: 28, letterSpacing: -0.3 }}
+              >
+                AUCUN MESSAGE
+              </Text>
+              <Text
+                className="font-body-medium text-ink-500 mt-6"
+                style={{ fontSize: 10, letterSpacing: 2.5 }}
+              >
+                MEMBRES DE TES CERCLES
+              </Text>
+            </View>
+          }
+          ListEmptyComponent={
+            <View className="px-6 pt-2">
+              <Text className="font-body text-ink-500" style={{ fontSize: 13 }}>
+                Tes cercles sont vides. Invite quelqu&apos;un pour commencer à chatter.
+              </Text>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <View className="flex-row items-center px-5 py-3.5 border-b border-ink-100">
+              <MemberAvatar username={item.username} avatarUrl={item.avatar_url} size={40} />
+              <View className="flex-1 ml-3">
+                <View className="flex-row items-center gap-1.5">
+                  <Text
+                    className="font-body-semibold text-ink-900"
+                    style={{ fontSize: 14 }}
+                    numberOfLines={1}
+                  >
+                    {item.username}
+                  </Text>
+                  <PresenceDot userId={item.id} />
+                </View>
+                {item.status ? (
+                  <Text
+                    className="font-body italic text-ice-600 mt-0.5"
+                    style={{ fontSize: 11 }}
+                    numberOfLines={1}
+                  >
+                    « {item.status} »
+                  </Text>
+                ) : null}
+              </View>
+              <PressableScale
+                onPress={() => void openWith(item.id)}
+                disabled={opening === item.id}
+                className="border border-ink-900 px-3 py-2"
+                style={{ opacity: opening === item.id ? 0.5 : 1 }}
+              >
+                <Text
+                  className="font-body-semibold text-ink-900"
+                  style={{ fontSize: 10, letterSpacing: 2 }}
+                >
+                  {opening === item.id ? "…" : "MESSAGE"}
+                </Text>
+              </PressableScale>
+            </View>
+          )}
+        />
       ) : (
         <FlatList
           data={threads}
@@ -87,6 +208,15 @@ export default function DMListScreen() {
                       {relTime(item.last_message_at).toUpperCase()}
                     </Text>
                   </View>
+                  {item.peer.status ? (
+                    <Text
+                      className="font-body italic text-ice-600"
+                      style={{ fontSize: 11 }}
+                      numberOfLines={1}
+                    >
+                      « {item.peer.status} »
+                    </Text>
+                  ) : null}
                   <Text
                     className="font-body text-ink-500"
                     style={{ fontSize: 13 }}

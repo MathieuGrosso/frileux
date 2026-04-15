@@ -11,6 +11,7 @@ export interface DMThreadWithPeer {
     id: string;
     username: string;
     avatar_url: string | null;
+    status: string | null;
   };
   unread: boolean;
 }
@@ -46,15 +47,32 @@ export function useDMThreads() {
       b: { id: string; username: string; avatar_url: string | null };
     };
 
-    const mapped: DMThreadWithPeer[] = ((data as unknown as Row[]) ?? []).map((r) => ({
-      id: r.id,
-      user_a: r.user_a,
-      user_b: r.user_b,
-      last_message_at: r.last_message_at,
-      last_message_preview: r.last_message_preview,
-      peer: r.user_a === user.id ? r.b : r.a,
-      unread: false,
-    }));
+    const rows = (data as unknown as Row[]) ?? [];
+    const peerIds = rows.map((r) => (r.user_a === user.id ? r.b.id : r.a.id));
+    let statusByUser = new Map<string, string>();
+    if (peerIds.length > 0) {
+      const { data: statuses } = await supabase
+        .from("user_statuses")
+        .select("user_id, text, expires_at")
+        .in("user_id", peerIds)
+        .gt("expires_at", new Date().toISOString());
+      statusByUser = new Map(
+        ((statuses as { user_id: string; text: string }[]) ?? []).map((s) => [s.user_id, s.text]),
+      );
+    }
+
+    const mapped: DMThreadWithPeer[] = rows.map((r) => {
+      const raw = r.user_a === user.id ? r.b : r.a;
+      return {
+        id: r.id,
+        user_a: r.user_a,
+        user_b: r.user_b,
+        last_message_at: r.last_message_at,
+        last_message_preview: r.last_message_preview,
+        peer: { ...raw, status: statusByUser.get(raw.id) ?? null },
+        unread: false,
+      };
+    });
     setThreads(mapped);
     setLoading(false);
   }, []);
