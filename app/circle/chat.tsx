@@ -19,6 +19,8 @@ import { MessageBody } from "@/components/circle/MessageBody";
 import { MessageReactions } from "@/components/circle/MessageReactions";
 import { ReactionPicker } from "@/components/circle/ReactionPicker";
 import { useMessageReactions, type ReactionKey } from "@/hooks/useMessageReactions";
+import { usePolls, type Poll } from "@/hooks/usePolls";
+import { PollCard } from "@/components/circle/PollCard";
 
 const MAX_LEN = 500;
 
@@ -55,7 +57,12 @@ interface DayRow {
   key: string;
 }
 
-type Row = MessageRow | DayRow;
+interface PollRow {
+  type: "poll";
+  poll: Poll;
+}
+
+type Row = MessageRow | DayRow | PollRow;
 
 export default function CircleChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -75,6 +82,7 @@ export default function CircleChatScreen() {
   const { rows: reactionRows, userId: reactionUserId, toggle: toggleReaction } =
     useMessageReactions(id ?? null, messageIds);
   const [pickerTarget, setPickerTarget] = useState<string | null>(null);
+  const { polls, vote: votePoll } = usePolls(id ?? null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -211,27 +219,38 @@ export default function CircleChatScreen() {
   }, [typingUserIds, members]);
 
   const rows = useMemo<Row[]>(() => {
-    // messages are newest first (FlatList inverted)
+    // Merge messages + polls, newest first (FlatList inverted)
+    type Stream =
+      | { kind: "message"; at: string; m: CircleMessage }
+      | { kind: "poll"; at: string; p: Poll };
+    const stream: Stream[] = [
+      ...messages.map((m) => ({ kind: "message" as const, at: m.created_at, m })),
+      ...polls.map((p) => ({ kind: "poll" as const, at: p.created_at, p })),
+    ].sort((a, b) => (a.at < b.at ? 1 : -1));
+
     const out: Row[] = [];
-    for (let i = 0; i < messages.length; i++) {
-      const m = messages[i];
-      const prev = messages[i - 1]; // more recent (above in inverted list)
-      const next = messages[i + 1]; // older
-      const showAuthor =
-        !next ||
-        next.user_id !== m.user_id ||
-        !isSameDay(next.created_at, m.created_at);
-      out.push({ type: "message", message: m, showAuthor });
-      const crossesDay = !next || !isSameDay(next.created_at, m.created_at);
+    for (let i = 0; i < stream.length; i++) {
+      const item = stream[i];
+      const next = stream[i + 1];
+      if (item.kind === "poll") {
+        out.push({ type: "poll", poll: item.p });
+      } else {
+        const m = item.m;
+        const nextMsg =
+          next && next.kind === "message" && next.m.user_id === m.user_id ? next.m : null;
+        const showAuthor =
+          !nextMsg || !isSameDay(nextMsg.created_at, m.created_at);
+        out.push({ type: "message", message: m, showAuthor });
+      }
+      const crossesDay =
+        !next || !isSameDay(next.at, item.at);
       if (crossesDay) {
         out.push({
           type: "day",
-          label: formatDayLabel(m.created_at),
-          key: `day-${m.created_at.slice(0, 10)}-${i}`,
+          label: formatDayLabel(item.at),
+          key: `day-${item.at.slice(0, 10)}-${i}`,
         });
       }
-      // prev reference kept for potential future grouping logic; no-op now
-      void prev;
     }
     return out;
   }, [messages]);
@@ -307,7 +326,9 @@ export default function CircleChatScreen() {
           ref={listRef}
           data={rows}
           inverted
-          keyExtractor={(r) => (r.type === "message" ? r.message.id : r.key)}
+          keyExtractor={(r) =>
+            r.type === "message" ? r.message.id : r.type === "poll" ? `poll-${r.poll.id}` : r.key
+          }
           contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 16 }}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => {
@@ -321,6 +342,14 @@ export default function CircleChatScreen() {
                     {item.label}
                   </Text>
                 </View>
+              );
+            }
+            if (item.type === "poll") {
+              return (
+                <PollCard
+                  poll={item.poll}
+                  onVote={(optId) => { void votePoll(item.poll.id, optId); }}
+                />
               );
             }
             const m = item.message;
@@ -377,7 +406,21 @@ export default function CircleChatScreen() {
           </View>
         )}
 
-        <View className="border-t border-paper-300 px-4 py-3 flex-row items-end gap-2 bg-paper-100">
+        <View className="border-t border-paper-300 px-4 py-2 flex-row items-end gap-2 bg-paper-100">
+          <Pressable
+            onPress={() =>
+              router.push({ pathname: "/circle/poll/new", params: { circleId: id ?? "" } })
+            }
+            className="px-3 py-3 border border-ink-100 active:bg-paper-200"
+            hitSlop={6}
+          >
+            <Text
+              className="font-body-semibold text-ink-900"
+              style={{ fontSize: 16, lineHeight: 16 }}
+            >
+              ⊟
+            </Text>
+          </Pressable>
           <MentionInput
             value={draft}
             onChangeText={onDraftChange}

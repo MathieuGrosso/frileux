@@ -16,9 +16,10 @@ interface UserGroup {
 
 interface Props {
   circleId: string | null;
+  circleName?: string | null;
 }
 
-export function StoriesBar({ circleId }: Props) {
+export function StoriesBar({ circleId, circleName }: Props) {
   const { posts, userId } = useDailyPosts(circleId);
 
   const groups = useMemo<UserGroup[]>(() => {
@@ -63,7 +64,7 @@ export function StoriesBar({ circleId }: Props) {
           onPress={() =>
             router.push({
               pathname: "/circle/story/compose",
-              params: { circleId: circleId ?? "" },
+              params: { circleId: circleId ?? "", circleName: circleName ?? "" },
             })
           }
           className="items-center"

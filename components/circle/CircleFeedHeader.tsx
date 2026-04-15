@@ -59,17 +59,6 @@ export function CircleFeedHeader({ circle }: Props) {
           )}
         </PressableScale>
         <PressableScale
-          onPress={() => router.push({ pathname: "/circle/polls/[circleId]", params: { circleId: circle.id } })}
-          hitSlop={8}
-        >
-          <Text
-            className="font-body-semibold text-ice-600 text-eyebrow"
-            style={{ letterSpacing: 2 }}
-          >
-            SONDAGES
-          </Text>
-        </PressableScale>
-        <PressableScale
           onPress={() => router.push("/circle/settings")}
           hitSlop={8}
         >
