@@ -12,8 +12,8 @@ import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
-import type { Outfit, OutfitOccasion, ThermalFeeling } from "@/lib/types";
-import { OUTFIT_OCCASIONS, THERMAL_FEELINGS } from "@/lib/types";
+import type { Outfit, OutfitIntention, OutfitOccasion, ThermalFeeling } from "@/lib/types";
+import { OUTFIT_INTENTIONS, OUTFIT_OCCASIONS, THERMAL_FEELINGS } from "@/lib/types";
 import { weatherEmoji } from "@/lib/weather";
 import { RatingStars } from "@/components/RatingStars";
 import { OutfitNotes } from "@/components/circle/OutfitNotes";
@@ -29,6 +29,7 @@ export default function OutfitDetailScreen() {
   const [rating, setRating] = useState(0);
   const [notes, setNotes] = useState("");
   const [occasion, setOccasion] = useState<OutfitOccasion | null>(null);
+  const [intention, setIntention] = useState<OutfitIntention | null>(null);
   const [thermal, setThermal] = useState<ThermalFeeling | null>(null);
   const [editing, setEditing] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
@@ -56,6 +57,7 @@ export default function OutfitDetailScreen() {
             setRating(row.rating ?? 0);
             setNotes(row.notes ?? "");
             setOccasion(row.occasion ?? null);
+            setIntention(row.intention ?? null);
             setThermal(row.thermal_feeling ?? null);
           }
         },
@@ -73,6 +75,7 @@ export default function OutfitDetailScreen() {
       setRating(data.rating ?? 0);
       setNotes(data.notes ?? "");
       setOccasion(data.occasion ?? null);
+      setIntention(data.intention ?? null);
       setThermal(data.thermal_feeling ?? null);
       const { data: { user } } = await supabase.auth.getUser();
       const owner = !!user && user.id === data.user_id;
@@ -97,6 +100,7 @@ export default function OutfitDetailScreen() {
         rating,
         notes: notes || null,
         occasion,
+        intention,
         thermal_feeling: thermal,
       })
       .eq("id", outfit.id);
@@ -104,7 +108,7 @@ export default function OutfitDetailScreen() {
       Alert.alert("Erreur", "Impossible de sauvegarder.");
     } else {
       setEditing(false);
-      setOutfit({ ...outfit, rating, notes, occasion, thermal_feeling: thermal });
+      setOutfit({ ...outfit, rating, notes, occasion, intention, thermal_feeling: thermal });
     }
   }
 
@@ -268,6 +272,46 @@ export default function OutfitDetailScreen() {
 
             <View className="mb-6">
               <Text className="font-body-medium text-micro tracking-widest text-ink-300 mb-3">
+                INTENTION
+              </Text>
+              {editing ? (
+                <View className="flex-row flex-wrap gap-1.5">
+                  {OUTFIT_INTENTIONS.map((opt) => {
+                    const active = intention === opt.value;
+                    return (
+                      <Pressable
+                        key={opt.value}
+                        onPress={() => setIntention(active ? null : opt.value)}
+                        className={`py-2 px-3 border ${
+                          active
+                            ? "bg-ink-900 border-ink-900"
+                            : "bg-paper-50 border-paper-300"
+                        }`}
+                      >
+                        <Text
+                          className={`font-body text-caption ${
+                            active ? "text-paper-100" : "text-ink-900"
+                          }`}
+                        >
+                          {opt.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : (
+                <Text
+                  className={`font-body text-body-sm leading-6 ${
+                    intention ? "text-ink-700" : "text-ink-300"
+                  }`}
+                >
+                  {OUTFIT_INTENTIONS.find((o) => o.value === intention)?.label ?? "Non renseignée"}
+                </Text>
+              )}
+            </View>
+
+            <View className="mb-6">
+              <Text className="font-body-medium text-micro tracking-widest text-ink-300 mb-3">
                 RESSENTI
               </Text>
               {editing ? (
@@ -358,6 +402,7 @@ export default function OutfitDetailScreen() {
                         setRating(outfit.rating ?? 0);
                         setNotes(outfit.notes ?? "");
                         setOccasion(outfit.occasion ?? null);
+                        setIntention(outfit.intention ?? null);
                         setThermal(outfit.thermal_feeling ?? null);
                       }}
                       className="flex-1 border border-paper-300 py-4 items-center active:bg-paper-200"

@@ -112,6 +112,15 @@ export const THERMAL_FEELINGS: { value: ThermalFeeling; label: string }[] = [
   { value: "too_warm", label: "Trop chaud" },
 ];
 
+export type OutfitIntention = "assume" | "pragmatic" | "lazy" | "test";
+
+export const OUTFIT_INTENTIONS: { value: OutfitIntention; label: string }[] = [
+  { value: "assume", label: "J'assume" },
+  { value: "pragmatic", label: "Pragmatique" },
+  { value: "lazy", label: "Flemme" },
+  { value: "test", label: "Test" },
+];
+
 export interface OutfitCritique {
   score: number;
   verdict: string;
@@ -133,6 +142,7 @@ export interface Outfit {
   worn_description: string | null;
   occasion: OutfitOccasion | null;
   thermal_feeling: ThermalFeeling | null;
+  intention: OutfitIntention | null;
   critique: OutfitCritique | null;
   critique_score: number | null;
   created_at: string;
