@@ -40,6 +40,7 @@ export interface ProfileBundle {
   liked_anchors: string[];
   derived_prefs: string[];
   wardrobe: WardrobePiece[];
+  wardrobeOnlyMode: boolean;
 }
 
 const EMPTY_BUNDLE: ProfileBundle = {
@@ -51,6 +52,7 @@ const EMPTY_BUNDLE: ProfileBundle = {
   liked_anchors: [],
   derived_prefs: [],
   wardrobe: [],
+  wardrobeOnlyMode: false,
 };
 
 const REJECTION_REASON_TO_PREF: Record<string, string> = {
@@ -89,7 +91,7 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
     supabase
       .from("profiles")
       .select(
-        "coldness_level, gender_presentation, style_universes, favorite_brands, avoid_tags, fit_preference, build, height_cm, shoe_size_eu"
+        "coldness_level, gender_presentation, style_universes, favorite_brands, avoid_tags, fit_preference, build, height_cm, shoe_size_eu, wardrobe_only_mode"
       )
       .eq("id", user.id)
       .maybeSingle(),
@@ -175,5 +177,6 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
     liked_anchors,
     derived_prefs,
     wardrobe,
+    wardrobeOnlyMode: Boolean(profile?.wardrobe_only_mode),
   };
 }
