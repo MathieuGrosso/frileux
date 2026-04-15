@@ -27,6 +27,7 @@ import { clearSuggestion, patchSuggestionAdoption, patchSuggestionImage, readSug
 import { REJECTION_REASONS, insertRejection, type RejectionReason } from "@/lib/rejections";
 import { embedOutfitText } from "@/lib/embedOutfit";
 import { extractItemsFromOutfitPhoto } from "@/lib/wardrobe-extract";
+import { recordCritiqueFacts } from "@/lib/style-memory";
 import { SuggestionSwipeArea } from "@/components/SuggestionSwipeArea";
 import { WardrobeNudge } from "@/components/WardrobeNudge";
 import { WardrobeCombos } from "@/components/WardrobeCombos";
@@ -129,7 +130,10 @@ export default function TodayScreen() {
           setCritiqueLoading(true);
           const targetId = data.id;
           fetchOutfitCritique(targetId)
-            .then((c) => { if (critiqueTargetRef.current === targetId) setCritique(c); })
+            .then((c) => {
+              if (critiqueTargetRef.current === targetId) setCritique(c);
+              if (c) void recordCritiqueFacts(targetId, c);
+            })
             .catch((err) => { if (__DEV__) console.warn("critique fetch:", err); })
             .finally(() => { if (critiqueTargetRef.current === targetId) setCritiqueLoading(false); });
         }

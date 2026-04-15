@@ -158,9 +158,21 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
     .map((o) => (o.worn_description ?? o.ai_suggestion) as string | null)
     .filter((v): v is string => !!v && v.trim().length > 0);
 
-  const derived_prefs = buildDerivedPrefs(
+  const base_prefs = buildDerivedPrefs(
     (rejectionsRes.data ?? []).map((r) => ({ reason: r.reason as string | null }))
   );
+
+  const { data: memoryRows } = await supabase
+    .from("style_memory")
+    .select("id, fact, kind, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(8);
+  const memory_prefs = (memoryRows ?? []).map((m) => {
+    const tag = m.kind === "strength" ? "fonctionne bien" : m.kind === "avoid" ? "à éviter" : "pattern";
+    return `mémoire (${tag}) : ${m.fact}`;
+  });
+  const derived_prefs = [...base_prefs, ...memory_prefs];
 
   const wardrobe: WardrobePiece[] = (wardrobeRes.data ?? []).map((w) => ({
     id: w.id as string,
