@@ -168,7 +168,7 @@ export function useCircle(): UseCircleResult {
     if (!circle || !userId) return;
     const today = todayIso();
     const channel = supabase
-      .channel(`circle-outfits-${circle.id}`)
+      .channel(`circle-outfits-${circle.id}-${Math.random().toString(36).slice(2, 8)}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "outfits" },
