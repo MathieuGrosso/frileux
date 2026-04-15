@@ -6,9 +6,10 @@ import { useCircleUnread } from "@/hooks/useCircleUnread";
 
 interface Props {
   circle: Circle;
+  circleCount?: number;
 }
 
-export function CircleFeedHeader({ circle }: Props) {
+export function CircleFeedHeader({ circle, circleCount = 1 }: Props) {
   const router = useRouter();
   const { unread } = useCircleUnread(circle.id);
 
@@ -21,22 +22,38 @@ export function CircleFeedHeader({ circle }: Props) {
 
   return (
     <View className="border-b border-ink-100">
-      <View className="px-6 pt-3 pb-2">
-        <Text
-          className="font-display text-ink-900"
-          style={{ fontSize: 28, letterSpacing: -0.5, lineHeight: 30 }}
-          numberOfLines={1}
-        >
-          {circle.name.toUpperCase()}
-        </Text>
-        <PressableScale onPress={handleShare} hitSlop={6}>
-          <Text
-            className="font-body text-ink-300 mt-0.5"
-            style={{ fontSize: 11, letterSpacing: 1.5 }}
+      <View className="px-6 pt-3 pb-2 flex-row items-start justify-between">
+        <View className="flex-1 pr-3">
+          <PressableScale
+            onPress={() => router.push("/circle/mine")}
+            hitSlop={6}
+            className="flex-row items-center gap-2"
           >
-            CODE · {circle.invite_code}  ↗
-          </Text>
-        </PressableScale>
+            <Text
+              className="font-display text-ink-900"
+              style={{ fontSize: 28, letterSpacing: -0.5, lineHeight: 30 }}
+              numberOfLines={1}
+            >
+              {circle.name.toUpperCase()}
+            </Text>
+            {circleCount > 1 ? (
+              <Text
+                className="font-body-semibold text-ice-600"
+                style={{ fontSize: 10, letterSpacing: 1.5 }}
+              >
+                ↕
+              </Text>
+            ) : null}
+          </PressableScale>
+          <PressableScale onPress={handleShare} hitSlop={6}>
+            <Text
+              className="font-body text-ink-300 mt-0.5"
+              style={{ fontSize: 11, letterSpacing: 1.5 }}
+            >
+              CODE · {circle.invite_code}  ↗
+            </Text>
+          </PressableScale>
+        </View>
       </View>
 
       <View className="flex-row border-t border-ink-100">
