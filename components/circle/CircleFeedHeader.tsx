@@ -1,5 +1,4 @@
 import { View, Text, Pressable, Share } from "react-native";
-import { PressableScale } from "@/components/ui/PressableScale";
 import { useRouter } from "expo-router";
 import type { Circle } from "@/lib/types";
 import { useCircleUnread } from "@/hooks/useCircleUnread";
@@ -28,17 +27,17 @@ export function CircleFeedHeader({ circle }: Props) {
         >
           CERCLE
         </Text>
-        <PressableScale onPress={handleShare}>
+        <Pressable onPress={handleShare}>
           <Text
             className="font-body text-ink-300 text-eyebrow"
             style={{ letterSpacing: 1 }}
           >
             Code : {circle.invite_code}  ↗
           </Text>
-        </PressableScale>
+        </Pressable>
       </View>
       <View className="flex-row items-end gap-4 pb-1">
-        <PressableScale
+        <Pressable
           onPress={() => router.push({ pathname: "/circle/chat", params: { id: circle.id } })}
           className="active:opacity-50 flex-row items-center gap-1"
         >
@@ -56,8 +55,8 @@ export function CircleFeedHeader({ circle }: Props) {
               · {unread > 99 ? "99+" : unread}
             </Text>
           )}
-        </PressableScale>
-        <PressableScale
+        </Pressable>
+        <Pressable
           onPress={() => router.push("/circle/settings")}
           className="active:opacity-50"
         >
@@ -67,7 +66,7 @@ export function CircleFeedHeader({ circle }: Props) {
           >
             RÉGLAGES
           </Text>
-        </PressableScale>
+        </Pressable>
       </View>
     </View>
   );

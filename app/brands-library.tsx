@@ -10,7 +10,6 @@ import {
   Alert,
   Modal,
 } from "react-native";
-import { PressableScale } from "@/components/ui/PressableScale";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
@@ -77,9 +76,9 @@ export default function BrandsLibrary() {
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <View style={styles.topBar}>
-        <PressableScale onPress={() => router.back()} hitSlop={12}>
+        <Pressable onPress={() => router.back()} hitSlop={12}>
           <Text style={styles.backText}>← RETOUR</Text>
-        </PressableScale>
+        </Pressable>
       </View>
 
       <ScrollView
@@ -94,12 +93,12 @@ export default function BrandsLibrary() {
         </Text>
 
         {favoriteSlugs.length === 0 && (
-          <PressableScale
+          <Pressable
             style={styles.emptyBtn}
             onPress={() => router.push("/onboarding/brands?upgrade=1")}
           >
             <Text style={styles.emptyBtnText}>CHOISIR TES MARQUES →</Text>
-          </PressableScale>
+          </Pressable>
         )}
 
         {favoriteSlugs.map((brand) => {
@@ -108,12 +107,12 @@ export default function BrandsLibrary() {
             <View key={brand.slug} style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.brandName}>{brand.name.toUpperCase()}</Text>
-                <PressableScale
+                <Pressable
                   hitSlop={10}
                   onPress={() => setAddOpen(brand.slug)}
                 >
                   <Text style={styles.addBtn}>+ AJOUTER</Text>
-                </PressableScale>
+                </Pressable>
               </View>
               {items.length === 0 ? (
                 <Text style={styles.empty}>
@@ -126,7 +125,7 @@ export default function BrandsLibrary() {
                   contentContainerStyle={{ gap: 8, paddingRight: 24 }}
                 >
                   {items.map((p) => (
-                    <PressableScale
+                    <Pressable
                       key={p.id}
                       onLongPress={async () => {
                         const ok = await confirmAction(p.name, "Supprimer cette pièce ?", "Supprimer", true);
@@ -150,7 +149,7 @@ export default function BrandsLibrary() {
                       {p.source === "manual" && (
                         <Text style={styles.cardBadge}>MANUEL</Text>
                       )}
-                    </PressableScale>
+                    </Pressable>
                   ))}
                 </ScrollView>
               )}
@@ -257,10 +256,10 @@ function AddProductModal({
             style={styles.input}
           />
           <View style={styles.modalActions}>
-            <PressableScale onPress={onClose} style={styles.modalBtnGhost}>
+            <Pressable onPress={onClose} style={styles.modalBtnGhost}>
               <Text style={styles.modalBtnGhostText}>ANNULER</Text>
-            </PressableScale>
-            <PressableScale
+            </Pressable>
+            <Pressable
               onPress={save}
               disabled={!name.trim() || saving}
               style={[
@@ -273,7 +272,7 @@ function AddProductModal({
               ) : (
                 <Text style={styles.modalBtnText}>AJOUTER</Text>
               )}
-            </PressableScale>
+            </Pressable>
           </View>
         </View>
       </View>

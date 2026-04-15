@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text } from "react-native";
-import { PressableScale } from "@/components/ui/PressableScale";
+import { View, Text, Pressable } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import {
@@ -75,7 +74,7 @@ export function WardrobeNudge() {
     : null;
 
   return (
-    <PressableScale onPress={() => router.push("/wardrobe")} className="mx-6 mb-6">
+    <Pressable onPress={() => router.push("/wardrobe")} className="mx-6 mb-6">
       <View className="border border-paper-300 bg-paper-100 px-4 py-3">
         <View className="flex-row items-baseline justify-between">
           <Text className="font-display text-micro text-ink-500 uppercase tracking-widest">
@@ -91,6 +90,6 @@ export function WardrobeNudge() {
           </Text>
         )}
       </View>
-    </PressableScale>
+    </Pressable>
   );
 }

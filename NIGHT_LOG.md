@@ -100,6 +100,35 @@ Format par session :
 - `009_circle_management.sql` (owner UPDATE circle + DELETE circle_members pour kick)
 - `010_outfit_comments.sql` (table notes + RLS)
 
+## 2026-04-15 nuit — Agentique v2 (plan smooth-tumbling-trinket)
+
+### Fait
+- PR1 ✅ feat/taste-profile-migration · PR #103 (draft) · migration 023 colonnes taste profile manquantes.
+- PR2 ✅ feat/wardrobe-extract-from-outfit · PR #104 (draft) · migration 024 + pipeline extraction auto fire-and-forget post-log.
+- PR3 ✅ feat/wardrobe-completion-screen · PR #105 (draft) · écran `/wardrobe`, score %, badges AUTO, entrée settings.
+- PR6 ✅ feat/gamification-wardrobe · PR #106 (draft) · nudge home combinatoire, dépend de #105.
+
+### Skippé
+- PR7b (brand-weighted-suggestions) : `suggest-outfit` intègre déjà `favorite_brands` via `BRAND_AESTHETICS` et `buildTasteBlock`. Le prompt interdit explicitement de nommer les marques, ce qui contredit le "loggue inspiré de {brand}" du plan. Skippé pour éviter un changement dommageable (fuite de noms de marques dans la suggestion). À reprendre si on ajoute un champ `rationale` séparé dans la sortie.
+- PR4, PR5, PR7a, PR8-PR24 : non tentés. Scope de chacun = 1 PR bien faite (Edge Function refactor ou nouvelle EF + schéma + UI + cache). Préférence 4 PRs propres > 20 bâclées.
+
+### Migrations à pousser (user)
+- `023_taste_profile.sql` (PR #103) — safe, colonnes neuves `ADD COLUMN IF NOT EXISTS`.
+- `024_wardrobe_source.sql` (PR #104) — safe, colonne + index neufs.
+
+### Questions morning review
+- OK pour merger #103 d'abord (pré-requis des autres) ?
+- La numérotation duplicate historique (007-009) est-elle à nettoyer avant `db push` ? (Voir session 2026-04-13 pour contexte.)
+
+### Bloqué
+- Application migrations prod : numérotation duplicate historique (007/008/009 en double). Pas touché, migration 023 est nouvelle → safe à pousser. User devra lancer `supabase db push` après revue.
+
+### Décisions
+- Defaults `'{}'` pour les arrays (évite NULL partout côté app).
+- `shoe_size_eu numeric(4,1)` (demi-pointures possibles).
+
+---
+
 ## 2026-04-13 nuit — Suite (rebase PR45 + PR9 chat)
 
 ### Fait

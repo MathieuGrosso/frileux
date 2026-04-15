@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { PressableScale } from "@/components/ui/PressableScale";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Location from "expo-location";
@@ -110,9 +109,9 @@ export default function OnboardingProfile() {
           <View className="h-[2px] w-6 bg-ink-900" />
           <View className="h-[2px] w-6 bg-paper-300" />
         </View>
-        <PressableScale onPress={() => router.back()} hitSlop={12}>
+        <Pressable onPress={() => router.back()} hitSlop={12}>
           <Text className="font-body-medium text-eyebrow text-ice uppercase">← Goût</Text>
-        </PressableScale>
+        </Pressable>
       </View>
 
       <ScrollView
@@ -145,7 +144,7 @@ export default function OnboardingProfile() {
           {([1, 2, 3, 4, 5] as ColdnessLevel[]).map((level) => {
             const active = coldness === level;
             return (
-              <PressableScale
+              <Pressable
                 key={level}
                 onPress={() => selectColdness(level)}
                 className="flex-row items-center py-4 border-b border-paper-300"
@@ -169,7 +168,7 @@ export default function OnboardingProfile() {
                 {active && (
                   <Text className="font-body-medium text-body-sm text-ice">✓</Text>
                 )}
-              </PressableScale>
+              </Pressable>
             );
           })}
         </View>
@@ -188,7 +187,7 @@ export default function OnboardingProfile() {
             </Text>
           </View>
         ) : (
-          <PressableScale
+          <Pressable
             className={`border border-ink-900 py-4 items-center active:bg-paper-200 ${
               geo === "asking" ? "opacity-40" : ""
             }`}
@@ -202,7 +201,7 @@ export default function OnboardingProfile() {
                 {geo === "denied" ? "Réessayer la position" : "Autoriser la position"}
               </Text>
             )}
-          </PressableScale>
+          </Pressable>
         )}
         {geo === "denied" && (
           <Text className="font-body text-caption text-ink-300 mt-2">
@@ -212,7 +211,7 @@ export default function OnboardingProfile() {
       </ScrollView>
 
       <View className="px-6 pt-3 pb-3 border-t border-paper-300 bg-paper">
-        <PressableScale
+        <Pressable
           className={`py-4 items-center ${coldness ? "bg-ink-900 active:bg-ink-700" : "bg-paper-300"}`}
           onPress={goNext}
           disabled={!coldness || saving}
@@ -224,7 +223,7 @@ export default function OnboardingProfile() {
           >
             Continuer →
           </Text>
-        </PressableScale>
+        </Pressable>
         {!coldness && (
           <Text className="font-body text-caption text-ink-300 text-center mt-2">
             Choisis ton niveau pour continuer

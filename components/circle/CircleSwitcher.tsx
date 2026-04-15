@@ -1,5 +1,4 @@
 import { View, Text, Pressable, ScrollView } from "react-native";
-import { PressableScale } from "@/components/ui/PressableScale";
 import type { Circle } from "@/lib/types";
 
 interface Props {
@@ -20,7 +19,7 @@ export function CircleSwitcher({ circles, activeId, onSelect }: Props) {
       {circles.map((c) => {
         const active = c.id === activeId;
         return (
-          <PressableScale
+          <Pressable
             key={c.id}
             onPress={() => onSelect(c.id)}
             className={`border px-3 py-1.5 ${active ? "border-ink-900 bg-ink-900" : "border-paper-300 bg-paper-100"}`}
@@ -31,7 +30,7 @@ export function CircleSwitcher({ circles, activeId, onSelect }: Props) {
             >
               {c.name.toUpperCase()}
             </Text>
-          </PressableScale>
+          </Pressable>
         );
       })}
     </ScrollView>
