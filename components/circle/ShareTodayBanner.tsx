@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text } from "react-native";
-import { PressableScale } from "@/components/ui/PressableScale";
+import { View, Text, Pressable, Alert, Platform } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { localDateISO } from "@/lib/dates";
 
@@ -8,6 +7,18 @@ interface Props {
   circleId: string;
   userId: string;
   onShared: () => void;
+}
+
+function notifyError(message: string) {
+  if (Platform.OS === "web") {
+    if (typeof window !== "undefined" && typeof window.alert === "function") {
+      window.alert(message);
+    } else {
+      console.warn(message);
+    }
+    return;
+  }
+  Alert.alert("Partage impossible", message);
 }
 
 export function ShareTodayBanner({ circleId, userId, onShared }: Props) {
@@ -50,7 +61,14 @@ export function ShareTodayBanner({ circleId, userId, onShared }: Props) {
       .insert({ outfit_id: outfitId, circle_id: circleId });
     setSharing(false);
     if (error) {
+      // PK (outfit_id, circle_id) → code 23505 = déjà partagé, on considère OK.
+      if (error.code === "23505") {
+        setOutfitId(null);
+        onShared();
+        return;
+      }
       console.warn("share today outfit", error);
+      notifyError(error.message || "Réessaie dans un instant.");
       return;
     }
     setOutfitId(null);
@@ -75,11 +93,16 @@ export function ShareTodayBanner({ circleId, userId, onShared }: Props) {
           Partage-la dans ce cercle.
         </Text>
       </View>
-      <PressableScale
-        onPress={() => void share()}
+      <Pressable
+        onPress={() => { void share(); }}
         disabled={sharing}
-        className="bg-ink-900 active:bg-ink-700 px-4 py-3"
-        style={{ opacity: sharing ? 0.5 : 1 }}
+        hitSlop={8}
+        style={({ pressed }) => ({
+          backgroundColor: pressed ? "#3A3A36" : "#0F0F0D",
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          opacity: sharing ? 0.5 : 1,
+        })}
       >
         <Text
           className="font-body-semibold text-paper-100"
@@ -87,7 +110,7 @@ export function ShareTodayBanner({ circleId, userId, onShared }: Props) {
         >
           {sharing ? "…" : "PARTAGER"}
         </Text>
-      </PressableScale>
+      </Pressable>
     </View>
   );
 }
