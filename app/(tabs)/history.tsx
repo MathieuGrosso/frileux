@@ -3,6 +3,7 @@ import { View, Text, FlatList, Pressable } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { WeeklyDigest } from "@/components/WeeklyDigest";
 import { supabase } from "@/lib/supabase";
 import type { Outfit } from "@/lib/types";
 import { RatingStars } from "@/components/RatingStars";
@@ -90,6 +91,7 @@ export default function HistoryScreen() {
         <Text className="font-display text-4xl text-ink-900 tracking-[1px] mb-5">
           MES TENUES
         </Text>
+        <WeeklyDigest />
         <View className="flex-row" style={{ gap: 24 }}>
           <Pressable onPress={() => setFilter("all")} className="pb-1.5 relative">
             <Text
