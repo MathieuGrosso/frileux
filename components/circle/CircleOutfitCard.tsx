@@ -1,4 +1,5 @@
-import { View, Text, Image, Pressable } from "react-native";
+import { View, Text, Pressable } from "react-native";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import type { OutfitWithProfile } from "@/lib/types";
 import { MemberAvatar } from "./MemberAvatar";
@@ -65,7 +66,9 @@ export function CircleOutfitCard({ outfit, isFirst = false }: Props) {
       <Image
         source={{ uri: outfit.photo_url }}
         style={{ width: "100%", height: 320 }}
-        resizeMode="cover"
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        transition={120}
       />
       {typeof outfit.notes_count === "number" && outfit.notes_count > 0 && (
         <Text

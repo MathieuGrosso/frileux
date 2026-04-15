@@ -10,6 +10,7 @@ import { CircleFeedSkeleton } from "@/components/circle/CircleFeedSkeleton";
 import { ViewModeToggle } from "@/components/circle/ViewModeToggle";
 import { StoriesBar } from "@/components/stories/StoriesBar";
 import { ChallengeBanner } from "@/components/circle/ChallengeBanner";
+import { ShareTodayAction } from "@/components/circle/ShareTodayAction";
 import { EmptyState } from "@/components/EmptyState";
 
 function formatDayHeader(dateIso: string): string {
@@ -34,6 +35,7 @@ export default function CircleScreen() {
     setActiveCircleId,
     createCircle,
     joinCircle,
+    userId,
   } = useCircle();
 
   const sections = useMemo(() => {
@@ -84,6 +86,9 @@ export default function CircleScreen() {
         mode={viewMode}
         onChange={(m) => { void setViewMode(m); }}
       />
+      {viewMode === "today" && circle && userId && (
+        <ShareTodayAction circleId={circle.id} userId={userId} onShared={refresh} />
+      )}
       {viewMode === "today" ? (
         <FlatList
           data={outfits}

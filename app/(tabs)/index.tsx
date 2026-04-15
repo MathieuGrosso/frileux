@@ -554,7 +554,7 @@ export default function TodayScreen() {
         savedId = inserted?.id ?? null;
       }
 
-      if (savedId && !adoptedOutfitId) {
+      if (savedId) {
         const { data: myCircles } = await supabase
           .from("circle_members")
           .select("circle_id, circles(id, visibility)")
@@ -568,10 +568,13 @@ export default function TodayScreen() {
           const target =
             (storedActive && circleRows.find((r) => r.circle_id === storedActive)?.circle_id) ||
             circleRows[0].circle_id;
-          await supabase.from("outfit_shares").insert({
-            outfit_id: savedId,
-            circle_id: target,
-          });
+          const { error: shareErr } = await supabase
+            .from("outfit_shares")
+            .upsert(
+              { outfit_id: savedId, circle_id: target },
+              { onConflict: "outfit_id,circle_id", ignoreDuplicates: true },
+            );
+          if (shareErr) console.warn("outfit share", shareErr);
         }
       }
 
