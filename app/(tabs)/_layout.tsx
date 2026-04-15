@@ -68,6 +68,8 @@ function TabItem({
     ) as unknown as string,
   }));
 
+  const isWeb = Platform.OS === "web";
+
   const labelStyle = useAnimatedStyle(() => ({
     color: interpolateColor(
       focus.value,
@@ -109,7 +111,15 @@ function TabItem({
         className="items-center justify-center gap-1"
       >
         <View style={{ height: 22, justifyContent: "center", alignItems: "center" }}>
-          <AnimatedFeather name={tab.icon} size={22} style={iconStyle} />
+          {isWeb ? (
+            <Feather
+              name={tab.icon}
+              size={22}
+              color={focused ? colors.ink[900] : colors.ink[500]}
+            />
+          ) : (
+            <AnimatedFeather name={tab.icon} size={22} style={iconStyle} />
+          )}
         </View>
         <Animated.Text
           numberOfLines={1}
