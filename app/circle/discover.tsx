@@ -50,7 +50,34 @@ export default function DiscoverScreen() {
         </View>
       ) : (
         <FlatList
-          data={circles}
+          data={circles.filter((c) => !c.is_featured).concat()}
+          ListHeaderComponent={() => {
+            const featured = circles.filter((c) => c.is_featured);
+            if (featured.length === 0) return null;
+            return (
+              <View className="pb-2">
+                <Text
+                  className="font-body-medium text-ice-600 px-5 pt-5 pb-3"
+                  style={{ fontSize: 10, letterSpacing: 3 }}
+                >
+                  CURATED · SÉLECTION
+                </Text>
+                {featured.map((c) => (
+                  <PublicCircleRow
+                    key={c.id}
+                    circle={c}
+                    onPress={() => router.push({ pathname: "/circle/preview/[id]", params: { id: c.id } })}
+                  />
+                ))}
+                <Text
+                  className="font-body-medium text-ink-300 px-5 pt-6 pb-3"
+                  style={{ fontSize: 10, letterSpacing: 3 }}
+                >
+                  TOUS LES CERCLES
+                </Text>
+              </View>
+            );
+          }}
           keyExtractor={(c) => c.id}
           renderItem={({ item }) => (
             <PublicCircleRow
