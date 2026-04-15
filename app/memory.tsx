@@ -104,7 +104,7 @@ export default function MemoryScreen() {
           <View className="px-6 pt-12">
             <EmptyState
               title="Rien appris pour l'instant."
-              body="Logue quelques tenues et laisse Frileux noter ce qui fonctionne."
+              subtitle="Logue quelques tenues et laisse Frileux noter ce qui fonctionne."
             />
           </View>
         ) : (
