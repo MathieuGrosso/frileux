@@ -11,6 +11,7 @@ import { CircleSwitcher } from "@/components/circle/CircleSwitcher";
 import { ViewModeToggle } from "@/components/circle/ViewModeToggle";
 import { StoriesBar } from "@/components/stories/StoriesBar";
 import { MultiActionsBar } from "@/components/circle/MultiActionsBar";
+import { ChallengeBanner } from "@/components/circle/ChallengeBanner";
 import { EmptyState } from "@/components/EmptyState";
 
 function formatDayHeader(dateIso: string): string {
@@ -86,6 +87,7 @@ export default function CircleScreen() {
         onSelect={(id) => { void setActiveCircleId(id); }}
       />
       <MultiActionsBar />
+      <ChallengeBanner />
       {circle && <StoriesBar circleId={circle.id} />}
       <ViewModeToggle
         mode={viewMode}
