@@ -100,7 +100,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: outfit, error: outfitErr } = await admin
       .from("outfits")
-      .select("id, user_id, photo_url, worn_description, ai_suggestion, weather_data, occasion, date")
+      .select("id, user_id, photo_url, worn_description, ai_suggestion, weather_data, occasion, intention, date")
       .eq("id", outfitId)
       .single();
     if (outfitErr || !outfit) throw new Error("outfit not found");
@@ -174,29 +174,44 @@ Deno.serve(async (req: Request) => {
       ? `Occasion : ${outfit.occasion}`
       : "Occasion : non précisée";
 
-    const prompt = `Tu es un styliste senior, ton Hypebeast/Ssense — éditorial, tranchant, précis, jamais mielleux. Tu juges une tenue qu'une personne a portée aujourd'hui. Tu la connais, tu avais proposé quelque chose ce matin.
+    const intentionLabel: Record<string, string> = {
+      assume: "J'assume (parti-pris volontaire)",
+      pragmatic: "Pragmatique (choix fonctionnel)",
+      lazy: "Flemme (peu d'effort consenti)",
+      test: "Test (j'essaie quelque chose)",
+    };
+    const intentionLine = outfit.intention
+      ? `Intention déclarée : ${intentionLabel[outfit.intention] ?? outfit.intention}`
+      : "Intention : non précisée";
+
+    const prompt = `Tu es un observateur éditorial type Ssense — précis, cultivé, curieux. Tu n'es pas juge, tu es styliste. Tu poses des hypothèses sur ce que la personne a cherché à faire, tu proposes des pistes. Précision > sévérité : ne rabaisse pas, éclaire.
 
 ${wornLine}
 ${suggestionLine}
 ${occasionLine}
+${intentionLine}
 Météo : ${weatherLine || "inconnue"}${tasteBlock}${recentBlock}
 
-Évalue la tenue en français, ton franc et expert, niveau styliste Ssense. Pas de pédagogie molle. Pas d'emoji. Pas de markdown. Jamais nommer de marque explicitement (utilise le vocabulaire : silhouette, matière, proportion, palette, texture).
+Lis la tenue en français, ton posé et expert. Pas de pédagogie molle, mais pas de sentence non plus. Pas d'emoji. Pas de markdown. Jamais nommer de marque explicitement (utilise le vocabulaire : silhouette, matière, proportion, palette, texture).
+
+Si l'intention est "J'assume", ne reproche pas les choix radicaux : questionne-les comme des partis-pris, propose des variations plutôt que des corrections.
+Si l'intention est "Flemme" ou "Pragmatique", reste bienveillant : propose 1 geste rapide qui élève sans refondre la tenue.
+Si l'intention est "Test", encourage l'exploration, note ce qui ouvre des pistes.
 
 Réponds UNIQUEMENT en JSON valide, exactement ce schéma :
 {
-  "score": <entier 1 à 10, sois exigeant : 7 = correct, 8 = bien, 9+ = exceptionnel>,
-  "verdict": "<une ligne, 80 caractères max, tranchante, éditoriale>",
-  "strengths": ["<point fort concret sur matière/palette/silhouette>", "..."],
-  "improvements": ["<proposition concrète d'amélioration>", "..."],
+  "score": <entier 1 à 10, note calibrée honnêtement : 5-6 = moyen, 7 = bien, 8 = très bien, 9+ = remarquable. N'invente pas de défauts pour baisser la note.>,
+  "verdict": "<une ligne, 80 caractères max, observation éditoriale (pas un jugement)>",
+  "strengths": ["<observation concrète sur matière/palette/silhouette>", "..."],
+  "improvements": ["<piste concrète, formulée comme proposition pas comme reproche>", "..."],
   "weather_note": <string si risque thermique réel (trop léger, trop chaud, pluie ignorée), sinon null>,
-  "vs_suggestion": <string comparant au choix que j'avais proposé ce matin si pertinent, sinon null>
+  "vs_suggestion": <string reliant au choix proposé ce matin si pertinent : "j'avais proposé X, tu as porté Y — l'écart tient parce que… / déraille parce que…", sinon null>
 }
 
 Règles :
 - strengths et improvements : 1 à 3 entrées, phrases courtes (12 mots max).
 - weather_note : seulement si vraiment pertinent (écart coldness_level ${profile?.coldness_level ?? 3} / météo).
-- vs_suggestion : style "j'avais proposé X, ton choix Y tient / déraille parce que...". Null si pas de suggestion initiale ou si la tenue est proche.
+- vs_suggestion : tourne la phrase vers l'écart et sa justification, pas vers la conformité. Null si pas de suggestion initiale ou si la tenue est proche.
 - Aucun texte en dehors du JSON.`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
