@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Frileuse — Politique de confidentialité</title>
+<style>
+  :root { --paper:#FAFAF8; --ink-900:#0F0F0D; --ink-700:#3a3a36; --ink-300:#9a9a92; --ice:#637D8E; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink-900);
+    font-family: -apple-system, "Helvetica Neue", "Jost", Arial, sans-serif;
+    font-size: 16px; line-height: 1.6; }
+  main { max-width: 680px; margin: 0 auto; padding: 64px 24px 96px; }
+  header { border-bottom: 1px solid #e5e5e0; padding-bottom: 24px; margin-bottom: 40px; }
+  .eyebrow { font-size: 11px; letter-spacing: .18em; color: var(--ice); text-transform: uppercase; margin: 0 0 12px; }
+  h1 { font-family: "Barlow Condensed", "Helvetica Neue Condensed", sans-serif;
+       font-weight: 600; font-size: 48px; line-height: 1; letter-spacing: -.01em; margin: 0; }
+  h2 { font-family: "Barlow Condensed", "Helvetica Neue Condensed", sans-serif;
+       font-weight: 600; font-size: 24px; letter-spacing: -.005em; margin: 48px 0 12px; }
+  p, li { color: var(--ink-700); }
+  ul { padding-left: 20px; }
+  a { color: var(--ice); }
+  .meta { color: var(--ink-300); font-size: 13px; }
+  footer { margin-top: 64px; border-top: 1px solid #e5e5e0; padding-top: 24px; font-size: 13px; color: var(--ink-300); }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <p class="eyebrow">Politique de confidentialité</p>
+  <h1>Frileuse</h1>
+  <p class="meta">Dernière mise à jour : 15 avril 2026</p>
+</header>
+
+<p>Frileuse est une app mobile qui aide à choisir sa tenue du jour en fonction de la météo, d'une garde-robe et d'un profil de style. Cette politique explique quelles données sont collectées, pourquoi, et comment les contrôler.</p>
+
+<h2>Responsable de traitement</h2>
+<p>Frileuse est édité par Mathieu Grosso, contact : <a href="mailto:mathieu@ida.eu">mathieu@ida.eu</a>.</p>
+
+<h2>Données collectées</h2>
+<ul>
+  <li><strong>Compte</strong> : adresse email, nom d'utilisateur, mot de passe chiffré (via Supabase Auth).</li>
+  <li><strong>Profil de style</strong> : présentation de genre, niveau de frilosité, marques favorites, préférences de coupe, morphologie indicative (taille, pointure). Déclaratif, modifiable à tout moment.</li>
+  <li><strong>Photos</strong> : photos de tenues et d'articles de garde-robe que tu choisis d'ajouter. Stockées sur Supabase Storage (Europe), accessibles uniquement à toi et aux cercles privés que tu rejoins.</li>
+  <li><strong>Géolocalisation</strong> : ta position approximative (ville) au moment où tu consultes la météo. Non stockée durablement au-delà de la dernière position utilisée pour la météo.</li>
+  <li><strong>Usage</strong> : tenues loggées, préférences exprimées sur les suggestions (j'aime, j'assume, je rejette), interactions avec les cercles. Utilisées pour améliorer les suggestions qui te sont proposées.</li>
+  <li><strong>Notifications push</strong> : identifiant anonyme de l'appareil (Expo push token) si tu actives les notifications.</li>
+</ul>
+
+<h2>Finalités</h2>
+<ul>
+  <li>Te proposer une tenue du jour adaptée à la météo et à ton style.</li>
+  <li>Générer une lecture éditoriale de la tenue que tu as portée.</li>
+  <li>Analyser automatiquement les photos que tu ajoutes à ta garde-robe (type de vêtement, matière, palette) via un modèle d'IA.</li>
+  <li>Partager tes tenues dans les cercles privés où tu es membre, si tu en fais le choix.</li>
+  <li>T'envoyer des notifications de rappel matinal, si tu les as activées.</li>
+</ul>
+
+<h2>Sous-traitants</h2>
+<p>Frileuse s'appuie sur des prestataires tiers pour fonctionner. Aucun de ces prestataires ne vend tes données à des tiers publicitaires.</p>
+<ul>
+  <li><strong>Supabase</strong> (hébergement base de données, stockage photos, authentification) — Europe.</li>
+  <li><strong>Anthropic</strong> (modèle Claude, pour la critique éditoriale des tenues). Les textes envoyés sont éphémères, non utilisés pour entraîner les modèles.</li>
+  <li><strong>Google Gemini</strong> (analyse des photos de garde-robe). Images envoyées de manière éphémère, non utilisées pour l'entraînement.</li>
+  <li><strong>OpenWeather</strong> (données météo à partir de la géolocalisation).</li>
+  <li><strong>Expo / EAS</strong> (notifications push, mises à jour de l'app).</li>
+  <li><strong>Apple</strong> (distribution via App Store).</li>
+</ul>
+
+<h2>Durée de conservation</h2>
+<p>Tes données sont conservées tant que ton compte est actif. Tu peux supprimer ton compte à tout moment depuis les réglages de l'app, ce qui efface définitivement ton profil, tes tenues, ta garde-robe et tes photos sous 30 jours.</p>
+
+<h2>Tes droits (RGPD)</h2>
+<p>Tu disposes d'un droit d'accès, de rectification, d'effacement, d'opposition et de portabilité. Pour exercer l'un de ces droits, écris à <a href="mailto:mathieu@ida.eu">mathieu@ida.eu</a>. Tu peux aussi déposer une plainte auprès de la CNIL (cnil.fr).</p>
+
+<h2>Sécurité</h2>
+<p>Les données sont transmises en HTTPS, stockées sur des serveurs européens (Supabase) et protégées par Row-Level Security : chaque utilisateur n'accède qu'à ses propres données, sauf partage explicite dans un cercle.</p>
+
+<h2>Mineurs</h2>
+<p>Frileuse n'est pas destinée aux mineurs de moins de 13 ans. Aucune collecte intentionnelle de données concernant des enfants n'est effectuée.</p>
+
+<h2>Modifications</h2>
+<p>Cette politique peut être mise à jour pour refléter des évolutions techniques ou légales. Toute modification substantielle fera l'objet d'une notification dans l'app.</p>
+
+<footer>
+  © 2026 Frileuse · <a href="mailto:mathieu@ida.eu">mathieu@ida.eu</a> · <a href="./support.html">Support</a>
+</footer>
+</main>
+</body>
+</html>
