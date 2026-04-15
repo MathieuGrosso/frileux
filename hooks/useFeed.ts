@@ -4,6 +4,17 @@ import type { OutfitWithProfile } from "@/lib/types";
 
 const PAGE_SIZE = 20;
 
+function dedupe(rows: OutfitWithProfile[]): OutfitWithProfile[] {
+  const seen = new Set<string>();
+  const out: OutfitWithProfile[] = [];
+  for (const r of rows) {
+    if (seen.has(r.id)) continue;
+    seen.add(r.id);
+    out.push(r);
+  }
+  return out;
+}
+
 interface UseFeedReturn {
   outfits: OutfitWithProfile[];
   loading: boolean;
@@ -43,7 +54,7 @@ export function useFeed(): UseFeedReturn {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const rows = await fetchPage(0);
+    const rows = dedupe(await fetchPage(0));
     offsetRef.current = rows.length;
     setOutfits(rows);
     setHasMore(rows.length === PAGE_SIZE);
@@ -52,7 +63,7 @@ export function useFeed(): UseFeedReturn {
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
-    const rows = await fetchPage(0);
+    const rows = dedupe(await fetchPage(0));
     offsetRef.current = rows.length;
     setOutfits(rows);
     setHasMore(rows.length === PAGE_SIZE);
@@ -63,8 +74,8 @@ export function useFeed(): UseFeedReturn {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
     const rows = await fetchPage(offsetRef.current);
+    setOutfits((prev) => dedupe([...prev, ...rows]));
     offsetRef.current += rows.length;
-    setOutfits((prev) => [...prev, ...rows]);
     setHasMore(rows.length === PAGE_SIZE);
     setLoadingMore(false);
   }, [fetchPage, loadingMore, hasMore]);
