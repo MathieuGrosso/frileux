@@ -37,10 +37,11 @@ export function CircleFeedHeader({ circle }: Props) {
           </Text>
         </PressableScale>
       </View>
-      <View className="flex-row items-end gap-4 pb-1">
+      <View className="flex-row items-end gap-5 pb-1">
         <PressableScale
           onPress={() => router.push({ pathname: "/circle/chat", params: { id: circle.id } })}
-          className="active:opacity-50 flex-row items-center gap-1"
+          hitSlop={8}
+          className="flex-row items-center gap-1"
         >
           <Text
             className="font-body-semibold text-ink-900 text-eyebrow"
@@ -58,30 +59,8 @@ export function CircleFeedHeader({ circle }: Props) {
           )}
         </PressableScale>
         <PressableScale
-          onPress={() => router.push("/dm")}
-          className="active:opacity-50"
-        >
-          <Text
-            className="font-body-semibold text-ink-900 text-eyebrow"
-            style={{ letterSpacing: 2 }}
-          >
-            MP
-          </Text>
-        </PressableScale>
-        <PressableScale
-          onPress={() => router.push("/circle/discover")}
-          className="active:opacity-50"
-        >
-          <Text
-            className="font-body-semibold text-ice-600 text-eyebrow"
-            style={{ letterSpacing: 2 }}
-          >
-            EXPLORER
-          </Text>
-        </PressableScale>
-        <PressableScale
           onPress={() => router.push("/circle/settings")}
-          className="active:opacity-50"
+          hitSlop={8}
         >
           <Text
             className="font-body-semibold text-ink-900 text-eyebrow"
