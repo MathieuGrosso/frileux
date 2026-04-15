@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
+import { localDateISO, localWeekAgoISO } from "@/lib/dates";
 import type { Circle, OutfitWithProfile } from "@/lib/types";
 
 const ACTIVE_CIRCLE_KEY = "frileux.circle.active";
@@ -36,15 +38,8 @@ function generateInviteCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
-function todayIso(): string {
-  return new Date().toISOString().split("T")[0];
-}
-
-function weekAgoIso(): string {
-  const d = new Date();
-  d.setDate(d.getDate() - 6);
-  return d.toISOString().split("T")[0];
-}
+const todayIso = localDateISO;
+const weekAgoIso = localWeekAgoISO;
 
 export function useCircle(): UseCircleResult {
   const [circles, setCircles] = useState<Circle[]>([]);
@@ -60,7 +55,7 @@ export function useCircle(): UseCircleResult {
 
   const loadOutfits = useCallback(async (
     circleId: string,
-    currentUserId: string,
+    _currentUserId: string,
     mode: CircleViewMode,
   ) => {
     const { data: members } = await supabase
@@ -91,7 +86,6 @@ export function useCircle(): UseCircleResult {
       .from("outfits")
       .select("*, profile:profiles(username, avatar_url)")
       .in("id", sharedIds)
-      .neq("user_id", currentUserId)
       .order("created_at", { ascending: false });
 
     if (mode === "today") {
@@ -166,6 +160,26 @@ export function useCircle(): UseCircleResult {
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void (async () => {
+        if (!userId || circles.length === 0) return;
+        const stored = await AsyncStorage.getItem(ACTIVE_CIRCLE_KEY);
+        const target =
+          stored && circles.some((c) => c.id === stored) ? stored : activeId;
+        if (!target) return;
+        const storedMode = await AsyncStorage.getItem(VIEW_MODE_PREFIX + target);
+        const mode: CircleViewMode = storedMode === "week" ? "week" : "today";
+        if (target !== activeId) {
+          setActiveId(target);
+          setOutfits([]);
+          setViewModeState(mode);
+        }
+        await loadOutfits(target, userId, mode);
+      })();
+    }, [userId, activeId, circles, loadOutfits]),
+  );
 
   useEffect(() => {
     if (!circle || !userId) return;

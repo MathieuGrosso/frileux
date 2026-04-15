@@ -157,24 +157,30 @@ export default function MyCirclesScreen() {
                       >
                         {item.name.toUpperCase()}
                       </Text>
+                      <Text
+                        className={`font-body-semibold ${item.visibility === "public" ? "text-ice-600" : "text-ink-300"}`}
+                        style={{ fontSize: 9, letterSpacing: 2 }}
+                      >
+                        {item.visibility === "public" ? "PUBLIC" : "PRIVÉ"}
+                      </Text>
                       {active ? (
                         <Text
                           className="font-body-semibold text-ice-600"
                           style={{ fontSize: 9, letterSpacing: 2 }}
                         >
-                          ACTIF
+                          · ACTIF
                         </Text>
                       ) : null}
                     </View>
-                    <Text
-                      className="font-body text-ink-500 mt-0.5"
-                      style={{ fontSize: 13 }}
-                      numberOfLines={1}
-                    >
-                      {item.last_message ?? (
-                        item.visibility === "public" ? "cercle public" : "cercle privé"
-                      )}
-                    </Text>
+                    {item.last_message ? (
+                      <Text
+                        className="font-body text-ink-500 mt-0.5"
+                        style={{ fontSize: 13 }}
+                        numberOfLines={1}
+                      >
+                        {item.last_message}
+                      </Text>
+                    ) : null}
                     <Text
                       className="font-body text-ink-300 mt-1"
                       style={{ fontSize: 10, letterSpacing: 1.2 }}
