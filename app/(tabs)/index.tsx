@@ -39,13 +39,11 @@ import { OutfitCritique } from "@/components/OutfitCritique";
 import { fetchOutfitCritique } from "@/lib/critique";
 import { colors, motion } from "@/lib/theme";
 import { useFocusEffect, useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { localDateISO } from "@/lib/dates";
 
-function getLocalDateISO(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
+const getLocalDateISO = localDateISO;
+const ACTIVE_CIRCLE_KEY = "frileux.circle.active";
 
 export default function TodayScreen() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -546,14 +544,15 @@ export default function TodayScreen() {
           circle_id: string;
           circles: { id: string; visibility: "public" | "private" } | null;
         }[]).filter((r) => !!r.circles);
-        if (circleRows.length === 1) {
+        if (circleRows.length > 0) {
+          const storedActive = await AsyncStorage.getItem(ACTIVE_CIRCLE_KEY);
+          const target =
+            (storedActive && circleRows.find((r) => r.circle_id === storedActive)?.circle_id) ||
+            circleRows[0].circle_id;
           await supabase.from("outfit_shares").insert({
             outfit_id: savedId,
-            circle_id: circleRows[0].circle_id,
+            circle_id: target,
           });
-        } else if (circleRows.length > 1) {
-          setSharePickerOutfitId(savedId);
-          setSharePickerOpen(true);
         }
       }
 

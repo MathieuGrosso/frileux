@@ -34,6 +34,12 @@ export default function DiscoverScreen() {
         >
           cercles publics · rejoignables en un tap
         </Text>
+        <Text
+          className="font-body text-ink-300 mt-1"
+          style={{ fontSize: 11, letterSpacing: 0.5 }}
+        >
+          tes cercles privés sont dans « mes cercles »
+        </Text>
       </View>
 
       {loading ? (
