@@ -77,7 +77,7 @@ export default function CircleScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-paper-100">
-      {circle && <CircleFeedHeader circle={circle} circleCount={circles.length} />}
+      {circle && <CircleFeedHeader circle={circle} />}
       <ChallengeBanner />
       {circle && <StoriesBar circleId={circle.id} />}
       <ViewModeToggle
