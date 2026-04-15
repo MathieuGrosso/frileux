@@ -3,6 +3,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { enforceQuota, recordTokens } from "../_shared/quota.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") ?? "*";
@@ -91,6 +92,9 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const outfitId = typeof body?.outfit_id === "string" ? body.outfit_id : null;
     if (!outfitId) throw new Error("outfit_id required");
+
+    const guard = await enforceQuota(userId, "critique-outfit");
+    if (!guard.ok) return guard.response(corsHeaders);
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -217,6 +221,13 @@ Règles :
     const text: string = data.content?.[0]?.text ?? "";
     const parsed = extractJson(text);
     const critique = coerceCritique(parsed);
+
+    recordTokens(
+      userId,
+      "critique-outfit",
+      data?.usage?.input_tokens ?? 0,
+      data?.usage?.output_tokens ?? 0,
+    ).catch(() => {});
 
     const { error: updateErr } = await admin
       .from("outfits")

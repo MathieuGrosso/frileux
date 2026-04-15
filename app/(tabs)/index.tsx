@@ -25,7 +25,7 @@ import { OutfitImageLoader } from "@/components/OutfitImageLoader";
 import { loadProfileBundle, type ProfileBundle } from "@/lib/profile";
 import { clearSuggestion, patchSuggestionAdoption, patchSuggestionImage, readSuggestion, writeSuggestion } from "@/lib/suggestionCache";
 import { REJECTION_REASONS, insertRejection, type RejectionReason } from "@/lib/rejections";
-import { embedOutfitText } from "@/lib/embedOutfit";
+import { embedOutfitTextWithHash } from "@/lib/embedOutfit";
 import { extractItemsFromOutfitPhoto } from "@/lib/wardrobe-extract";
 import { recordCritiqueFacts } from "@/lib/style-memory";
 import { SuggestionSwipeArea } from "@/components/SuggestionSwipeArea";
@@ -96,6 +96,15 @@ export default function TodayScreen() {
     profilePromiseRef.current = loadProfileBundle();
     loadWeather();
     loadTodayOutfit();
+    // Touch last_active_at so daily-notification only targets active users.
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) return;
+      supabase
+        .from("profiles")
+        .update({ last_active_at: new Date().toISOString() })
+        .eq("id", data.user.id)
+        .then(() => {});
+    });
   }, []);
 
   useFocusEffect(
@@ -375,7 +384,8 @@ export default function TodayScreen() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { Alert.alert("Non connecté"); return; }
-      const embedding = await embedOutfitText(suggestion).catch(() => null);
+      const embedRes = await embedOutfitTextWithHash(suggestion).catch(() => null);
+      const embedding = embedRes?.embedding ?? null;
       const { data, error } = await supabase
         .from("outfits")
         .insert({
@@ -386,6 +396,7 @@ export default function TodayScreen() {
           ai_suggestion: suggestion,
           occasion,
           embedding,
+          embedding_text_hash: embedRes?.textHash ?? null,
           embedding_source: embedding ? "suggested" : null,
           adopted: true,
         })
@@ -503,7 +514,8 @@ export default function TodayScreen() {
       } catch (e) { if (__DEV__) console.warn("worn_description analysis skipped:", e); }
 
       const embeddingSource = worn_description ?? suggestion ?? null;
-      const embedding = embeddingSource ? await embedOutfitText(embeddingSource) : null;
+      const embedRes2 = embeddingSource ? await embedOutfitTextWithHash(embeddingSource).catch(() => null) : null;
+      const embedding = embedRes2?.embedding ?? null;
 
       const payload = {
         user_id: user.id,
@@ -516,6 +528,7 @@ export default function TodayScreen() {
         occasion,
         notes: notes.trim() || null,
         embedding,
+        embedding_text_hash: embedRes2?.textHash ?? null,
         embedding_source: embedding ? (worn_description ? "worn" : "suggested") : null,
         adopted: adopted || adoptedOutfitId !== null,
       };

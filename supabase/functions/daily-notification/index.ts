@@ -209,13 +209,16 @@ Deno.serve(async (req: Request) => {
     requireEnv("SUPABASE_SERVICE_ROLE_KEY", SUPABASE_SERVICE_ROLE_KEY),
   );
 
-  // Get all users with push token + stored location
+  // Get active users (last 7 days) with push token + stored location.
+  // Inactive users still get notified weekly via a fallback window.
+  const activeCutoff = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
   const { data: profiles, error } = await supabase
     .from("profiles")
-    .select("id, push_token, last_latitude, last_longitude, coldness_level, username")
+    .select("id, push_token, last_latitude, last_longitude, coldness_level, username, last_active_at")
     .not("push_token", "is", null)
     .not("last_latitude", "is", null)
-    .not("last_longitude", "is", null);
+    .not("last_longitude", "is", null)
+    .or(`last_active_at.gte.${activeCutoff},last_active_at.is.null`);
 
   if (error || !profiles?.length) {
     return new Response(JSON.stringify({ mode, sent: 0, message: "No users to notify" }), {
