@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, FlatList, RefreshControl } from "react-native";
-import { PressableScale } from "@/components/ui/PressableScale";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -95,7 +94,7 @@ export default function WardrobeScreen() {
             renderItem={({ item: f }) => {
               const active = filter === f.value;
               return (
-                <PressableScale
+                <Pressable
                   onPress={() => setFilter(f.value)}
                   className={`py-2 px-3 border ${active ? "bg-ink-900 border-ink-900" : "bg-paper-50 border-paper-300"}`}
                 >
@@ -104,7 +103,7 @@ export default function WardrobeScreen() {
                   >
                     {f.label}
                   </Text>
-                </PressableScale>
+                </Pressable>
               );
             }}
           />
@@ -129,7 +128,7 @@ export default function WardrobeScreen() {
             ) : null
           }
           renderItem={({ item }) => (
-            <PressableScale
+            <Pressable
               onPress={() => router.push(`/wardrobe/${item.id}`)}
               className="flex-1 active:opacity-70"
             >
@@ -162,7 +161,7 @@ export default function WardrobeScreen() {
                   </View>
                 );
               })()}
-            </PressableScale>
+            </Pressable>
           )}
         />
       </SafeAreaView>

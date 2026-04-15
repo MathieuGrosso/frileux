@@ -8,7 +8,6 @@ import {
   Image,
   Alert,
 } from "react-native";
-import { PressableScale } from "@/components/ui/PressableScale";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -166,9 +165,9 @@ export default function OnboardingSwipe() {
             <View style={[styles.progressDot, styles.progressDotActive]} />
             <View style={[styles.progressDot, styles.progressDotActive]} />
           </View>
-          <PressableScale onPress={backToVestiaire} hitSlop={12}>
+          <Pressable onPress={backToVestiaire} hitSlop={12}>
             <Text style={styles.backText}>← VESTIAIRE</Text>
-          </PressableScale>
+          </Pressable>
         </View>
         <View style={styles.failedWrap}>
           <Text style={styles.kicker}>PROBLÈME</Text>
@@ -176,12 +175,12 @@ export default function OnboardingSwipe() {
           <Text style={styles.failedBody}>
             Réseau ou IA indispo. Réessaye, ou entre quand même — tu pourras affiner plus tard.
           </Text>
-          <PressableScale style={styles.retryBtn} onPress={load}>
+          <Pressable style={styles.retryBtn} onPress={load}>
             <Text style={styles.retryText}>RÉESSAYER</Text>
-          </PressableScale>
-          <PressableScale style={styles.skipBtn} onPress={() => finish(true)}>
+          </Pressable>
+          <Pressable style={styles.skipBtn} onPress={() => finish(true)}>
             <Text style={styles.skipBtnText}>ENTRER QUAND MÊME</Text>
-          </PressableScale>
+          </Pressable>
         </View>
       </SafeAreaView>
     );
@@ -200,9 +199,9 @@ export default function OnboardingSwipe() {
           <View style={[styles.progressDot, styles.progressDotActive]} />
         </View>
         <View style={styles.topBarRight}>
-          <PressableScale onPress={backToVestiaire} hitSlop={12}>
+          <Pressable onPress={backToVestiaire} hitSlop={12}>
             <Text style={styles.backText}>← AJOUTER</Text>
-          </PressableScale>
+          </Pressable>
           <Text style={styles.counter}>
             {Math.min(cursor + 1, cards.length)} / {cards.length}
           </Text>
@@ -247,25 +246,25 @@ export default function OnboardingSwipe() {
 
       <View style={styles.bottomBar}>
         {done ? (
-          <PressableScale style={styles.finishBtn} onPress={() => finish()} disabled={finishing}>
+          <Pressable style={styles.finishBtn} onPress={() => finish()} disabled={finishing}>
             <Text style={styles.finishText}>
               {finishing ? "…" : "ENTRER DANS L'APP →"}
             </Text>
-          </PressableScale>
+          </Pressable>
         ) : (
           <View style={styles.manualRow}>
-            <PressableScale
+            <Pressable
               style={[styles.manualBtn, styles.manualReject]}
               onPress={() => handleSwipe(false)}
             >
               <Text style={styles.manualRejectText}>PASSER</Text>
-            </PressableScale>
-            <PressableScale
+            </Pressable>
+            <Pressable
               style={[styles.manualBtn, styles.manualAccept]}
               onPress={() => handleSwipe(true)}
             >
               <Text style={styles.manualAcceptText}>GARDER</Text>
-            </PressableScale>
+            </Pressable>
           </View>
         )}
       </View>

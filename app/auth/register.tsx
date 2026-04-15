@@ -8,7 +8,6 @@ import {
   Platform,
   StyleSheet,
 } from "react-native";
-import { PressableScale } from "@/components/ui/PressableScale";
 import { Link } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -86,7 +85,7 @@ export default function RegisterScreen() {
             secureTextEntry
             selectionColor={colors.ice[600]}
           />
-          <PressableScale
+          <Pressable
             onPress={handleRegister}
             disabled={loading}
             style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
@@ -94,16 +93,16 @@ export default function RegisterScreen() {
             <Text style={styles.btnText}>
               {loading ? "CRÉATION…" : "CRÉER MON COMPTE"}
             </Text>
-          </PressableScale>
+          </Pressable>
         </View>
 
         <Link href="/auth/login" asChild>
-          <PressableScale style={styles.footer}>
+          <Pressable style={styles.footer}>
             <Text style={styles.footerText}>
               Déjà un compte ?{" "}
               <Text style={styles.footerLink}>Se connecter</Text>
             </Text>
-          </PressableScale>
+          </Pressable>
         </Link>
       </KeyboardAvoidingView>
     </View>
