@@ -83,11 +83,6 @@ export function CircleFeedHeader({ circle }: Props) {
           border
         />
         <HeaderAction
-          label="MP"
-          onPress={() => router.push("/dm")}
-          border
-        />
-        <HeaderAction
           label="EXPLORER"
           onPress={() => router.push("/circle/discover")}
           border

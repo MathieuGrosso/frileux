@@ -21,6 +21,7 @@ import { ReactionPicker } from "@/components/circle/ReactionPicker";
 import { useMessageReactions, type ReactionKey } from "@/hooks/useMessageReactions";
 import { usePolls, type Poll } from "@/hooks/usePolls";
 import { PollCard } from "@/components/circle/PollCard";
+import { DMPane } from "@/components/circle/DMPane";
 
 const MAX_LEN = 500;
 
@@ -83,6 +84,7 @@ export default function CircleChatScreen() {
     useMessageReactions(id ?? null, messageIds);
   const [pickerTarget, setPickerTarget] = useState<string | null>(null);
   const { polls, vote: votePoll } = usePolls(id ?? null);
+  const [tab, setTab] = useState<"cercle" | "mp">("cercle");
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -291,32 +293,48 @@ export default function CircleChatScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-paper-100" edges={["top"]}>
-      <View className="px-6 pt-2 pb-4 border-b border-paper-300 flex-row items-end justify-between">
-        <View>
-          <Pressable
-            onPress={() => {
-              if (router.canGoBack()) router.back();
-              else router.replace("/(tabs)/circle");
-            }}
-            hitSlop={16}
-            className="active:opacity-50 mb-1"
-          >
-            <Text
-              className="font-body text-ink-300 text-eyebrow"
-              style={{ letterSpacing: 1.5 }}
-            >
-              ← CERCLE
-            </Text>
-          </Pressable>
-          <Text
-            className="font-display text-ink-900"
-            style={{ fontSize: 36, letterSpacing: 1 }}
-          >
-            CHAT
+      <View className="px-6 pt-2 pb-3 border-b border-ink-100">
+        <Pressable
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace("/(tabs)/circle");
+          }}
+          hitSlop={16}
+          className="active:opacity-50 mb-2"
+        >
+          <Text className="font-body-medium text-ink-900" style={{ fontSize: 12, letterSpacing: 2 }}>
+            ← CERCLE
           </Text>
-        </View>
+        </Pressable>
+      </View>
+      <View className="flex-row border-b border-ink-100">
+        <Pressable
+          onPress={() => setTab("cercle")}
+          className={`flex-1 py-3 items-center ${tab === "cercle" ? "bg-paper-200" : ""}`}
+        >
+          <Text
+            className={`font-body-semibold ${tab === "cercle" ? "text-ink-900" : "text-ink-300"}`}
+            style={{ fontSize: 12, letterSpacing: 2.5 }}
+          >
+            CERCLE
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setTab("mp")}
+          className={`flex-1 py-3 items-center ${tab === "mp" ? "bg-paper-200" : ""}`}
+        >
+          <Text
+            className={`font-body-semibold ${tab === "mp" ? "text-ink-900" : "text-ink-300"}`}
+            style={{ fontSize: 12, letterSpacing: 2.5 }}
+          >
+            PRIVÉ
+          </Text>
+        </Pressable>
       </View>
 
+      {tab === "mp" ? (
+        <DMPane circleId={id ?? undefined} />
+      ) : (
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
@@ -444,6 +462,7 @@ export default function CircleChatScreen() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+      )}
 
       <ReactionPicker
         visible={pickerTarget !== null}
