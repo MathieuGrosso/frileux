@@ -14,7 +14,7 @@ export function OutfitCritique({ critique, loading, onDismiss }: Props) {
     <View className="bg-paper-100 border-t border-paper-300 px-6 pt-6 pb-8">
       <View className="flex-row justify-between items-center mb-5">
         <Text className="font-body-medium text-micro tracking-widest text-ice">
-          CRITIQUE
+          NOTES
         </Text>
         {onDismiss && (
           <Pressable onPress={onDismiss} hitSlop={12}>
@@ -35,17 +35,14 @@ export function OutfitCritique({ critique, loading, onDismiss }: Props) {
 function CritiqueBody({ critique }: { critique: Critique }) {
   return (
     <View>
-      <View className="flex-row items-end gap-3 mb-4">
-        <Text
-          className="font-display text-display-xl text-ink-900"
-          style={{ lineHeight: 58 }}
-        >
+      <View className="flex-row items-baseline gap-2 mb-3">
+        <Text className="font-display text-h1 tracking-tight text-ink-900">
           {critique.score}
         </Text>
-        <Text className="font-body text-body-sm text-ink-300 mb-2">/ 10</Text>
+        <Text className="font-body text-body-sm text-ink-300">/ 10</Text>
       </View>
 
-      <Text className="font-display text-h2 tracking-tight text-ink-900 mb-6">
+      <Text className="font-display text-h2 tracking-tight text-ink-900 mb-6 leading-snug">
         {critique.verdict}
       </Text>
 
@@ -95,7 +92,7 @@ function CritiqueBody({ critique }: { critique: Critique }) {
       {critique.vs_suggestion && (
         <View className="border-t border-paper-300 pt-4">
           <Text className="font-body-medium text-micro tracking-widest text-ink-300 mb-1.5">
-            MOI J'AVAIS DIT
+            ÉCART AVEC LA PROPOSITION
           </Text>
           <Text className="font-body text-body-sm text-ink-500 italic leading-6">
             {critique.vs_suggestion}
