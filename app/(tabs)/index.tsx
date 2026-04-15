@@ -28,6 +28,7 @@ import { REJECTION_REASONS, insertRejection, type RejectionReason } from "@/lib/
 import { embedOutfitText } from "@/lib/embedOutfit";
 import { extractItemsFromOutfitPhoto } from "@/lib/wardrobe-extract";
 import { SuggestionSwipeArea } from "@/components/SuggestionSwipeArea";
+import { WardrobeNudge } from "@/components/WardrobeNudge";
 import { RefineSheet } from "@/components/RefineSheet";
 import { OutfitCritique } from "@/components/OutfitCritique";
 import { fetchOutfitCritique } from "@/lib/critique";
@@ -893,6 +894,10 @@ export default function TodayScreen() {
               </Text>
             </View>
           )}
+
+          <View className="-mx-6 mt-10">
+            <WardrobeNudge />
+          </View>
         </ScrollView>
       </SafeAreaView>
 
