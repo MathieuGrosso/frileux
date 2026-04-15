@@ -76,11 +76,13 @@ export function useCircle(): UseCircleResult {
 
     setMemberCount(members.length);
 
-    const memberIds = members
-      .map((m) => m.user_id)
-      .filter((id) => id !== currentUserId);
+    const { data: shares } = await supabase
+      .from("outfit_shares")
+      .select("outfit_id")
+      .eq("circle_id", circleId);
+    const sharedIds = (shares ?? []).map((s) => (s as { outfit_id: string }).outfit_id);
 
-    if (memberIds.length === 0) {
+    if (sharedIds.length === 0) {
       setOutfits([]);
       return;
     }
@@ -88,7 +90,8 @@ export function useCircle(): UseCircleResult {
     let query = supabase
       .from("outfits")
       .select("*, profile:profiles(username, avatar_url)")
-      .in("user_id", memberIds)
+      .in("id", sharedIds)
+      .neq("user_id", currentUserId)
       .order("created_at", { ascending: false });
 
     if (mode === "today") {
