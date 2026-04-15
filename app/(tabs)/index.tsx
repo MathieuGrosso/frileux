@@ -540,7 +540,7 @@ export default function TodayScreen() {
       if (adoptedOutfitId) {
         const { error: updateError } = await supabase
           .from("outfits")
-          .update(payload)
+          .update({ ...payload, critique: null, critique_score: null })
           .eq("id", adoptedOutfitId);
         if (updateError) throw updateError;
         savedId = adoptedOutfitId;
