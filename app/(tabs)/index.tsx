@@ -29,6 +29,8 @@ import { embedOutfitText } from "@/lib/embedOutfit";
 import { extractItemsFromOutfitPhoto } from "@/lib/wardrobe-extract";
 import { SuggestionSwipeArea } from "@/components/SuggestionSwipeArea";
 import { WardrobeNudge } from "@/components/WardrobeNudge";
+import { WardrobeCombos } from "@/components/WardrobeCombos";
+import type { ComboItem } from "@/lib/wardrobe-combos";
 import { RefineSheet } from "@/components/RefineSheet";
 import { OutfitCritique } from "@/components/OutfitCritique";
 import { fetchOutfitCritique } from "@/lib/critique";
@@ -60,6 +62,7 @@ export default function TodayScreen() {
   const [steerText, setSteerText] = useState("");
   const [steerBrands, setSteerBrands] = useState<string[]>([]);
   const [favoriteBrands, setFavoriteBrands] = useState<string[]>([]);
+  const [wardrobeItems, setWardrobeItems] = useState<ComboItem[]>([]);
   const [adopted, setAdopted] = useState(false);
   const [adoptedOutfitId, setAdoptedOutfitId] = useState<string | null>(null);
   const [adopting, setAdopting] = useState(false);
@@ -209,6 +212,19 @@ export default function TodayScreen() {
       const { userId, coldness: userColdness, taste, recent_worn, recent_feedback, liked_anchors, derived_prefs, wardrobe, wardrobeOnlyMode } = bundle;
       setColdness(userColdness);
       if (taste?.favorite_brands?.length) setFavoriteBrands(taste.favorite_brands);
+      setWardrobeItems(
+        wardrobe
+          .filter((w) => Boolean(w.id))
+          .map((w) => ({
+            id: w.id!,
+            type: (w.type as ComboItem["type"]),
+            color: w.color,
+            material: w.material,
+            description: w.description,
+            photo_url: w.photo_url ?? null,
+            style_tags: w.style_tags ?? null,
+          })),
+      );
 
       if (userId && !opts.skipCache) {
         const cached = await readSuggestion({
@@ -919,6 +935,16 @@ export default function TodayScreen() {
               <Text className="font-body-medium text-eyebrow text-ice">
                 SAUVEGARDÉ
               </Text>
+            </View>
+          )}
+
+          {weather && coldness !== null && (
+            <View className="-mx-6">
+              <WardrobeCombos
+                items={wardrobeItems}
+                feelsLike={weather.feels_like}
+                coldness={coldness}
+              />
             </View>
           )}
 
