@@ -75,7 +75,7 @@ export function CircleFeedHeader({ circle }: Props) {
         </PressableScale>
       </View>
 
-      <View className="flex-row border-t border-ink-100">
+      <View className="flex-row border-t border-ink-100 w-full">
         <HeaderAction
           label="CHAT"
           badge={unread > 0 ? (unread > 99 ? "99+" : String(unread)) : null}
