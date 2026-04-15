@@ -53,6 +53,7 @@ export default function CircleScreen() {
   if (!circle && !loading) {
     return (
       <SafeAreaView className="flex-1 bg-paper-100">
+        <MultiActionsBar />
         <CircleOnboarding onCreate={createCircle} onJoin={joinCircle} />
       </SafeAreaView>
     );
