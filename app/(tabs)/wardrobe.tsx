@@ -7,6 +7,8 @@ import { supabase } from "@/lib/supabase";
 import { HatchedPlaceholder } from "@/components/HatchedPlaceholder";
 import { colors } from "@/lib/theme";
 import { cleanValue } from "@/lib/ui";
+import AddWardrobeItemSheet from "@/components/AddWardrobeItemSheet";
+import { PressableScale } from "@/components/ui/PressableScale";
 
 type WardrobeType = "top" | "bottom" | "outerwear" | "shoes" | "accessory";
 
@@ -36,6 +38,7 @@ export default function WardrobeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<WardrobeType | "all">("all");
+  const [addOpen, setAddOpen] = useState(false);
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -82,6 +85,20 @@ export default function WardrobeScreen() {
               {items.length} {items.length > 1 ? "pieces" : "piece"}
             </Text>
           </View>
+          <PressableScale
+            onPress={() => setAddOpen(true)}
+            hitSlop={10}
+            className="pb-1"
+            accessibilityLabel="Ajouter une pièce"
+          >
+            <Text
+              className="font-display text-ink-900"
+              style={{ fontSize: 18, letterSpacing: 0.4 }}
+            >
+              + AJOUTER
+            </Text>
+            <View className="h-px bg-ice-600 mt-0.5" />
+          </PressableScale>
         </View>
 
         <View className="px-6 pb-4">
@@ -120,10 +137,32 @@ export default function WardrobeScreen() {
           }
           ListEmptyComponent={
             !loading ? (
-              <View className="px-6 pt-12 items-center">
-                <Text className="font-body text-body-sm text-ink-500 text-center">
-                  Aucune piece pour ce filtre.
+              <View className="px-6 pt-16 items-center">
+                <Text
+                  className="font-body-medium text-ice-600"
+                  style={{ fontSize: 10, letterSpacing: 2 }}
+                >
+                  VESTIAIRE VIDE
                 </Text>
+                <Text
+                  className="font-display text-ink-900 text-center mt-3"
+                  style={{ fontSize: 32, letterSpacing: -0.4, lineHeight: 34 }}
+                >
+                  {filter === "all" ? "RIEN ENCORE.\nAJOUTE TA PREMIÈRE PIÈCE." : "Aucune pièce pour ce filtre."}
+                </Text>
+                {filter === "all" && (
+                  <PressableScale
+                    onPress={() => setAddOpen(true)}
+                    className="mt-6 bg-ink-900 px-6 py-4"
+                  >
+                    <Text
+                      className="font-display text-paper"
+                      style={{ fontSize: 16, letterSpacing: 1.2 }}
+                    >
+                      + AJOUTER UNE PIÈCE
+                    </Text>
+                  </PressableScale>
+                )}
               </View>
             ) : null
           }
@@ -165,6 +204,11 @@ export default function WardrobeScreen() {
           )}
         />
       </SafeAreaView>
+      <AddWardrobeItemSheet
+        visible={addOpen}
+        onClose={() => setAddOpen(false)}
+        onItemAdded={(item) => setItems((prev) => [item, ...prev])}
+      />
     </View>
   );
 }
