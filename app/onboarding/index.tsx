@@ -13,7 +13,6 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { PressableScale } from "@/components/ui/PressableScale";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -288,9 +287,9 @@ export default function OnboardingItems() {
           <View style={styles.progressDot} />
           <View style={styles.progressDot} />
         </View>
-        <PressableScale onPress={skipOnboarding} hitSlop={12}>
+        <Pressable onPress={skipOnboarding} hitSlop={12}>
           <Text style={styles.skipText}>PASSER</Text>
-        </PressableScale>
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -301,31 +300,31 @@ export default function OnboardingItems() {
         </Text>
 
         <View style={styles.ctaRow}>
-          <PressableScale
+          <Pressable
             style={[styles.cta, styles.ctaPrimary, analyzing && styles.ctaDisabled]}
             onPress={() => handlePhoto(true)}
             disabled={analyzing}
           >
             <Text style={styles.ctaPrimaryText}>PHOTO</Text>
             <Text style={styles.ctaPrimarySub}>Caméra</Text>
-          </PressableScale>
-          <PressableScale
+          </Pressable>
+          <Pressable
             style={[styles.cta, styles.ctaSecondary, analyzing && styles.ctaDisabled]}
             onPress={() => handlePhoto(false)}
             disabled={analyzing}
           >
             <Text style={styles.ctaSecondaryText}>GALERIE</Text>
             <Text style={styles.ctaSecondarySub}>Import</Text>
-          </PressableScale>
+          </Pressable>
         </View>
 
-        <PressableScale
+        <Pressable
           style={[styles.ctaFull, analyzing && styles.ctaDisabled]}
           onPress={() => setTextModal(true)}
           disabled={analyzing}
         >
           <Text style={styles.ctaFullText}>DÉCRIRE EN TEXTE</Text>
-        </PressableScale>
+        </Pressable>
 
         {analyzing && (
           <View style={styles.analyzingRow}>
@@ -346,7 +345,7 @@ export default function OnboardingItems() {
           <View style={styles.grid}>
             {items.map((item) => (
               <View key={item.id} style={styles.gridItem}>
-                <PressableScale
+                <Pressable
                   onPress={() => item.photo_url && setRefineItem(item)}
                   disabled={!item.photo_url}
                 >
@@ -359,20 +358,20 @@ export default function OnboardingItems() {
                       </Text>
                     </View>
                   )}
-                </PressableScale>
+                </Pressable>
                 <Text style={styles.itemType}>{TYPE_LABELS[item.type]}</Text>
                 <Text style={styles.itemDesc} numberOfLines={2}>
                   {item.description}
                 </Text>
                 <View style={styles.itemActions}>
                   {item.photo_url && (
-                    <PressableScale onPress={() => setRefineItem(item)} hitSlop={8}>
+                    <Pressable onPress={() => setRefineItem(item)} hitSlop={8}>
                       <Text style={styles.refineLink}>Raffiner</Text>
-                    </PressableScale>
+                    </Pressable>
                   )}
-                  <PressableScale onPress={() => removeItem(item.id)} hitSlop={8}>
+                  <Pressable onPress={() => removeItem(item.id)} hitSlop={8}>
                     <Text style={styles.removeText}>Retirer</Text>
-                  </PressableScale>
+                  </Pressable>
                 </View>
               </View>
             ))}
@@ -381,7 +380,7 @@ export default function OnboardingItems() {
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <PressableScale
+        <Pressable
           style={[styles.continueBtn, !canContinue && styles.continueBtnDisabled]}
           onPress={goToTaste}
           disabled={!canContinue}
@@ -389,7 +388,7 @@ export default function OnboardingItems() {
           <Text style={[styles.continueText, !canContinue && styles.continueTextDisabled]}>
             CONTINUER →
           </Text>
-        </PressableScale>
+        </Pressable>
         {!canContinue && (
           <Text style={styles.bottomHint}>
             Encore {MIN_ITEMS - items.length} pour continuer
@@ -412,11 +411,11 @@ export default function OnboardingItems() {
             <Text style={styles.modalHint}>
               Une seule pièce, ou plusieurs à extraire ?
             </Text>
-            <PressableScale style={styles.choiceBtn} onPress={analyzePendingAsSingle}>
+            <Pressable style={styles.choiceBtn} onPress={analyzePendingAsSingle}>
               <Text style={styles.choiceBtnText}>GARDER COMME UNE PIÈCE</Text>
               <Text style={styles.choiceBtnSub}>Une photo, une entrée</Text>
-            </PressableScale>
-            <PressableScale
+            </Pressable>
+            <Pressable
               style={[styles.choiceBtn, styles.choiceBtnPrimary]}
               onPress={analyzePendingAsMulti}
             >
@@ -426,13 +425,13 @@ export default function OnboardingItems() {
               <Text style={[styles.choiceBtnSub, styles.choiceBtnSubPrimary]}>
                 Gemini sépare chaque vêtement visible
               </Text>
-            </PressableScale>
-            <PressableScale
+            </Pressable>
+            <Pressable
               style={[styles.modalCancel, styles.choiceCancel]}
               onPress={() => setPendingPhoto(null)}
             >
               <Text style={styles.modalCancelText}>ANNULER</Text>
-            </PressableScale>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -457,12 +456,12 @@ export default function OnboardingItems() {
               style={styles.modalInput}
             />
             <View style={styles.modalRow}>
-              <PressableScale style={styles.modalCancel} onPress={() => setTextModal(false)}>
+              <Pressable style={styles.modalCancel} onPress={() => setTextModal(false)}>
                 <Text style={styles.modalCancelText}>ANNULER</Text>
-              </PressableScale>
-              <PressableScale style={styles.modalSubmit} onPress={handleDescribe}>
+              </Pressable>
+              <Pressable style={styles.modalSubmit} onPress={handleDescribe}>
                 <Text style={styles.modalSubmitText}>ANALYSER</Text>
-              </PressableScale>
+              </Pressable>
             </View>
           </View>
         </KeyboardAvoidingView>

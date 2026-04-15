@@ -1,5 +1,4 @@
 import { View, Text, Pressable } from "react-native";
-import { PressableScale } from "@/components/ui/PressableScale";
 import type { CircleViewMode } from "@/hooks/useCircle";
 
 interface Props {
@@ -18,14 +17,14 @@ export function ViewModeToggle({ mode, onChange }: Props) {
       {ITEMS.map((it) => {
         const active = it.value === mode;
         return (
-          <PressableScale key={it.value} onPress={() => onChange(it.value)}>
+          <Pressable key={it.value} onPress={() => onChange(it.value)}>
             <Text
               className={`font-body-semibold text-eyebrow ${active ? "text-ink-900" : "text-ink-300"}`}
               style={{ letterSpacing: 2 }}
             >
               {it.label}
             </Text>
-          </PressableScale>
+          </Pressable>
         );
       })}
     </View>

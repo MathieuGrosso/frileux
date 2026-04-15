@@ -1,21 +1,18 @@
 import { useEffect, useState, useCallback } from "react";
-import { View, Text, FlatList, Image } from "react-native";
-import Animated, { useReducedMotion } from "react-native-reanimated";
+import { View, Text, FlatList, Pressable } from "react-native";
+import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import type { Outfit } from "@/lib/types";
-import { enterFadeUp } from "@/lib/animations";
 import { RatingStars } from "@/components/RatingStars";
 import { EmptyState } from "@/components/EmptyState";
-import { PressableScale } from "@/components/ui/PressableScale";
 
 export default function HistoryScreen() {
   const [outfits, setOutfits] = useState<Outfit[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "top">("all");
   const router = useRouter();
-  const reducedMotion = useReducedMotion();
 
   const loadOutfits = useCallback(async () => {
     setLoading(true);
@@ -41,17 +38,18 @@ export default function HistoryScreen() {
     loadOutfits();
   }, [loadOutfits]);
 
-  function renderOutfit({ item, index }: { item: Outfit; index: number }) {
+  function renderOutfit({ item }: { item: Outfit }) {
     return (
-      <Animated.View entering={enterFadeUp(index, reducedMotion)}>
-      <PressableScale
+      <Pressable
         onPress={() => router.push(`/outfit/${item.id}`)}
-        className="mb-9"
+        className="mb-9 active:opacity-70"
       >
         <Image
-          source={{ uri: item.photo_url }}
-          className="w-full h-[280px]"
-          resizeMode="cover"
+          source={item.photo_url ? { uri: item.photo_url } : null}
+          className="w-full h-[280px] bg-paper-200"
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={150}
         />
         <View className="pt-3">
           <View className="flex-row justify-between items-center mb-2.5">
@@ -82,8 +80,7 @@ export default function HistoryScreen() {
             </Text>
           ) : null}
         </View>
-      </PressableScale>
-      </Animated.View>
+      </Pressable>
     );
   }
 
@@ -94,7 +91,7 @@ export default function HistoryScreen() {
           MES TENUES
         </Text>
         <View className="flex-row" style={{ gap: 24 }}>
-          <PressableScale onPress={() => setFilter("all")} className="pb-1.5 relative">
+          <Pressable onPress={() => setFilter("all")} className="pb-1.5 relative">
             <Text
               className={`font-body-medium text-eyebrow tracking-[2px] ${
                 filter === "all" ? "text-ink-900" : "text-ink-300"
@@ -103,8 +100,8 @@ export default function HistoryScreen() {
               TOUTES
             </Text>
             {filter === "all" && <View className="absolute -bottom-px left-0 right-0 h-px bg-ink-900" />}
-          </PressableScale>
-          <PressableScale onPress={() => setFilter("top")} className="pb-1.5 relative">
+          </Pressable>
+          <Pressable onPress={() => setFilter("top")} className="pb-1.5 relative">
             <Text
               className={`font-body-medium text-eyebrow tracking-[2px] ${
                 filter === "top" ? "text-ink-900" : "text-ink-300"
@@ -113,7 +110,7 @@ export default function HistoryScreen() {
               FAVORIS
             </Text>
             {filter === "top" && <View className="absolute -bottom-px left-0 right-0 h-px bg-ink-900" />}
-          </PressableScale>
+          </Pressable>
         </View>
       </View>
 

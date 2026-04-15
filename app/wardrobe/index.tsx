@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, ScrollView, ActivityIndicator } from "react-native";
-import { PressableScale } from "@/components/ui/PressableScale";
+import { View, Text, ScrollView, ActivityIndicator, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -87,11 +86,11 @@ export default function WardrobeIndex() {
         {/* Header */}
         <View className="px-6 pt-4 pb-6 border-b border-paper-300">
           <View className="flex-row items-center justify-between mb-6">
-            <PressableScale onPress={() => router.back()} className="py-1">
+            <Pressable onPress={() => router.back()} className="py-1">
               <Text className="font-body text-caption text-ink-500 uppercase tracking-widest">
                 Retour
               </Text>
-            </PressableScale>
+            </Pressable>
             <Text className="font-body text-caption text-ink-500 uppercase tracking-widest">
               {items.length} pièce{items.length > 1 ? "s" : ""}
             </Text>
@@ -153,7 +152,7 @@ export default function WardrobeIndex() {
               </Text>
               <View className="flex-row flex-wrap -mx-1">
                 {list.map((item) => (
-                  <PressableScale
+                  <Pressable
                     key={item.id}
                     onPress={() => router.push(`/wardrobe/${item.id}` as const)}
                     className="w-1/2 p-1"
@@ -191,7 +190,7 @@ export default function WardrobeIndex() {
                         {item.color}
                       </Text>
                     )}
-                  </PressableScale>
+                  </Pressable>
                 ))}
               </View>
             </View>

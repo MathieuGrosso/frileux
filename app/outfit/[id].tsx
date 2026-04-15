@@ -8,7 +8,6 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-import { PressableScale } from "@/components/ui/PressableScale";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -142,12 +141,12 @@ export default function OutfitDetailScreen() {
               className="w-full h-full"
               resizeMode="cover"
             />
-            <PressableScale
+            <Pressable
               onPress={() => router.back()}
               className="absolute top-4 left-4 bg-paper-100/90 px-3.5 py-2 border border-paper-300"
             >
               <Text className="font-body-medium text-body-sm text-ink-900">←</Text>
-            </PressableScale>
+            </Pressable>
           </View>
 
           <View className="px-6 pt-6">
@@ -215,7 +214,7 @@ export default function OutfitDetailScreen() {
                   {OUTFIT_OCCASIONS.map((opt) => {
                     const active = occasion === opt.value;
                     return (
-                      <PressableScale
+                      <Pressable
                         key={opt.value}
                         onPress={() => setOccasion(active ? null : opt.value)}
                         className={`py-2 px-3 border ${
@@ -231,7 +230,7 @@ export default function OutfitDetailScreen() {
                         >
                           {opt.label}
                         </Text>
-                      </PressableScale>
+                      </Pressable>
                     );
                   })}
                 </View>
@@ -255,7 +254,7 @@ export default function OutfitDetailScreen() {
                   {THERMAL_FEELINGS.map((opt) => {
                     const active = thermal === opt.value;
                     return (
-                      <PressableScale
+                      <Pressable
                         key={opt.value}
                         onPress={() => setThermal(active ? null : opt.value)}
                         className={`py-2 px-3 border ${
@@ -271,7 +270,7 @@ export default function OutfitDetailScreen() {
                         >
                           {opt.label}
                         </Text>
-                      </PressableScale>
+                      </Pressable>
                     );
                   })}
                 </View>
@@ -324,15 +323,15 @@ export default function OutfitDetailScreen() {
               <View className="flex-row gap-2.5 mt-2">
                 {editing ? (
                   <>
-                    <PressableScale
+                    <Pressable
                       onPress={saveChanges}
                       className="flex-1 bg-ink-900 py-4 items-center active:bg-ink-700"
                     >
                       <Text className="font-body-semibold text-eyebrow tracking-widest text-paper-100">
                         SAUVEGARDER
                       </Text>
-                    </PressableScale>
-                    <PressableScale
+                    </Pressable>
+                    <Pressable
                       onPress={() => {
                         setEditing(false);
                         setRating(outfit.rating ?? 0);
@@ -345,19 +344,19 @@ export default function OutfitDetailScreen() {
                       <Text className="font-body text-body-sm text-ink-300">
                         Annuler
                       </Text>
-                    </PressableScale>
+                    </Pressable>
                   </>
                 ) : (
                   <>
-                    <PressableScale
+                    <Pressable
                       onPress={() => setEditing(true)}
                       className="flex-1 border border-ink-900 py-4 items-center active:bg-paper-200"
                     >
                       <Text className="font-body-semibold text-eyebrow tracking-widest text-ink-900">
                         MODIFIER
                       </Text>
-                    </PressableScale>
-                    <PressableScale
+                    </Pressable>
+                    <Pressable
                       onPress={deleteOutfit}
                       disabled={deleting}
                       className={`flex-1 border border-paper-300 py-4 items-center ${deleting ? "opacity-50" : "active:bg-paper-200"}`}
@@ -365,7 +364,7 @@ export default function OutfitDetailScreen() {
                       <Text className="font-body text-body-sm text-error">
                         {deleting ? "Suppression…" : "Supprimer"}
                       </Text>
-                    </PressableScale>
+                    </Pressable>
                   </>
                 )}
               </View>

@@ -1,7 +1,7 @@
 import "react-native-url-polyfill/auto";
 import "../global.css";
 import { useCallback, useEffect, useState } from "react";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Slot, useRouter, useSegments } from "expo-router";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { OnboardingContext } from "@/lib/onboarding-context";
@@ -130,25 +130,7 @@ export default function RootLayout() {
       value={{ completed: onboardingCompleted, refresh: refreshOnboardingFlag }}
     >
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            animation: "slide_from_right",
-            animationDuration: 220,
-            contentStyle: { backgroundColor: colors.paper.DEFAULT },
-          }}
-        >
-          <Stack.Screen name="(tabs)" options={{ animation: "fade" }} />
-          <Stack.Screen name="auth" options={{ animation: "fade" }} />
-          <Stack.Screen
-            name="settings"
-            options={{ presentation: "modal", animation: "slide_from_bottom" }}
-          />
-          <Stack.Screen
-            name="brands-library"
-            options={{ presentation: "modal", animation: "slide_from_bottom" }}
-          />
-        </Stack>
+        <Slot />
       </GestureHandlerRootView>
     </OnboardingContext.Provider>
   );
