@@ -1,4 +1,4 @@
-import { View, Text, Share } from "react-native";
+import { View, Text, Share, Pressable } from "react-native";
 import { PressableScale } from "@/components/ui/PressableScale";
 import { useRouter } from "expo-router";
 import type { Circle } from "@/lib/types";
@@ -107,10 +107,18 @@ interface ActionProps {
 
 function HeaderAction({ label, onPress, border, badge, accent }: ActionProps) {
   return (
-    <PressableScale
+    <Pressable
       onPress={onPress}
-      className={`flex-1 py-3 items-center flex-row justify-center gap-1 ${border ? "border-r border-ink-100" : ""}`}
-      scaleTo={0.98}
+      style={{
+        flex: 1,
+        paddingVertical: 12,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 4,
+        borderRightWidth: border ? 1 : 0,
+        borderRightColor: "#C4C0BC",
+      }}
     >
       <Text
         className={`font-body-semibold ${accent ? "text-ice-600" : "text-ink-900"}`}
@@ -126,6 +134,6 @@ function HeaderAction({ label, onPress, border, badge, accent }: ActionProps) {
           · {badge}
         </Text>
       ) : null}
-    </PressableScale>
+    </Pressable>
   );
 }
