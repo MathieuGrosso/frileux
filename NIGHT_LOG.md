@@ -247,3 +247,101 @@ Format par session :
 
 ### Fichiers touchés (session complète)
 13 features · 8 migrations · 19 commits · typecheck vert à chaque push.
+
+## 2026-04-17 nuit — Raffinage IA + Hello calibrage
+
+### Fait
+
+- **PR #146** ✅ `fix/unisex-gender-signal` · fix du prompt suggest-outfit
+  quand `gender_presentation === "both"` (la ligne était filtrée → biais
+  masculin par défaut du LLM). Même fix dans `critique-outfit`. Exemple
+  final du prompt rendu paramétrique.
+
+- **PR #148** ✅ `feat/sonnet-editorial-prompt` · upgrade Haiku 4.5 → Sonnet
+  4.6 sur `suggest-outfit`, `critique-outfit`, `daily-notification`.
+  Réécriture du prompt suggest-outfit : ton éditorial (Ssense /
+  Highsnobiety), règles de composition (silhouette nette, 2 textures min,
+  palette ≤3, pièce signature, matière nommée), vocabulaire interdit
+  ("joli", "basique"), anti-template "pull + jean + baskets".
+
+- **PR #149** ✅ `fix/memory-persists-feedback` · l'écran "Ce que Frileux
+  sait de toi" ignorait la majorité des retours. Bugs fixés :
+  1. `recordCritiqueFacts` n'écrivait que pour score ≥8 ou ≤5. Élargi à
+     ≥7 / ≤6 + insertion du 2e improvement comme pattern sur toute critique.
+  2. Les raffinements (reason, steer_text, steer_brands) n'allaient
+     jamais dans style_memory. Nouvelle fonction
+     `recordRefinementFeedback` qui insère comme pattern + fallback lisible
+     par raison preset.
+
+- **PR #151** ✅ `feat/refinement-chain` · fix le "je raffine, l'IA
+  oublie". Migration 043 : `outfit_rejections` + `parent_rejection_id`,
+  `iteration_number`, `steer_text`, `steer_brands`. Client : state
+  refinementChain + lastRejectionId, rechargé au mount, passé à chaque
+  fetchSuggestion. UI : label "ITÉRATION 02 · SUGGESTION DU JOUR" +
+  rappel du dernier steer. RefineSheet : titre "RAFFINER · ITÉRATION 03"
+  + bloc "DÉJÀ DEMANDÉ AUJOURD'HUI". Edge : nouveau `chainBlock` dans le
+  prompt qui liste chaque itération rejetée + directive demandée +
+  instruction de dévier du fil rouge.
+
+- **PR #152** ✅ `feat/hello-calibration` · module Hello à la connexion.
+  Migration 044 : `taste_probes` (batch_id, axis, options, chosen,
+  judged_at) + RLS. Edge `daily-taste-probe` : **Opus 4.7 température
+  0.9**, génère 5 duels contrastés sur axes variés (silhouette /
+  palette / texture / registre / proportion), relit historique pour
+  éviter redondance. Screen `/calibrate` affiché tant que
+  `judged_count < 30` (cooldown 4h). Jauge hairline, "HELLO. DIS-MOI CE
+  QUE TU AIMES.", 5 duels, écran "VU · TON GOÛT EST MIEUX CERNÉ".
+  Settings → "RECALIBRER MON GOÛT". L'écran Today **reste intouché**.
+
+- **PR #153** ✅ `feat/swipe-feedback-integration` · `outfit_preferences`
+  (swipes d'onboarding) et `taste_probes` (calibrage) enfin relus dans
+  `loadProfileBundle` → injectés dans derived_prefs → suggest-outfit.
+  Slice à 10 max pour respecter la validation edge. Priorité :
+  calibrage > mémoire > regret > swipes > rejects.
+
+- **PR #154** ✅ `feat/critique-memory-closure` · dédoublonnage de
+  style_memory. Normalisation robuste (lowercase, sans diacritics, slice
+  80). Duplicate → delete ancien + insert nouveau (recency bump). Les
+  signaux récurrents remontent naturellement en tête via `order by
+  created_at desc limit 8` dans `loadProfileBundle`.
+
+Queue de merge recommandée : #146 → #148 → #149 → #151 → #152 → #153 → #154.
+
+Migrations 043 et 044 **déjà appliquées en prod** via `supabase db push`.
+Edge functions **déployées en prod** : suggest-outfit, critique-outfit,
+daily-notification, daily-taste-probe.
+
+### Décisions prises en autonomie
+
+- **Modèle** : Sonnet 4.6 partout pour suggest/critique/daily (confirmé
+  via AskUserQuestion). Opus 4.7 seulement pour daily-taste-probe
+  (diversité critique, budget ≤ 3 batchs/jour cappé, user a dit "tant
+  pis le prix").
+- **Scope aesthetic_personality** : abandonné au profit du Hello
+  calibrage en batch de 5 duels (idée plus riche exprimée par
+  l'utilisatrice en mid-session). Signal 100× plus dense qu'un champ
+  statique.
+- **Seuil calibrage** = 30 jugements (6 sessions environ). Cooldown 4h
+  pour ne pas harceler à chaque refresh.
+- **UI** : "ITÉRATION 02" en display uppercase tracking-widest, pas de
+  badge ni pill — footer de chapitre System magazine style.
+- **Copy** : tutoiement partout, "Hello. Dis-moi ce que tu aimes." avec
+  point final typographique intentionnel.
+- **Dédoublonnage mémoire** : recency bump via delete+insert (pas de
+  nouvelle policy UPDATE à ajouter).
+
+### Bloqué
+
+- Rien.
+
+### Questions pour toi (review du matin)
+
+- **Coût Opus** : monitorer le dashboard Supabase après 1-2 jours
+  d'usage pour voir si le cap 3/jour/user suffit. Si trop cher → switch
+  Sonnet sur daily-taste-probe (fallback prévu dans le code).
+- **Queue de merge** : les 7 PRs forment une chaîne linéaire. Mergent
+  dans l'ordre indiqué et chaque rebase devrait être trivial.
+
+### Idées ajoutées au BACKLOG
+
+- (aucune, backlog 0417 fermé)
