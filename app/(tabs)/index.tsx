@@ -26,7 +26,6 @@ import { loadProfileBundle, type ProfileBundle } from "@/lib/profile";
 import { clearSuggestion, patchSuggestionAdoption, patchSuggestionImage, readSuggestion, writeSuggestion } from "@/lib/suggestionCache";
 import { REJECTION_REASONS, insertRejection, type RejectionReason } from "@/lib/rejections";
 import { embedOutfitTextWithHash } from "@/lib/embedOutfit";
-import { extractItemsFromOutfitPhoto } from "@/lib/wardrobe-extract";
 import { recordCritiqueFacts } from "@/lib/style-memory";
 import { SuggestionSwipeArea } from "@/components/SuggestionSwipeArea";
 import { WardrobeNudge } from "@/components/WardrobeNudge";
@@ -512,15 +511,6 @@ export default function TodayScreen() {
         });
         if (wornError) { if (__DEV__) console.warn("describe_worn failed:", wornError); }
         else worn_description = wornData?.worn_description ?? null;
-
-        void extractItemsFromOutfitPhoto({
-          userId: user.id,
-          imageBase64: base64,
-          mimeType,
-          photoUri,
-        }).catch((err) => {
-          if (__DEV__) console.warn("wardrobe extract skipped:", err);
-        });
       } catch (e) { if (__DEV__) console.warn("worn_description analysis skipped:", e); }
 
       const embeddingSource = worn_description ?? suggestion ?? null;
