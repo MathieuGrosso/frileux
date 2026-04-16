@@ -24,7 +24,13 @@ import { TodayLoader, type LoaderStep } from "@/components/TodayLoader";
 import { OutfitImageLoader } from "@/components/OutfitImageLoader";
 import { loadProfileBundle, type ProfileBundle } from "@/lib/profile";
 import { clearSuggestion, patchSuggestionAdoption, patchSuggestionImage, readSuggestion, writeSuggestion } from "@/lib/suggestionCache";
-import { REJECTION_REASONS, insertRejection, type RejectionReason } from "@/lib/rejections";
+import {
+  REJECTION_REASONS,
+  insertRejection,
+  loadTodayRefinementChain,
+  type RefinementChainItem,
+  type RejectionReason,
+} from "@/lib/rejections";
 import { embedOutfitTextWithHash } from "@/lib/embedOutfit";
 import { enrichOutfitInBackground } from "@/lib/enrich-outfit";
 import { recordCritiqueFacts, recordRefinementFeedback } from "@/lib/style-memory";
@@ -75,6 +81,8 @@ export default function TodayScreen() {
   const [refining, setRefining] = useState(false);
   const [steerText, setSteerText] = useState("");
   const [steerBrands, setSteerBrands] = useState<string[]>([]);
+  const [refinementChain, setRefinementChain] = useState<RefinementChainItem[]>([]);
+  const [lastRejectionId, setLastRejectionId] = useState<string | null>(null);
   const [favoriteBrands, setFavoriteBrands] = useState<string[]>([]);
   const [wardrobeItems, setWardrobeItems] = useState<ComboItem[]>([]);
   const [adopted, setAdopted] = useState(false);
@@ -106,6 +114,11 @@ export default function TodayScreen() {
     profilePromiseRef.current = loadProfileBundle();
     loadWeather();
     loadTodayOutfit();
+    loadTodayRefinementChain().then((chain) => {
+      if (chain.length > 0) {
+        setRefinementChain(chain);
+      }
+    });
     // Touch last_active_at so daily-notification only targets active users.
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) return;
@@ -253,6 +266,7 @@ export default function TodayScreen() {
       steer_text?: string | null;
       steer_brands?: string[];
       skipCache?: boolean;
+      refinement_chain?: RefinementChainItem[];
     } = {}
   ) {
     try {
@@ -317,6 +331,7 @@ export default function TodayScreen() {
           derived_prefs,
           wardrobe,
           wardrobe_mode: wardrobeOnlyMode ? ("strict" as const) : ("priority" as const),
+          refinement_chain: opts.refinement_chain,
         },
       });
       if (error) {
@@ -365,13 +380,31 @@ export default function TodayScreen() {
       const notePieces: string[] = [];
       if (trimmedText) notePieces.push(trimmedText);
       if (brands.length) notePieces.push(`marques: ${brands.join(", ")}`);
-      await insertRejection({
+      const nextIteration = refinementChain.length + 1;
+      const rejectionResult = await insertRejection({
         suggestion_text: suggestion,
         reason: reason ?? "autre",
         weather_data: weather,
         occasion,
         reason_note: notePieces.join(" · ") || null,
+        parent_rejection_id: lastRejectionId,
+        iteration_number: nextIteration,
+        steer_text: trimmedText || null,
+        steer_brands: brands.length ? brands : undefined,
       });
+      setLastRejectionId(rejectionResult.id);
+      const updatedChain: RefinementChainItem[] = [
+        ...refinementChain,
+        {
+          iteration: nextIteration,
+          rejected_suggestion: suggestion,
+          reason: reason ?? "autre",
+          reason_note: notePieces.join(" · ") || null,
+          steer_text: trimmedText || null,
+          steer_brands: brands.length ? brands : null,
+        },
+      ];
+      setRefinementChain(updatedChain);
       void recordRefinementFeedback({
         reason: reason ?? "autre",
         reason_note: notePieces.join(" · ") || null,
@@ -397,6 +430,7 @@ export default function TodayScreen() {
         steer_text: trimmedText || null,
         steer_brands: brands.length ? brands : undefined,
         skipCache: true,
+        refinement_chain: updatedChain,
       });
       setSteerText("");
       setSteerBrands([]);
@@ -435,6 +469,8 @@ export default function TodayScreen() {
       if (error) throw error;
       setAdopted(true);
       setAdoptedOutfitId(data.id);
+      setRefinementChain([]);
+      setLastRejectionId(null);
       const bundle = await (profilePromiseRef.current ?? loadProfileBundle());
       if (bundle.userId) {
         await patchSuggestionAdoption(
@@ -797,8 +833,37 @@ export default function TodayScreen() {
           {/* Suggestion */}
           <View className="mb-8">
             <Text className={`font-body-medium text-eyebrow mb-3 ${adopted ? "text-ink-900" : "text-ice"}`}>
-              {adopted ? "ADOPTÉE POUR AUJOURD'HUI" : "SUGGESTION DU JOUR"}
+              {adopted
+                ? "ADOPTÉE POUR AUJOURD'HUI"
+                : refinementChain.length > 0
+                ? `ITÉRATION ${String(refinementChain.length + 1).padStart(2, "0")} · SUGGESTION DU JOUR`
+                : "SUGGESTION DU JOUR"}
             </Text>
+
+            {!adopted && refinementChain.length > 0 && (() => {
+              const last = refinementChain[refinementChain.length - 1];
+              const bits: string[] = [];
+              if (last.steer_text && last.steer_text.trim()) {
+                bits.push(`« ${last.steer_text.trim()} »`);
+              }
+              if (last.steer_brands && last.steer_brands.length > 0) {
+                bits.push(last.steer_brands.slice(0, 3).join(" · "));
+              }
+              if (bits.length === 0 && last.reason_note) {
+                bits.push(`« ${last.reason_note.slice(0, 60)} »`);
+              }
+              if (bits.length === 0) {
+                const reasonEntry = REJECTION_REASONS.find((r) => r.value === last.reason);
+                if (reasonEntry) bits.push(reasonEntry.label);
+              }
+              return (
+                <View className="-mt-1 mb-4">
+                  <Text className="font-body text-micro text-ink-400 uppercase tracking-widest">
+                    Ajustée selon {bits.join(" · ") || "tes retours"}
+                  </Text>
+                </View>
+              );
+            })()}
 
             <View className="aspect-square mb-4">
               {suggestionImage ? (
@@ -1048,6 +1113,7 @@ export default function TodayScreen() {
         favoriteBrands={favoriteBrands}
         steerText={steerText}
         steerBrands={steerBrands}
+        refinementChain={refinementChain}
         onSteerTextChange={setSteerText}
         onToggleBrand={(brand) =>
           setSteerBrands((prev) =>
