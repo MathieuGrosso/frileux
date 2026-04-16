@@ -104,8 +104,12 @@ const BRAND_AESTHETICS: Record<string, string> = {
 function buildTasteBlock(t?: TasteBody): string {
   if (!t) return "";
   const lines: string[] = [];
-  if (t.gender_presentation && t.gender_presentation !== "both") {
-    lines.push(`- Présentation : ${t.gender_presentation}`);
+  if (t.gender_presentation === "menswear") {
+    lines.push("- Présentation : menswear (garde-robe masculine — silhouettes, coupes et codes menswear)");
+  } else if (t.gender_presentation === "womenswear") {
+    lines.push("- Présentation : womenswear (garde-robe féminine — silhouettes, coupes et codes womenswear)");
+  } else if (t.gender_presentation === "both") {
+    lines.push("- Présentation : mix menswear + womenswear (aucun des deux n'est prioritaire — varie d'un jour à l'autre, pioche librement entre les codes masculins et féminins)");
   }
   if (t.style_universes?.length) {
     lines.push(`- Univers : ${t.style_universes.join(", ")}`);
@@ -345,6 +349,16 @@ Deno.serve(async (req: Request) => {
       ? `\n\nContexte demandé pour aujourd'hui : ${cleanOccasion}. Adapte le code vestimentaire (ex: travail = un cran plus formel, sortie = plus expressif, sport = technique).`
       : "";
 
+    const genderPresentation = taste?.gender_presentation ?? null;
+    const exampleByGender = {
+      menswear: "Pull col roulé laine grise, jean droit brut, manteau en laine noire, bottines en cuir, écharpe en cachemire camel.",
+      womenswear: "Chemise popeline crème, pantalon tailleur laine noir, trench beige, derbies cuir noir, sac cuir camel.",
+      both: "Chemise popeline crème oversize, pantalon tailleur laine noir, pardessus laine anthracite, mocassins cuir noir, écharpe cachemire camel.",
+    } as const;
+    const exampleLine = genderPresentation
+      ? exampleByGender[genderPresentation] ?? exampleByGender.both
+      : exampleByGender.both;
+
     const prompt = `Tu es une styliste personnelle pour une personne ${coldnessDescriptions[coldness_level] ?? "très frileuse"}.
 
 Météo du jour :
@@ -364,7 +378,7 @@ Règles strictes :
 - Pas d'emoji.
 
 Exemple de format attendu :
-Pull col roulé laine grise, jean droit brut, manteau en laine noire, bottines en cuir, écharpe en cachemire camel.`;
+${exampleLine}`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
