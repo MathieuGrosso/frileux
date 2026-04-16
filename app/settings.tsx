@@ -205,12 +205,13 @@ export default function SettingsScreen() {
             ]);
           });
     if (!confirmed) return;
-    try {
-      await supabase.auth.signOut();
-    } catch (e) {
-      console.warn("signOut failed", e);
+    const { error: signOutError } = await supabase.auth.signOut();
+    if (signOutError) {
+      console.warn("signOut failed", signOutError);
+      Alert.alert("Déconnexion", "Impossible de se déconnecter. Réessaie.");
     }
-    router.replace("/auth/login");
+    // Pas de router.replace ici : _layout.tsx écoute onAuthStateChange
+    // et redirige vers /auth/login quand session devient null (CLAUDE.md §5).
   }
 
   return (
