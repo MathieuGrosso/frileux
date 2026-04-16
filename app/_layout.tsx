@@ -6,6 +6,7 @@ import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { OnboardingContext } from "@/lib/onboarding-context";
 import { registerForPushNotifications, savePushToken } from "@/lib/notifications";
+import { shouldShowCalibrationGate } from "@/lib/tasteProbes";
 import { View, ActivityIndicator } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useFonts } from "expo-font";
@@ -93,6 +94,7 @@ export default function RootLayout() {
     if (loading) return;
     const inAuthGroup = segments[0] === "auth";
     const inOnboarding = segments[0] === "onboarding";
+    const inCalibrate = segments[0] === "calibrate";
 
     if (!session) {
       if (!inAuthGroup) router.replace("/auth/login");
@@ -113,6 +115,15 @@ export default function RootLayout() {
     }
     if (inAuthGroup || inOnboarding) {
       router.replace("/");
+      return;
+    }
+
+    // Hello calibrage : propose un batch à la connexion tant que l'utilisatrice
+    // n'a pas assez calibré son goût. N'interrompt pas quand déjà sur /calibrate.
+    if (!inCalibrate) {
+      shouldShowCalibrationGate().then((show) => {
+        if (show) router.replace("/calibrate");
+      }).catch(() => { /* fail-open — on reste sur Today */ });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, loading, onboardingCompleted, tasteCompleted]);
