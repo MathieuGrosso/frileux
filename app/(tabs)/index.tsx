@@ -39,7 +39,21 @@ import { fetchOutfitCritique } from "@/lib/critique";
 import { colors, motion } from "@/lib/theme";
 import { useFocusEffect, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { decode as decodeBase64 } from "base64-arraybuffer";
 import { localDateISO } from "@/lib/dates";
+
+async function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const r = reader.result as string;
+      const comma = r.indexOf(",");
+      resolve(comma >= 0 ? r.slice(comma + 1) : r);
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
 
 const getLocalDateISO = localDateISO;
 
@@ -483,10 +497,18 @@ export default function TodayScreen() {
       const response = await fetch(photoUri);
       const blob = await response.blob();
       const mimeType = blob.type || "image/jpeg";
+      // Convertir en base64 puis ArrayBuffer : Blob direct upload casse sur
+      // RN New Arch (fichier uploadé à 0 octet → image vide côté rendu).
+      const base64 = await blobToBase64(blob);
+      if (!base64) {
+        Alert.alert("Upload échoué", "Impossible de lire la photo, réessaye.");
+        setSaving(false);
+        return;
+      }
 
       const { error: uploadError } = await supabase.storage
         .from("outfits")
-        .upload(fileName, blob, { contentType: mimeType });
+        .upload(fileName, decodeBase64(base64), { contentType: mimeType });
       if (uploadError) {
         Alert.alert("Upload échoué", "Réessaye dans un instant.");
         setSaving(false);
