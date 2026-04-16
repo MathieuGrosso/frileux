@@ -26,6 +26,7 @@ import { loadProfileBundle, type ProfileBundle } from "@/lib/profile";
 import { clearSuggestion, patchSuggestionAdoption, patchSuggestionImage, readSuggestion, writeSuggestion } from "@/lib/suggestionCache";
 import { REJECTION_REASONS, insertRejection, type RejectionReason } from "@/lib/rejections";
 import { embedOutfitTextWithHash } from "@/lib/embedOutfit";
+import { extractItemsFromOutfitPhoto } from "@/lib/wardrobe-extract";
 import { recordCritiqueFacts } from "@/lib/style-memory";
 import { SuggestionSwipeArea } from "@/components/SuggestionSwipeArea";
 import { WardrobeNudge } from "@/components/WardrobeNudge";
@@ -495,8 +496,9 @@ export default function TodayScreen() {
       const { data: urlData } = supabase.storage.from("outfits").getPublicUrl(fileName);
 
       let worn_description: string | null = null;
+      let base64: string | null = null;
       try {
-        const base64 = await new Promise<string>((resolve, reject) => {
+        base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onloadend = () => {
             const result = reader.result as string;
@@ -572,6 +574,17 @@ export default function TodayScreen() {
           .finally(() => {
             if (critiqueTargetRef.current === targetId) setCritiqueLoading(false);
           });
+
+        if (base64) {
+          void extractItemsFromOutfitPhoto({
+            userId: user.id,
+            imageBase64: base64,
+            mimeType,
+            photoUri,
+          }).catch((err) => {
+            if (__DEV__) console.warn("wardrobe extract skipped:", err);
+          });
+        }
       }
 
       setSaved(true);
