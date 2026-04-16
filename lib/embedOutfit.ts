@@ -5,6 +5,9 @@ export interface EmbedResult {
   textHash: string | null;
 }
 
+const EMBED_TIMEOUT_MS = 10_000;
+const TIMEOUT_SENTINEL = Symbol("embed-outfit-timeout");
+
 export async function embedOutfitText(text: string): Promise<number[] | null> {
   const res = await embedOutfitTextWithHash(text);
   return res?.embedding ?? null;
@@ -13,9 +16,18 @@ export async function embedOutfitText(text: string): Promise<number[] | null> {
 export async function embedOutfitTextWithHash(text: string): Promise<EmbedResult | null> {
   const clean = text.trim();
   if (!clean) return null;
-  const { data, error } = await supabase.functions.invoke("embed-outfit", {
+  const invokePromise = supabase.functions.invoke("embed-outfit", {
     body: { text: clean },
   });
+  const timeoutPromise = new Promise<typeof TIMEOUT_SENTINEL>((resolve) =>
+    setTimeout(() => resolve(TIMEOUT_SENTINEL), EMBED_TIMEOUT_MS),
+  );
+  const raced = await Promise.race([invokePromise, timeoutPromise]);
+  if (raced === TIMEOUT_SENTINEL) {
+    if (__DEV__) console.warn("embed-outfit timeout");
+    return null;
+  }
+  const { data, error } = raced;
   if (error) {
     if (__DEV__) console.warn("embed-outfit failed:", error.message);
     return null;
