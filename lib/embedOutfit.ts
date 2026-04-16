@@ -5,7 +5,7 @@ export interface EmbedResult {
   textHash: string | null;
 }
 
-const EMBED_TIMEOUT_MS = 10_000;
+const EMBED_TIMEOUT_MS = 30_000;
 const TIMEOUT_SENTINEL = Symbol("embed-outfit-timeout");
 
 export async function embedOutfitText(text: string): Promise<number[] | null> {

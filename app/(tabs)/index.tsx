@@ -26,7 +26,7 @@ import { loadProfileBundle, type ProfileBundle } from "@/lib/profile";
 import { clearSuggestion, patchSuggestionAdoption, patchSuggestionImage, readSuggestion, writeSuggestion } from "@/lib/suggestionCache";
 import { REJECTION_REASONS, insertRejection, type RejectionReason } from "@/lib/rejections";
 import { embedOutfitTextWithHash } from "@/lib/embedOutfit";
-import { extractItemsFromOutfitPhoto } from "@/lib/wardrobe-extract";
+import { enrichOutfitInBackground } from "@/lib/enrich-outfit";
 import { recordCritiqueFacts } from "@/lib/style-memory";
 import { SuggestionSwipeArea } from "@/components/SuggestionSwipeArea";
 import { WardrobeNudge } from "@/components/WardrobeNudge";
@@ -495,44 +495,16 @@ export default function TodayScreen() {
 
       const { data: urlData } = supabase.storage.from("outfits").getPublicUrl(fileName);
 
-      let worn_description: string | null = null;
-      let base64: string | null = null;
-      try {
-        base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            const result = reader.result as string;
-            const comma = result.indexOf(",");
-            resolve(comma >= 0 ? result.slice(comma + 1) : result);
-          };
-          reader.onerror = () => reject(reader.error);
-          reader.readAsDataURL(blob);
-        });
-        const { data: wornData, error: wornError } = await supabase.functions.invoke("wardrobe-ai", {
-          body: { action: "describe_worn", image_base64: base64, mime_type: mimeType, suggestion },
-        });
-        if (wornError) { if (__DEV__) console.warn("describe_worn failed:", wornError); }
-        else worn_description = wornData?.worn_description ?? null;
-      } catch (e) { if (__DEV__) console.warn("worn_description analysis skipped:", e); }
-
-      const embeddingSource = worn_description ?? suggestion ?? null;
-      const embedRes2 = embeddingSource ? await embedOutfitTextWithHash(embeddingSource).catch(() => null) : null;
-      const embedding = embedRes2?.embedding ?? null;
-
-      const payload = {
+      const basePayload = {
         user_id: user.id,
         photo_url: urlData.publicUrl,
         date: getLocalDateISO(today),
         weather_data: weather,
         rating: rating || null,
         ai_suggestion: suggestion,
-        worn_description,
         occasion,
         intention,
         notes: notes.trim() || null,
-        embedding,
-        embedding_text_hash: embedRes2?.textHash ?? null,
-        embedding_source: embedding ? (worn_description ? "worn" : "suggested") : null,
         adopted: adopted || adoptedOutfitId !== null,
         is_public: postPublic,
       };
@@ -540,14 +512,14 @@ export default function TodayScreen() {
       if (adoptedOutfitId) {
         const { error: updateError } = await supabase
           .from("outfits")
-          .update({ ...payload, critique: null, critique_score: null })
+          .update({ ...basePayload, critique: null, critique_score: null })
           .eq("id", adoptedOutfitId);
         if (updateError) throw updateError;
         savedId = adoptedOutfitId;
       } else {
         const { data: inserted, error: insertError } = await supabase
           .from("outfits")
-          .insert(payload)
+          .insert(basePayload)
           .select("id")
           .single();
         if (insertError) throw insertError;
@@ -575,16 +547,15 @@ export default function TodayScreen() {
             if (critiqueTargetRef.current === targetId) setCritiqueLoading(false);
           });
 
-        if (base64) {
-          void extractItemsFromOutfitPhoto({
-            userId: user.id,
-            imageBase64: base64,
-            mimeType,
-            photoUri,
-          }).catch((err) => {
-            if (__DEV__) console.warn("wardrobe extract skipped:", err);
-          });
-        }
+        const capturedSuggestion = suggestion;
+        void enrichOutfitInBackground({
+          outfitId: savedId,
+          userId: user.id,
+          blob,
+          mimeType,
+          photoUri,
+          suggestion: capturedSuggestion,
+        });
       }
 
       setSaved(true);
