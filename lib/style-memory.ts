@@ -14,20 +14,68 @@ function truncate(s: string, max = 200): string {
   return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
 }
 
+function normalizeFact(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}+/gu, "")
+    .replace(/[^\p{Letter}\p{Number}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+}
+
 async function insertFacts(
   rows: Array<{ fact: string; kind: StyleMemoryFact["kind"]; source_outfit_id?: string | null }>,
 ): Promise<void> {
   if (rows.length === 0) return;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
-  await supabase.from("style_memory").insert(
-    rows.map((r) => ({
+
+  // Dédoublonner : ne pas insérer un fact équivalent à un des 50 derniers.
+  const { data: existing } = await supabase
+    .from("style_memory")
+    .select("id, fact, kind")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  const seen = new Map<string, { id: string; kind: StyleMemoryFact["kind"] }>();
+  for (const row of existing ?? []) {
+    const key = `${row.kind}:${normalizeFact(row.fact as string)}`;
+    seen.set(key, { id: row.id as string, kind: row.kind as StyleMemoryFact["kind"] });
+  }
+
+  const toInsert: Array<{
+    user_id: string;
+    fact: string;
+    kind: StyleMemoryFact["kind"];
+    source_outfit_id: string | null;
+  }> = [];
+  const idsToRefresh: string[] = [];
+
+  for (const r of rows) {
+    const key = `${r.kind}:${normalizeFact(r.fact)}`;
+    const hit = seen.get(key);
+    if (hit && hit.id !== "pending") {
+      // Signal récurrent : on supprime l'ancien pour laisser le nouveau
+      // remonter en tête (la recence pilote la priorité côté profile).
+      idsToRefresh.push(hit.id);
+    }
+    seen.set(key, { id: "pending", kind: r.kind });
+    toInsert.push({
       user_id: user.id,
       fact: r.fact,
       kind: r.kind,
       source_outfit_id: r.source_outfit_id ?? null,
-    })),
-  );
+    });
+  }
+
+  if (idsToRefresh.length > 0) {
+    await supabase.from("style_memory").delete().in("id", idsToRefresh);
+  }
+  if (toInsert.length > 0) {
+    await supabase.from("style_memory").insert(toInsert);
+  }
 }
 
 export async function recordCritiqueFacts(
