@@ -13,17 +13,18 @@ import Animated, {
 interface Props {
   children: ReactNode;
   onSwipe: (accepted: boolean) => void;
+  onTap?: () => void;
   stackIndex: number; // 0 = top
 }
 
 const SWIPE_THRESHOLD = 120;
 
-export function SwipeCard({ children, onSwipe, stackIndex }: Props) {
+export function SwipeCard({ children, onSwipe, onTap, stackIndex }: Props) {
   const { width } = useWindowDimensions();
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
 
-  const gesture = Gesture.Pan()
+  const pan = Gesture.Pan()
     .enabled(stackIndex === 0)
     .onUpdate((e) => {
       translateX.value = e.translationX;
@@ -41,6 +42,15 @@ export function SwipeCard({ children, onSwipe, stackIndex }: Props) {
         translateY.value = withSpring(0, { damping: 18 });
       }
     });
+
+  const tap = Gesture.Tap()
+    .enabled(stackIndex === 0 && !!onTap)
+    .maxDuration(250)
+    .onEnd((_e, success) => {
+      if (success && onTap) runOnJS(onTap)();
+    });
+
+  const gesture = Gesture.Exclusive(pan, tap);
 
   const cardStyle = useAnimatedStyle(() => {
     const rotate = interpolate(translateX.value, [-width, 0, width], [-12, 0, 12]);
