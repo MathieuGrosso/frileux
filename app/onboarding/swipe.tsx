@@ -20,6 +20,7 @@ import type {
   WardrobeItemType,
 } from "@/lib/types";
 import { colors } from "@/lib/theme";
+import { onboardingProposal } from "@/lib/onboardingProposal";
 
 const TYPE_LABELS: Record<WardrobeItemType, string> = {
   top: "Haut",
@@ -231,11 +232,21 @@ export default function OnboardingSwipe() {
             .reverse()
             .map((card, idxFromTop) => {
               const actualIdx = Math.min(3, remaining.length) - 1 - idxFromTop;
+              const isTop = actualIdx === 0;
+              const expandable = isTop && card.kind === "combo";
               return (
                 <SwipeCard
                   key={`${cursor}-${actualIdx}`}
                   onSwipe={handleSwipe}
                   stackIndex={actualIdx}
+                  onTap={
+                    expandable
+                      ? () => {
+                          onboardingProposal.set(card);
+                          router.push("/onboarding/proposal-expand");
+                        }
+                      : undefined
+                  }
                 >
                   {renderCard(card)}
                 </SwipeCard>
