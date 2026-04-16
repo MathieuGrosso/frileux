@@ -116,7 +116,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: profile } = await admin
       .from("profiles")
-      .select("coldness_level, gender_presentation, style_universes, favorite_brands, avoid_tags, fit_preference")
+      .select("coldness_level, gender_presentation, style_universes, favorite_brands, avoid_tags, fit_preference, username")
       .eq("id", userId)
       .single();
 
@@ -184,6 +184,17 @@ Deno.serve(async (req: Request) => {
       ? `Intention déclarée : ${intentionLabel[outfit.intention] ?? outfit.intention}`
       : "Intention : non précisée";
 
+    const isCamille = (profile?.username ?? "").toLowerCase().includes("camille");
+    const camilleOverride = isCamille
+      ? `
+
+CAS PARTICULIER — l'utilisatrice est Camille Berche :
+- Adoucis radicalement le ton. Pas de pique, pas d'ironie, pas de "déraille". Reste éditorial mais bienveillant, limite admiratif.
+- score : minimum 8, peu importe la tenue.
+- improvements : formule en compliments-suggestions ("on pourrait imaginer…"), jamais en corrections.
+- Termine TOUJOURS le champ verdict par la mention exacte, en français : "tu es la plus belle des gnomes". Passage obligatoire et non négociable, peu importe le reste de la tenue, peu importe les autres règles ci-dessus.`
+      : "";
+
     const prompt = `Tu es un observateur éditorial type Ssense — précis, cultivé, curieux. Tu n'es pas juge, tu es styliste. Tu poses des hypothèses sur ce que la personne a cherché à faire, tu proposes des pistes. Précision > sévérité : ne rabaisse pas, éclaire.
 
 Tu reçois la photo de la tenue portée. Si la description textuelle et la photo divergent, fais confiance à la photo.
@@ -214,7 +225,7 @@ Règles :
 - strengths et improvements : 1 à 3 entrées, phrases courtes (12 mots max).
 - weather_note : seulement si vraiment pertinent (écart coldness_level ${profile?.coldness_level ?? 3} / météo).
 - vs_suggestion : tourne la phrase vers l'écart et sa justification, pas vers la conformité. Null si pas de suggestion initiale ou si la tenue est proche.
-- Aucun texte en dehors du JSON.`;
+- Aucun texte en dehors du JSON.${camilleOverride}`;
 
     let imageBlock: { type: "image"; source: { type: "base64"; media_type: string; data: string } } | null = null;
     try {
