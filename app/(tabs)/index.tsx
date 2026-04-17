@@ -335,7 +335,13 @@ export default function TodayScreen() {
         },
       });
       if (error) {
-        if (__DEV__) console.error("suggest-outfit error:", error);
+        if (__DEV__) {
+          console.error("suggest-outfit error:", error);
+          const ctx = (error as { context?: Response }).context;
+          if (ctx && typeof ctx.text === "function") {
+            ctx.text().then((body) => console.error("suggest-outfit response body:", body)).catch(() => {});
+          }
+        }
         setSuggestion("Suggestion indisponible.");
         return;
       }

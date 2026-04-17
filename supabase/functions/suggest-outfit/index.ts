@@ -236,11 +236,15 @@ function validate(body: unknown): RequestBody {
     throw new Error("wardrobe_mode invalid");
   }
   const dp = b.derived_prefs;
-  if (dp !== undefined) {
-    if (!Array.isArray(dp) || dp.length > 10) throw new Error("derived_prefs invalid");
+  if (dp !== undefined && dp !== null) {
+    if (!Array.isArray(dp)) throw new Error("derived_prefs invalid");
+    const truncated: string[] = [];
     for (const item of dp) {
-      if (typeof item !== "string" || item.length > 300) throw new Error("derived_prefs entry invalid");
+      if (typeof item !== "string") continue;
+      truncated.push(item.length > 300 ? `${item.slice(0, 299)}…` : item);
+      if (truncated.length >= 10) break;
     }
+    b.derived_prefs = truncated;
   }
   const rc = b.refinement_chain;
   if (rc !== undefined && rc !== null) {
@@ -449,7 +453,9 @@ ${exampleLine}`;
     });
 
     if (!response.ok) {
-      throw new Error(`Anthropic error ${response.status}`);
+      const bodyText = await response.text().catch(() => "");
+      console.error(`[suggest-outfit] anthropic ${response.status} :: ${bodyText.slice(0, 500)}`);
+      throw new Error(`Anthropic error ${response.status}: ${bodyText.slice(0, 200)}`);
     }
 
     const data = await response.json();
@@ -465,9 +471,11 @@ ${exampleLine}`;
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown";
+    const stack = error instanceof Error ? error.stack : undefined;
+    console.error("[suggest-outfit] fatal:", message, stack);
     const status = message.includes("must be") || message.includes("required") || message.includes("invalid") ? 400 : 500;
     return new Response(
-      JSON.stringify({ error: "Erreur lors de la génération de la suggestion." }),
+      JSON.stringify({ error: "Erreur lors de la génération de la suggestion.", detail: message.slice(0, 300) }),
       {
         status,
         headers: { "Content-Type": "application/json", ...corsHeaders },

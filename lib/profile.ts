@@ -278,14 +278,16 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
     });
 
   // Priorité d'injection : signaux explicites (calibrage, mémoire) > patterns dérivés > volume swipe.
-  // Max 10 — validation stricte côté edge.
+  // Max 10 entrées et 280 chars par entrée — validation stricte côté edge (rejette >300).
   const derived_prefs = [
     ...sortedTagPrefs,
     ...memory_prefs,
     ...regret_prefs,
     ...swipe_prefs,
     ...base_prefs,
-  ].slice(0, 10);
+  ]
+    .map((s) => (s.length > 280 ? `${s.slice(0, 279)}…` : s))
+    .slice(0, 10);
 
   const wardrobe: WardrobePiece[] = (wardrobeRes.data ?? []).map((w) => ({
     id: w.id as string,

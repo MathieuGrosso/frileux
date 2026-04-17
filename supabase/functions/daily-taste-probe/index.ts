@@ -202,7 +202,9 @@ Réponds STRICTEMENT en JSON, aucun texte autour, ce schéma exact :
     });
 
     if (!response.ok) {
-      throw new Error(`Anthropic error ${response.status}`);
+      const bodyText = await response.text().catch(() => "");
+      console.error(`[daily-taste-probe] anthropic ${response.status} :: ${bodyText.slice(0, 500)}`);
+      throw new Error(`Anthropic error ${response.status}: ${bodyText.slice(0, 200)}`);
     }
 
     const data = await response.json();
@@ -252,10 +254,14 @@ Réponds STRICTEMENT en JSON, aucun texte autour, ce schéma exact :
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown";
-    console.warn("[daily-taste-probe]", message);
+    const stack = error instanceof Error ? error.stack : undefined;
+    console.error("[daily-taste-probe] fatal:", message, stack);
     const status = message.includes("unauthorized") ? 401 : 500;
     return new Response(
-      JSON.stringify({ error: "Impossible de générer les duels de calibrage." }),
+      JSON.stringify({
+        error: "Impossible de générer les duels de calibrage.",
+        detail: message.slice(0, 300),
+      }),
       {
         status,
         headers: { "Content-Type": "application/json", ...corsHeaders },
