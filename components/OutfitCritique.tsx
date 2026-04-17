@@ -4,11 +4,26 @@ import type { OutfitCritique as Critique } from "@/lib/types";
 type Props = {
   critique: Critique | null;
   loading: boolean;
+  error?: string | null;
   onDismiss?: () => void;
+  onRetry?: () => void;
 };
 
-export function OutfitCritique({ critique, loading, onDismiss }: Props) {
-  if (!loading && !critique) return null;
+const ERROR_COPY: Record<string, string> = {
+  network: "Connexion perdue pendant l'analyse.",
+  image_unreachable: "Impossible d'accéder à la photo.",
+  llm_error: "Le styliste est indisponible un instant.",
+  llm_refused: "L'analyse n'a pas abouti.",
+  schema_mismatch: "Réponse incohérente reçue.",
+  no_photo: "Photo manquante pour cette tenue.",
+  config_missing: "Service indisponible.",
+  previous_failure: "Dernière analyse échouée.",
+  empty_response: "Pas de réponse reçue.",
+};
+
+export function OutfitCritique({ critique, loading, error, onDismiss, onRetry }: Props) {
+  const showFailed = !loading && !critique && error;
+  if (!loading && !critique && !error) return null;
 
   return (
     <View className="bg-paper-100 border-t border-paper-300 px-6 pt-6 pb-8">
@@ -24,7 +39,11 @@ export function OutfitCritique({ critique, loading, onDismiss }: Props) {
       </View>
 
       {loading || !critique ? (
-        <CritiqueSkeleton />
+        showFailed ? (
+          <CritiqueFailed error={error!} onRetry={onRetry} />
+        ) : (
+          <CritiqueSkeleton />
+        )
       ) : (
         <CritiqueBody critique={critique} />
       )}
@@ -98,6 +117,28 @@ function CritiqueBody({ critique }: { critique: Critique }) {
             {critique.vs_suggestion}
           </Text>
         </View>
+      )}
+    </View>
+  );
+}
+
+function CritiqueFailed({ error, onRetry }: { error: string; onRetry?: () => void }) {
+  const message = ERROR_COPY[error] ?? "Analyse indisponible pour le moment.";
+  return (
+    <View>
+      <Text className="font-display text-h3 tracking-tight text-ink-900 mb-4 leading-snug">
+        {message}
+      </Text>
+      {onRetry ? (
+        <Pressable onPress={onRetry} hitSlop={8}>
+          <Text className="font-body-medium text-micro tracking-widest text-ice">
+            RETENTER
+          </Text>
+        </Pressable>
+      ) : (
+        <Text className="font-body text-body-sm text-ink-300">
+          Relance plus tard depuis l'historique.
+        </Text>
       )}
     </View>
   );
