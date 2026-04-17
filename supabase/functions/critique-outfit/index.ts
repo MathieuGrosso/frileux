@@ -30,15 +30,22 @@ interface Critique {
   vs_suggestion: string | null;
 }
 
+const FALLBACK_CRITIQUE: Critique = {
+  score: 1,
+  verdict: "Illisible. Cadre-toi habillé(e), plan large, et retente.",
+  strengths: [],
+  improvements: ["Plan large, de face ou de dos, lumière frontale, tenue visible des épaules aux pieds."],
+  weather_note: null,
+  vs_suggestion: null,
+};
+
 function coerceCritique(raw: unknown): Critique {
-  if (!raw || typeof raw !== "object") throw new Error("critique not an object");
+  if (!raw || typeof raw !== "object") return FALLBACK_CRITIQUE;
   const r = raw as Record<string, unknown>;
-  const score = typeof r.score === "number" ? Math.round(r.score) : NaN;
-  if (!Number.isFinite(score) || score < 1 || score > 10) {
-    throw new Error("score out of range");
-  }
-  const verdict = typeof r.verdict === "string" ? r.verdict.trim().slice(0, 160) : "";
-  if (!verdict) throw new Error("verdict missing");
+  const rawScore = typeof r.score === "number" ? Math.round(r.score) : NaN;
+  const score = Number.isFinite(rawScore) ? Math.min(10, Math.max(1, rawScore)) : 1;
+  const verdictRaw = typeof r.verdict === "string" ? r.verdict.trim().slice(0, 160) : "";
+  const verdict = verdictRaw || FALLBACK_CRITIQUE.verdict;
   const toStrList = (v: unknown, max: number): string[] => {
     if (!Array.isArray(v)) return [];
     return v
@@ -63,8 +70,12 @@ function extractJson(text: string): unknown {
   const trimmed = text.trim();
   const start = trimmed.indexOf("{");
   const end = trimmed.lastIndexOf("}");
-  if (start < 0 || end <= start) throw new Error("no JSON object in response");
-  return JSON.parse(trimmed.slice(start, end + 1));
+  if (start < 0 || end <= start) return null;
+  try {
+    return JSON.parse(trimmed.slice(start, end + 1));
+  } catch {
+    return null;
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -211,6 +222,14 @@ Si l'intention est "J'assume", ne reproche pas les choix radicaux : questionne-l
 Si l'intention est "Flemme" ou "Pragmatique", reste bienveillant : propose 1 geste rapide qui élève sans refondre la tenue.
 Si l'intention est "Test", encourage l'exploration, note ce qui ouvre des pistes.
 
+Si l'image ne contient pas de tenue humaine portée (paysage, animal, selfie visage sans vêtement visible, objet, capture d'écran, image illisible), tu DOIS quand même répondre en JSON valide strict, jamais en prose :
+- score : 1, 2 ou 3 selon le degré de hors-sujet
+- verdict : une phrase sèche et éditoriale qui nomme ce que tu vois et renvoie au cadrage attendu. Ton Ssense, pas insulte. Ex. "Cascade, c'est joli. Mais ma job c'est les fringues — cadre-toi habillé(e)."
+- strengths : []
+- improvements : ["Plan large, de face ou de dos, lumière frontale, tenue visible des épaules aux pieds."]
+- weather_note : null
+- vs_suggestion : null
+
 Réponds UNIQUEMENT en JSON valide, exactement ce schéma :
 {
   "score": <entier 1 à 10, note calibrée honnêtement : 5-6 = moyen, 7 = bien, 8 = très bien, 9+ = remarquable. N'invente pas de défauts pour baisser la note.>,
@@ -248,41 +267,52 @@ Règles :
       ? [imageBlock, { type: "text", text: prompt }]
       : [{ type: "text", text: prompt }];
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 500,
-        messages: [{ role: "user", content: userContent }],
-      }),
-    });
+    let critique: Critique;
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 500,
+          messages: [{ role: "user", content: userContent }],
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Anthropic error ${response.status}`);
+      if (!response.ok) {
+        const bodyText = await response.text().catch(() => "");
+        console.error(`critique: anthropic ${response.status}`, bodyText.slice(0, 400));
+        critique = { ...FALLBACK_CRITIQUE, verdict: "Analyse indisponible. Retente dans un instant." };
+      } else {
+        const data = await response.json();
+        const text: string = data.content?.[0]?.text ?? "";
+        const parsed = extractJson(text);
+        if (parsed === null) {
+          console.warn("critique: non-JSON reply, using fallback. raw:", text.slice(0, 300));
+        }
+        critique = coerceCritique(parsed);
+
+        recordTokens(
+          userId,
+          "critique-outfit",
+          data?.usage?.input_tokens ?? 0,
+          data?.usage?.output_tokens ?? 0,
+        ).catch(() => {});
+      }
+    } catch (llmErr) {
+      console.error("critique: llm path failed", llmErr instanceof Error ? llmErr.message : llmErr);
+      critique = { ...FALLBACK_CRITIQUE, verdict: "Analyse indisponible. Retente dans un instant." };
     }
-
-    const data = await response.json();
-    const text: string = data.content?.[0]?.text ?? "";
-    const parsed = extractJson(text);
-    const critique = coerceCritique(parsed);
-
-    recordTokens(
-      userId,
-      "critique-outfit",
-      data?.usage?.input_tokens ?? 0,
-      data?.usage?.output_tokens ?? 0,
-    ).catch(() => {});
 
     const { error: updateErr } = await admin
       .from("outfits")
       .update({ critique, critique_score: critique.score })
       .eq("id", outfitId);
-    if (updateErr) throw updateErr;
+    if (updateErr) console.warn("critique: update failed", updateErr.message);
 
     return new Response(JSON.stringify({ critique }), {
       headers: { "Content-Type": "application/json", ...corsHeaders },
