@@ -334,85 +334,112 @@ export default function SettingsScreen() {
             Personnalisation
           </Text>
 
-          <Pressable
-            onPress={redoTaste}
-            className="bg-ink-900 py-4 items-center active:bg-ink-700"
-          >
-            <Text className="font-display text-body-sm text-paper uppercase tracking-widest">
-              Mettre à jour mon goût
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => router.push("/wardrobe")}
-            className="border border-ink-900 py-4 items-center mt-2 active:bg-paper-200"
-          >
-            <Text className="font-display text-body-sm text-ink-900 uppercase tracking-widest">
-              Ma garde-robe
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => router.push("/memory")}
-            className="border border-ink-900 py-4 items-center mt-2 active:bg-paper-200"
-          >
-            <Text className="font-display text-body-sm text-ink-900 uppercase tracking-widest">
-              Ce que Frileux sait de toi
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => router.push("/calibrate")}
-            className="border border-ink-900 py-4 items-center mt-2 active:bg-paper-200"
-          >
-            <Text className="font-display text-body-sm text-ink-900 uppercase tracking-widest">
-              Recalibrer mon goût
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={toggleWardrobeOnlyMode}
-            disabled={togglingWardrobeMode}
-            className="border border-ink-900 mt-2 px-4 py-4 flex-row items-center justify-between active:bg-paper-200"
-          >
-            <View className="flex-1 pr-4">
-              <Text className="font-display text-body-sm text-ink-900 uppercase tracking-widest">
-                Uniquement ma garde-robe
-              </Text>
-              <Text className="font-body text-caption text-ink-500 mt-1">
-                Les suggestions n'utilisent que tes pièces. Active quand ton placard est bien rempli.
-              </Text>
-            </View>
-            <View
-              className={`border border-ink-900 w-10 h-5 ${
-                wardrobeOnlyMode ? "bg-ink-900" : "bg-paper"
-              }`}
+          {/* Goût & style */}
+          <Text className="font-body-medium text-eyebrow text-ink-300 uppercase mb-2">
+            Goût & style
+          </Text>
+          <View className="border-t border-paper-300">
+            <Pressable
+              onPress={redoTaste}
+              className="flex-row items-center py-4 border-b border-paper-300 active:bg-paper-200"
             >
+              <Text className="flex-1 font-body text-body text-ink-900">
+                Refaire mes swipes
+              </Text>
+              <Text className="font-body text-body-sm text-ink-300">›</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => router.push("/calibrate")}
+              className="flex-row items-center py-4 border-b border-paper-300 active:bg-paper-200"
+            >
+              <Text className="flex-1 font-body text-body text-ink-900">
+                Affiner mon goût
+              </Text>
+              <Text className="font-body text-body-sm text-ink-300">›</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => router.push("/brands-library")}
+              className="flex-row items-center py-4 border-b border-paper-300 active:bg-paper-200"
+            >
+              <Text className="flex-1 font-body text-body text-ink-900">
+                Bibliothèque de marques
+              </Text>
+              <Text className="font-body text-body-sm text-ink-300">›</Text>
+            </Pressable>
+          </View>
+
+          {/* Placard */}
+          <Text className="font-body-medium text-eyebrow text-ink-300 uppercase mb-2 mt-8">
+            Placard
+          </Text>
+          <View className="border-t border-paper-300">
+            <Pressable
+              onPress={() => router.push("/wardrobe")}
+              className="flex-row items-center py-4 border-b border-paper-300 active:bg-paper-200"
+            >
+              <Text className="flex-1 font-body text-body text-ink-900">
+                Ma garde-robe
+              </Text>
+              <Text className="font-body text-body-sm text-ink-300">›</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={toggleWardrobeOnlyMode}
+              disabled={togglingWardrobeMode}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: wardrobeOnlyMode }}
+              accessibilityLabel={`Uniquement ma garde-robe, ${wardrobeOnlyMode ? "activé" : "désactivé"}`}
+              className="flex-row items-center py-4 border-b border-paper-300 active:bg-paper-200"
+            >
+              <View className="flex-1 pr-4">
+                <Text className="font-body text-body text-ink-900">
+                  Uniquement ma garde-robe
+                </Text>
+                <Text className="font-body text-caption text-ink-500 mt-1">
+                  Les suggestions n'utilisent que tes pièces.
+                </Text>
+              </View>
               <View
-                className={`w-4 h-4 ${
-                  wardrobeOnlyMode ? "bg-paper self-end mt-[1px] mr-[1px]" : "bg-ink-900 mt-[1px] ml-[1px]"
+                className={`border border-ink-900 w-10 h-5 ${
+                  wardrobeOnlyMode ? "bg-ink-900" : "bg-paper"
                 }`}
-              />
-            </View>
-          </Pressable>
+              >
+                <View
+                  className={`w-4 h-4 ${
+                    wardrobeOnlyMode ? "bg-paper self-end mt-[1px] mr-[1px]" : "bg-ink-900 mt-[1px] ml-[1px]"
+                  }`}
+                />
+              </View>
+            </Pressable>
 
-          <Pressable
-            onPress={() => router.push("/brands-library")}
-            className="border border-ink-900 py-4 items-center mt-2 active:bg-paper-200"
-          >
-            <Text className="font-display text-body-sm text-ink-900 uppercase tracking-widest">
-              Bibliothèque de marques
-            </Text>
-          </Pressable>
+            <Pressable
+              onPress={() => router.push("/memory")}
+              className="flex-row items-center py-4 border-b border-paper-300 active:bg-paper-200"
+            >
+              <Text className="flex-1 font-body text-body text-ink-900">
+                Ce que Frileux sait de toi
+              </Text>
+              <Text className="font-body text-body-sm text-ink-300">›</Text>
+            </Pressable>
+          </View>
 
-          <Pressable
-            onPress={resetOnboarding}
-            className="border border-ink-900 py-4 items-center mt-2 active:bg-paper-200"
-          >
-            <Text className="font-display text-body-sm text-ink-900 uppercase tracking-widest">
-              Recommencer l'onboarding
-            </Text>
-          </Pressable>
+          {/* Avancé */}
+          <Text className="font-body-medium text-eyebrow text-ink-300 uppercase mb-2 mt-8">
+            Avancé
+          </Text>
+          <View className="border-t border-paper-300">
+            <Pressable
+              onPress={resetOnboarding}
+              className="flex-row items-center py-4 border-b border-paper-300 active:bg-paper-200"
+            >
+              <Text className="flex-1 font-body text-body text-ink-900">
+                Recommencer l'onboarding
+              </Text>
+              <Text className="font-body text-body-sm text-ink-300">›</Text>
+            </Pressable>
+          </View>
         </View>
 
         {/* Session */}
@@ -422,7 +449,7 @@ export default function SettingsScreen() {
             accessibilityRole="button"
             className="self-start py-2 active:opacity-60"
           >
-            <Text className="font-body text-body-sm text-error underline">
+            <Text className="font-body text-body-sm text-ink-500 underline">
               Se déconnecter
             </Text>
           </Pressable>
