@@ -35,8 +35,30 @@ export default function OutfitDetailScreen() {
   const [isOwner, setIsOwner] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [critiqueLoading, setCritiqueLoading] = useState(false);
+  const [critiqueError, setCritiqueError] = useState<string | null>(null);
+  const [critiqueCanRetry, setCritiqueCanRetry] = useState(false);
 
   useEffect(() => { loadOutfit(); }, [id]);
+
+  function runCritique(outfitId: string) {
+    setCritiqueError(null);
+    setCritiqueCanRetry(false);
+    setCritiqueLoading(true);
+    fetchOutfitCritique(outfitId)
+      .then((result) => {
+        if (result.status === "done") {
+          setOutfit((prev) =>
+            prev
+              ? { ...prev, critique: result.critique, critique_score: result.critique.score }
+              : prev,
+          );
+        } else {
+          setCritiqueError(result.error);
+          setCritiqueCanRetry(result.canRetry);
+        }
+      })
+      .finally(() => setCritiqueLoading(false));
+  }
 
   useEffect(() => {
     if (!id) return;
@@ -82,12 +104,12 @@ export default function OutfitDetailScreen() {
       setIsOwner(owner);
 
       if (owner && !data.critique && data.photo_url) {
-        setCritiqueLoading(true);
-        fetchOutfitCritique(data.id)
-          .then((c) => {
-            if (c) setOutfit((prev) => (prev ? { ...prev, critique: c, critique_score: c.score } : prev));
-          })
-          .finally(() => setCritiqueLoading(false));
+        if (data.critique_status === "failed") {
+          setCritiqueError(data.critique_error ?? "previous_failure");
+          setCritiqueCanRetry(true);
+        } else {
+          runCritique(data.id);
+        }
       }
     }
   }
@@ -193,11 +215,15 @@ export default function OutfitDetailScreen() {
               </View>
             )}
 
-            {isOwner && (critiqueLoading || outfit.critique) && (
+            {isOwner && (critiqueLoading || outfit.critique || critiqueError) && (
               <View className="-mx-6 mb-6">
                 <OutfitCritique
                   critique={outfit.critique ?? null}
                   loading={critiqueLoading}
+                  error={critiqueError}
+                  onRetry={
+                    critiqueCanRetry && !critiqueLoading ? () => runCritique(outfit.id) : undefined
+                  }
                 />
               </View>
             )}

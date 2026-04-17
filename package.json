@@ -8,7 +8,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "lint:colors": "bash scripts/check-hex.sh"
+    "lint:colors": "bash scripts/check-hex.sh",
+    "deploy:functions": "supabase functions deploy critique-outfit suggest-outfit wardrobe-ai daily-taste-probe embed-outfit daily-notification get-weather scrape-brands --project-ref qkghokrzqrbddqrsoksm",
+    "deploy:critique": "supabase functions deploy critique-outfit --project-ref qkghokrzqrbddqrsoksm"
   },
   "dependencies": {
     "@expo-google-fonts/barlow-condensed": "^0.4.1",

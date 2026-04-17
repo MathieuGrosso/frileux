@@ -93,8 +93,45 @@ export default function TodayScreen() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [critique, setCritique] = useState<import("@/lib/types").OutfitCritique | null>(null);
   const [critiqueLoading, setCritiqueLoading] = useState(false);
+  const [critiqueError, setCritiqueError] = useState<string | null>(null);
+  const [critiqueCanRetry, setCritiqueCanRetry] = useState(false);
   const [critiqueOutfitId, setCritiqueOutfitId] = useState<string | null>(null);
   const critiqueTargetRef = useRef<string | null>(null);
+
+  const runCritique = useCallback((outfitId: string) => {
+    setCritique(null);
+    setCritiqueError(null);
+    setCritiqueCanRetry(false);
+    setCritiqueLoading(true);
+    setCritiqueOutfitId(outfitId);
+    critiqueTargetRef.current = outfitId;
+    fetchOutfitCritique(outfitId)
+      .then((result) => {
+        if (critiqueTargetRef.current !== outfitId) return;
+        if (result.status === "done") {
+          setCritique(result.critique);
+          setCritiqueError(null);
+          setCritiqueCanRetry(false);
+          void recordCritiqueFacts(outfitId, result.critique);
+          if (result.critique.score <= 4) {
+            void supabase.from("outfits").update({ regretted: true }).eq("id", outfitId);
+          }
+        } else {
+          setCritique(null);
+          setCritiqueError(result.error);
+          setCritiqueCanRetry(result.canRetry);
+        }
+      })
+      .catch((err) => {
+        if (__DEV__) console.warn("runCritique:", err);
+        if (critiqueTargetRef.current !== outfitId) return;
+        setCritiqueError("network");
+        setCritiqueCanRetry(true);
+      })
+      .finally(() => {
+        if (critiqueTargetRef.current === outfitId) setCritiqueLoading(false);
+      });
+  }, []);
   const [todayOutfit, setTodayOutfit] = useState<{
     id: string;
     photo_url: string;
@@ -156,7 +193,7 @@ export default function TodayScreen() {
       // plusieurs rows par jour pour le feed/cercles, mais la home n'en affiche qu'une).
       const { data } = await supabase
         .from("outfits")
-        .select("id, photo_url, occasion, rating, notes, critique")
+        .select("id, photo_url, occasion, rating, notes, critique, critique_status, critique_error")
         .eq("user_id", user.id)
         .eq("date", todayStr)
         .not("photo_url", "is", null)
@@ -175,23 +212,18 @@ export default function TodayScreen() {
         critiqueTargetRef.current = data.id;
         if (data.critique) {
           setCritique(data.critique as import("@/lib/types").OutfitCritique);
+          setCritiqueError(null);
+          setCritiqueCanRetry(false);
+          setCritiqueLoading(false);
+        } else if (data.critique_status === "failed") {
+          // Échec connu : on ne rejoue pas auto (éviter boucle), on laisse
+          // l'utilisateur relancer via le bouton Retenter.
+          setCritique(null);
+          setCritiqueError(data.critique_error ?? "previous_failure");
+          setCritiqueCanRetry(true);
           setCritiqueLoading(false);
         } else {
-          setCritique(null);
-          setCritiqueLoading(true);
-          const targetId = data.id;
-          fetchOutfitCritique(targetId)
-            .then((c) => {
-              if (critiqueTargetRef.current === targetId) setCritique(c);
-              if (c) {
-                void recordCritiqueFacts(targetId, c);
-                if (c.score <= 4) {
-                  void supabase.from("outfits").update({ regretted: true }).eq("id", targetId);
-                }
-              }
-            })
-            .catch((err) => { if (__DEV__) console.warn("critique fetch:", err); })
-            .finally(() => { if (critiqueTargetRef.current === targetId) setCritiqueLoading(false); });
+          runCritique(data.id);
         }
       }
     } catch (e) { if (__DEV__) console.warn("loadTodayOutfit:", e); }
@@ -584,18 +616,26 @@ export default function TodayScreen() {
         adopted: adopted || adoptedOutfitId !== null,
         is_public: postPublic,
       };
+      // Reset des champs critique pour forcer une nouvelle analyse (update comme insert).
+      const critiqueReset = {
+        critique: null,
+        critique_score: null,
+        critique_status: "pending" as const,
+        critique_error: null,
+        critique_attempts: 0,
+      };
       let savedId: string | null = null;
       if (adoptedOutfitId) {
         const { error: updateError } = await supabase
           .from("outfits")
-          .update({ ...basePayload, critique: null, critique_score: null })
+          .update({ ...basePayload, ...critiqueReset })
           .eq("id", adoptedOutfitId);
         if (updateError) throw updateError;
         savedId = adoptedOutfitId;
       } else {
         const { data: inserted, error: insertError } = await supabase
           .from("outfits")
-          .insert(basePayload)
+          .insert({ ...basePayload, ...critiqueReset })
           .select("id")
           .single();
         if (insertError) throw insertError;
@@ -610,18 +650,7 @@ export default function TodayScreen() {
           rating: rating || null,
           notes: notes.trim() || null,
         });
-        setCritique(null);
-        setCritiqueOutfitId(savedId);
-        setCritiqueLoading(true);
-        const targetId = savedId;
-        critiqueTargetRef.current = targetId;
-        fetchOutfitCritique(targetId)
-          .then((c) => {
-            if (critiqueTargetRef.current === targetId) setCritique(c);
-          })
-          .finally(() => {
-            if (critiqueTargetRef.current === targetId) setCritiqueLoading(false);
-          });
+        runCritique(savedId);
 
         const capturedSuggestion = suggestion;
         void enrichOutfitInBackground({
@@ -808,6 +837,8 @@ export default function TodayScreen() {
                   onPress={() => {
                     setTodayOutfit(null);
                     setCritique(null);
+                    setCritiqueError(null);
+                    setCritiqueCanRetry(false);
                     setCritiqueOutfitId(null);
                     critiqueTargetRef.current = null;
                     if (weather) fetchSuggestion(weather, { skipCache: true });
@@ -836,7 +867,16 @@ export default function TodayScreen() {
               </View>
               {critiqueOutfitId === todayOutfit.id && (
                 <View className="mt-8 -mx-6">
-                  <OutfitCritique critique={critique} loading={critiqueLoading} />
+                  <OutfitCritique
+                    critique={critique}
+                    loading={critiqueLoading}
+                    error={critiqueError}
+                    onRetry={
+                      critiqueCanRetry && !critiqueLoading
+                        ? () => runCritique(todayOutfit.id)
+                        : undefined
+                    }
+                  />
                 </View>
               )}
             </View>

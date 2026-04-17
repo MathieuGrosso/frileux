@@ -130,6 +130,12 @@ export interface OutfitCritique {
   vs_suggestion: string | null;
 }
 
+export type CritiqueStatus = "pending" | "running" | "done" | "failed";
+
+export type CritiqueResult =
+  | { status: "done"; critique: OutfitCritique }
+  | { status: "failed"; error: string; canRetry: boolean };
+
 export interface Outfit {
   id: string;
   user_id: string;
@@ -145,6 +151,10 @@ export interface Outfit {
   intention: OutfitIntention | null;
   critique: OutfitCritique | null;
   critique_score: number | null;
+  critique_status: CritiqueStatus | null;
+  critique_error: string | null;
+  critique_attempts: number;
+  critique_updated_at: string | null;
   created_at: string;
 }
 
