@@ -150,8 +150,12 @@ Deno.serve(async (req: Request) => {
     ].filter(Boolean).join(", ");
 
     const tasteLines: string[] = [];
-    if (profile?.gender_presentation && profile.gender_presentation !== "both") {
-      tasteLines.push(`- Présentation : ${profile.gender_presentation}`);
+    if (profile?.gender_presentation === "menswear") {
+      tasteLines.push("- Présentation : menswear (garde-robe masculine)");
+    } else if (profile?.gender_presentation === "womenswear") {
+      tasteLines.push("- Présentation : womenswear (garde-robe féminine)");
+    } else if (profile?.gender_presentation === "both") {
+      tasteLines.push("- Présentation : mix menswear + womenswear (pioche librement entre les deux registres)");
     }
     if (profile?.style_universes?.length) {
       tasteLines.push(`- Univers : ${profile.style_universes.join(", ")}`);
