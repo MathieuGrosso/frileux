@@ -196,7 +196,8 @@ Réponds STRICTEMENT en JSON, aucun texte autour, ce schéma exact :
       body: JSON.stringify({
         model: "claude-opus-4-7",
         max_tokens: 1800,
-        temperature: 0.9,
+        // Opus 4.7 : pas de temperature ni effort au niveau API top-level
+        // (rejetés côté serveur). Le modèle fait la diversité naturellement.
         messages: [{ role: "user", content: prompt }],
       }),
     });
