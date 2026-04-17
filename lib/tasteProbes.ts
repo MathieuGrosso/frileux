@@ -45,15 +45,34 @@ export async function getLastProbeActivity(): Promise<Date | null> {
   return ts ? new Date(ts) : null;
 }
 
+type InvokeBody =
+  | { status: "done"; batch_id: string; probes: TasteProbe[] }
+  | { status: "failed"; error: string; detail?: string };
+
+export class CalibrateError extends Error {
+  constructor(public code: string, public detail: string) {
+    super(code);
+    this.name = "CalibrateError";
+  }
+}
+
 export async function requestBatch(): Promise<TasteProbeBatch> {
-  const { data, error } = await supabase.functions.invoke("daily-taste-probe", {
+  const { data, error } = await supabase.functions.invoke<InvokeBody>("daily-taste-probe", {
     body: {},
   });
-  if (error) throw new Error(error.message ?? "daily-taste-probe failed");
-  if (!data || !Array.isArray(data.probes) || !data.batch_id) {
-    throw new Error("daily-taste-probe returned invalid payload");
+  if (error) {
+    throw new CalibrateError("network", error.message ?? "invoke failed");
   }
-  return data as TasteProbeBatch;
+  if (!data) {
+    throw new CalibrateError("empty_response", "no body");
+  }
+  if (data.status === "failed") {
+    throw new CalibrateError(data.error, data.detail ?? "");
+  }
+  if (!Array.isArray(data.probes) || !data.batch_id || data.probes.length === 0) {
+    throw new CalibrateError("invalid_payload", "missing probes or batch_id");
+  }
+  return { batch_id: data.batch_id, probes: data.probes };
 }
 
 export async function submitProbeChoice(
