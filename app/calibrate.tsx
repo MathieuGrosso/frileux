@@ -33,7 +33,13 @@ export default function CalibrateScreen() {
       setSessionJudged(0);
       setPhase(batch.probes.length > 0 ? "duels" : "error");
     } catch (e) {
-      if (__DEV__) console.warn("calibrate load:", e);
+      if (__DEV__) {
+        console.warn("calibrate load:", e);
+        const ctx = (e as { context?: Response }).context;
+        if (ctx && typeof ctx.text === "function") {
+          ctx.text().then((body) => console.warn("daily-taste-probe response body:", body)).catch(() => {});
+        }
+      }
       setPhase("error");
     }
   }, []);
