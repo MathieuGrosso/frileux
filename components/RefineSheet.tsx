@@ -9,7 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { REJECTION_REASONS, type RejectionReason } from "@/lib/rejections";
+import { REJECTION_REASONS, type RefinementChainItem, type RejectionReason } from "@/lib/rejections";
 import { colors } from "@/lib/theme";
 
 interface Props {
@@ -18,6 +18,7 @@ interface Props {
   favoriteBrands: string[];
   steerText: string;
   steerBrands: string[];
+  refinementChain?: RefinementChainItem[];
   onSteerTextChange: (value: string) => void;
   onToggleBrand: (brand: string) => void;
   onRefine: (opts: {
@@ -34,12 +35,20 @@ export function RefineSheet({
   favoriteBrands,
   steerText,
   steerBrands,
+  refinementChain,
   onSteerTextChange,
   onToggleBrand,
   onRefine,
   onClose,
 }: Props) {
   const canSubmit = !refining && (steerText.trim().length > 0 || steerBrands.length > 0);
+  const chain = refinementChain ?? [];
+  const nextIteration = chain.length + 1;
+  const previousAsks: string[] = [];
+  for (const item of chain) {
+    if (item.steer_text && item.steer_text.trim()) previousAsks.push(`« ${item.steer_text.trim().slice(0, 40)} »`);
+    if (item.steer_brands && item.steer_brands.length) previousAsks.push(item.steer_brands.slice(0, 2).join(" · "));
+  }
 
   return (
     <Modal
@@ -55,7 +64,11 @@ export function RefineSheet({
             behavior={Platform.OS === "ios" ? "padding" : undefined}
           >
             <View className="flex-row justify-between items-center px-6 pt-2 pb-4 border-b border-paper-300">
-              <Text className="font-body-medium text-eyebrow text-ink-900">RAFFINER</Text>
+              <Text className="font-body-medium text-eyebrow text-ink-900">
+                {chain.length > 0
+                  ? `RAFFINER · ITÉRATION ${String(nextIteration).padStart(2, "0")}`
+                  : "RAFFINER"}
+              </Text>
               <Pressable onPress={onClose} hitSlop={12}>
                 <Text className="font-body-medium text-eyebrow text-ice">FERMER</Text>
               </Pressable>
@@ -65,6 +78,16 @@ export function RefineSheet({
               contentContainerClassName="px-6 pt-6 pb-8"
               keyboardShouldPersistTaps="handled"
             >
+              {chain.length > 0 && previousAsks.length > 0 && (
+                <View className="mb-6 pb-6 border-b border-paper-300">
+                  <Text className="font-body-medium text-micro text-ink-300 mb-2">
+                    DÉJÀ DEMANDÉ AUJOURD'HUI
+                  </Text>
+                  <Text className="font-body text-body-sm text-ink-500 leading-snug">
+                    {previousAsks.slice(-4).join("  ·  ")}
+                  </Text>
+                </View>
+              )}
               <Text className="font-body-medium text-micro text-ink-300 mb-4">
                 POURQUOI PAS CELLE-CI
               </Text>

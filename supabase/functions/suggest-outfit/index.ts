@@ -66,6 +66,14 @@ interface RequestBody {
     description: string;
   }>;
   wardrobe_mode?: "priority" | "strict";
+  refinement_chain?: Array<{
+    iteration: number;
+    rejected_suggestion: string;
+    reason: string;
+    reason_note?: string | null;
+    steer_text?: string | null;
+    steer_brands?: string[] | null;
+  }>;
 }
 
 const BRAND_AESTHETICS: Record<string, string> = {
@@ -234,6 +242,21 @@ function validate(body: unknown): RequestBody {
       if (typeof item !== "string" || item.length > 300) throw new Error("derived_prefs entry invalid");
     }
   }
+  const rc = b.refinement_chain;
+  if (rc !== undefined && rc !== null) {
+    if (!Array.isArray(rc) || rc.length > 8) throw new Error("refinement_chain invalid");
+    for (const item of rc) {
+      if (!item || typeof item !== "object") throw new Error("refinement_chain entry invalid");
+      const it = item as Record<string, unknown>;
+      if (typeof it.iteration !== "number") throw new Error("refinement_chain.iteration invalid");
+      if (typeof it.rejected_suggestion !== "string" || it.rejected_suggestion.length > 500) {
+        throw new Error("refinement_chain.rejected_suggestion invalid");
+      }
+      if (typeof it.reason !== "string" || it.reason.length > 40) {
+        throw new Error("refinement_chain.reason invalid");
+      }
+    }
+  }
   return body as RequestBody;
 }
 
@@ -263,7 +286,7 @@ Deno.serve(async (req: Request) => {
     const {
       weather, coldness_level, recent_worn, recent_feedback, occasion, taste,
       avoid_reasons, steer_text, steer_brands, liked_anchors, derived_prefs,
-      wardrobe, wardrobe_mode,
+      wardrobe, wardrobe_mode, refinement_chain,
     } = validate(raw);
 
     const guard = await enforceQuota(userId, "suggest-outfit");
@@ -300,6 +323,24 @@ Deno.serve(async (req: Request) => {
     const cleanAvoid = sanitizeList(avoid_reasons, 10, 160);
     const avoidBlock = cleanAvoid.length > 0
       ? `\n\nContraintes négatives (STRICTES, à respecter en priorité) :\n${cleanAvoid.map((r) => `- ${r}`).join("\n")}`
+      : "";
+
+    const chain = Array.isArray(refinement_chain) ? refinement_chain.slice(-5) : [];
+    const chainBlock = chain.length > 0
+      ? (() => {
+          const lines = chain.map((c) => {
+            const steer = sanitizeUserInput(c.steer_text ?? "", 180);
+            const note = sanitizeUserInput(c.reason_note ?? "", 180);
+            const brands = Array.isArray(c.steer_brands) ? c.steer_brands.slice(0, 4).join(", ") : "";
+            const rejected = sanitizeUserInput(c.rejected_suggestion ?? "", 300);
+            const iter = String(c.iteration ?? 1).padStart(2, "0");
+            const reasonLabel = sanitizeUserInput(c.reason ?? "autre", 40);
+            const directive = [steer, brands, note].filter(Boolean).join(" · ") || "(pas de directive explicite)";
+            return `[${iter}] Rejetée : « ${rejected} ». Raison : ${reasonLabel}. A demandé : ${directive}.`;
+          });
+          const nextIter = String(chain.length + 1).padStart(2, "0");
+          return `\n\nHistorique de raffinement AUJOURD'HUI (${chain.length} itération${chain.length > 1 ? "s" : ""} déjà rejetée${chain.length > 1 ? "s" : ""}) :\n${lines.join("\n")}\n\nTu es à l'itération ${nextIter}. Ne redonne AUCUNE des tenues ci-dessus (même variante cosmétique). Identifie le fil rouge des refus (si l'utilisatrice a dit plusieurs fois "trop X", tu dois vraiment dévier de cet axe). Propose un déplacement net — silhouette différente, registre différent, matière dominante différente.`;
+        })()
       : "";
 
     const steerBrandLines = (steer_brands ?? [])
@@ -380,7 +421,7 @@ Météo du jour :
 - Vent : ${weather.wind_speed} m/s
 - Humidité : ${weather.humidity}%
 ${weather.rain ? "- Il pleut" : ""}
-${weather.snow ? "- Il neige" : ""}${occasionBlock}${tasteBlock}${derivedBlock}${anchorsBlock}${wardrobeBlock}${recentBlock}${feedbackBlock}${steerBlock}${avoidBlock}
+${weather.snow ? "- Il neige" : ""}${occasionBlock}${tasteBlock}${derivedBlock}${anchorsBlock}${wardrobeBlock}${recentBlock}${feedbackBlock}${chainBlock}${steerBlock}${avoidBlock}
 
 Donne une suggestion de tenue ULTRA COURTE en français (1 phrase, 20 mots max). Liste 4 à 6 pièces séparées par des virgules, dans l'ordre haut → bas (haut, bas, manteau si besoin, chaussures, accessoires). Adapte au fait que la personne est ${coldnessDescriptions[coldness_level]}.${recentBlock ? " Par rapport aux dernières tenues, change de registre — pas juste la couleur, un vrai déplacement de silhouette ou de matière." : ""}
 
