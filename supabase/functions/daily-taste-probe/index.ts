@@ -1,6 +1,6 @@
 // Supabase Edge Function: daily-taste-probe
 // Génère un batch de duels A/B pour calibrer le goût de l'utilisatrice.
-// Utilise Opus 4.7 (diversité éditoriale critique) — appelé ≤ 3 fois/jour.
+// Sonnet 4.6 : même modèle que suggest-outfit/critique-outfit, comportement stable.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -194,10 +194,9 @@ Réponds STRICTEMENT en JSON, aucun texte autour, ce schéma exact :
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-opus-4-7",
+        model: "claude-sonnet-4-6",
         max_tokens: 1800,
-        // Opus 4.7 : pas de temperature ni effort au niveau API top-level
-        // (rejetés côté serveur). Le modèle fait la diversité naturellement.
+        temperature: 0.9,
         messages: [{ role: "user", content: prompt }],
       }),
     });
