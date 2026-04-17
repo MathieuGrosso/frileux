@@ -89,7 +89,15 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const [profileRes, outfitsRes, likedRes, rejectionsRes, wardrobeRes] = await Promise.all([
+  const [
+    profileRes,
+    outfitsRes,
+    likedRes,
+    rejectionsRes,
+    wardrobeRes,
+    swipesRes,
+    tasteProbesRes,
+  ] = await Promise.all([
     supabase
       .from("profiles")
       .select(
@@ -122,6 +130,19 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
       .select("id, photo_url, type, color, material, style_tags, description")
       .eq("user_id", user.id)
       .limit(80),
+    supabase
+      .from("outfit_preferences")
+      .select("kind, payload, accepted, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(30),
+    supabase
+      .from("taste_probes")
+      .select("axis, option_a_text, option_a_tags, option_b_text, option_b_tags, chosen, judged_at")
+      .eq("user_id", user.id)
+      .not("judged_at", "is", null)
+      .order("judged_at", { ascending: false })
+      .limit(30),
   ]);
 
   const profile = profileRes.data;
@@ -184,7 +205,87 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
     const tag = m.kind === "strength" ? "fonctionne bien" : m.kind === "avoid" ? "à éviter" : "pattern";
     return `mémoire (${tag}) : ${m.fact}`;
   });
-  const derived_prefs = [...base_prefs, ...memory_prefs, ...regret_prefs];
+
+  const swipes = (swipesRes.data ?? []) as Array<{
+    kind: string;
+    payload: Record<string, unknown> | null;
+    accepted: boolean;
+  }>;
+  const acceptedSwipes = swipes.filter((s) => s.accepted === true);
+  const rejectedSwipes = swipes.filter((s) => s.accepted === false);
+  const describeSwipePayload = (s: { kind: string; payload: Record<string, unknown> | null }) => {
+    const p = s.payload ?? {};
+    const text =
+      (p.description as string | undefined) ??
+      (p.summary as string | undefined) ??
+      (p.label as string | undefined) ??
+      (p.name as string | undefined);
+    return text ? text.slice(0, 140) : null;
+  };
+  const swipe_prefs: string[] = [];
+  const acceptedSamples = acceptedSwipes
+    .map(describeSwipePayload)
+    .filter((v): v is string => !!v)
+    .slice(0, 3);
+  if (acceptedSamples.length > 0) {
+    swipe_prefs.push(
+      `swipes aimés (à reprendre comme esprit) : ${acceptedSamples.join(" | ")}`
+    );
+  }
+  const rejectedSamples = rejectedSwipes
+    .map(describeSwipePayload)
+    .filter((v): v is string => !!v)
+    .slice(0, 3);
+  if (rejectedSamples.length > 0) {
+    swipe_prefs.push(
+      `swipes rejetés (à éviter d'imiter) : ${rejectedSamples.join(" | ")}`
+    );
+  }
+  if (acceptedSwipes.length + rejectedSwipes.length >= 10) {
+    const acceptRate = Math.round(
+      (acceptedSwipes.length / (acceptedSwipes.length + rejectedSwipes.length)) * 100
+    );
+    swipe_prefs.push(`volume swipes : ${acceptedSwipes.length} aimés / ${rejectedSwipes.length} rejetés (${acceptRate}%)`);
+  }
+
+  const probes = (tasteProbesRes.data ?? []) as Array<{
+    axis: string;
+    option_a_tags: string[] | null;
+    option_b_tags: string[] | null;
+    chosen: string | null;
+  }>;
+  const tagCounts = new Map<string, { axis: string; count: number }>();
+  for (const probe of probes) {
+    const pickedTags = probe.chosen === "a"
+      ? probe.option_a_tags
+      : probe.chosen === "b"
+      ? probe.option_b_tags
+      : null;
+    if (!pickedTags) continue;
+    for (const tag of pickedTags) {
+      if (!tag) continue;
+      const key = `${probe.axis}:${tag}`;
+      const prev = tagCounts.get(key);
+      tagCounts.set(key, { axis: probe.axis, count: (prev?.count ?? 0) + 1 });
+    }
+  }
+  const sortedTagPrefs = Array.from(tagCounts.entries())
+    .sort((a, b) => b[1].count - a[1].count)
+    .slice(0, 6)
+    .map(([key, val]) => {
+      const tag = key.split(":")[1];
+      return `calibrage goût [${val.axis}] : penche vers ${tag} (${val.count}×)`;
+    });
+
+  // Priorité d'injection : signaux explicites (calibrage, mémoire) > patterns dérivés > volume swipe.
+  // Max 10 — validation stricte côté edge.
+  const derived_prefs = [
+    ...sortedTagPrefs,
+    ...memory_prefs,
+    ...regret_prefs,
+    ...swipe_prefs,
+    ...base_prefs,
+  ].slice(0, 10);
 
   const wardrobe: WardrobePiece[] = (wardrobeRes.data ?? []).map((w) => ({
     id: w.id as string,

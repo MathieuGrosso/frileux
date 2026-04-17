@@ -362,6 +362,15 @@ export default function SettingsScreen() {
           </Pressable>
 
           <Pressable
+            onPress={() => router.push("/calibrate")}
+            className="border border-ink-900 py-4 items-center mt-2 active:bg-paper-200"
+          >
+            <Text className="font-display text-body-sm text-ink-900 uppercase tracking-widest">
+              Recalibrer mon goût
+            </Text>
+          </Pressable>
+
+          <Pressable
             onPress={toggleWardrobeOnlyMode}
             disabled={togglingWardrobeMode}
             className="border border-ink-900 mt-2 px-4 py-4 flex-row items-center justify-between active:bg-paper-200"
