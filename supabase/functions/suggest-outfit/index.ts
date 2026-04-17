@@ -359,7 +359,20 @@ Deno.serve(async (req: Request) => {
       ? exampleByGender[genderPresentation] ?? exampleByGender.both
       : exampleByGender.both;
 
-    const prompt = `Tu es une styliste personnelle pour une personne ${coldnessDescriptions[coldness_level] ?? "très frileuse"}.
+    const prompt = `Tu es la styliste personnelle d'une personne ${coldnessDescriptions[coldness_level] ?? "très frileuse"} qui prend son style au sérieux.
+
+Son niveau de goût est éditorial — Ssense, Highsnobiety, System Magazine, Muji, Our Legacy, Lemaire, Auralee. Elle lit, elle achète, elle sait. Tes propositions sont jugées comme une page de magazine, pas comme une app météo.
+
+Parti-pris obligatoire (aucune exception) :
+- Une silhouette nette — tailored, ample, fluide, technique, déstructuré. Choisis, ne moyenne pas.
+- Au moins 2 textures distinctes (laine + cuir, coton + nylon, denim + cachemire…). Interdit : tenue monomatière.
+- Palette maîtrisée : 3 couleurs dominantes max, cohérentes. Les neutres (noir, blanc, gris, crème, camel) ne se comptent qu'à demi.
+- Une pièce signature qui ancre la tenue — la première chose qu'on remarque.
+- Chaque pièce structurante a une matière nommée (pas "pull", mais "pull laine côtelée épaisse").
+
+Vocabulaire interdit : "joli", "mignon", "sympa", "passe-partout", "basique", "classique intemporel". Remplace par du précis.
+
+Anti-template : "pull + jean + baskets" est une réponse par défaut et n'est acceptée que si la météo ou l'occasion l'impose vraiment. Sinon, varie franchement — overshirt, blouson cuir, tailleur, pièce technique, maille sculpturale, pantalon tailoring, mocassins, derbies, bottines. Différencie chaque jour par un vrai changement de registre.
 
 Météo du jour :
 - Température : ${weather.temp}°C (ressenti ${weather.feels_like}°C)
@@ -369,11 +382,11 @@ Météo du jour :
 ${weather.rain ? "- Il pleut" : ""}
 ${weather.snow ? "- Il neige" : ""}${occasionBlock}${tasteBlock}${derivedBlock}${anchorsBlock}${wardrobeBlock}${recentBlock}${feedbackBlock}${steerBlock}${avoidBlock}
 
-Donne une suggestion de tenue ULTRA COURTE en français (1 phrase, 20 mots max). Liste 4 à 6 pièces séparées par des virgules, dans l'ordre haut → bas (haut, bas, manteau si besoin, chaussures, accessoires). Sois spécifique sur les matières (ex: "pull laine épaisse" plutôt que "pull"). Adapte au fait que la personne est ${coldnessDescriptions[coldness_level]}.${recentBlock ? " Varie les matières, couleurs et coupes par rapport aux dernières tenues." : ""}
+Donne une suggestion de tenue ULTRA COURTE en français (1 phrase, 20 mots max). Liste 4 à 6 pièces séparées par des virgules, dans l'ordre haut → bas (haut, bas, manteau si besoin, chaussures, accessoires). Adapte au fait que la personne est ${coldnessDescriptions[coldness_level]}.${recentBlock ? " Par rapport aux dernières tenues, change de registre — pas juste la couleur, un vrai déplacement de silhouette ou de matière." : ""}
 
-Règles strictes :
+Règles strictes de format :
 - AUCUN markdown (pas de **, pas d'astérisques, pas de tirets en début de ligne).
-- Texte plat brut.
+- Texte plat brut, une seule phrase.
 - Pas d'introduction ni conclusion.
 - Pas d'emoji.
 
@@ -388,7 +401,7 @@ ${exampleLine}`;
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
+        model: "claude-sonnet-4-6",
         max_tokens: 300,
         messages: [{ role: "user", content: prompt }],
       }),
