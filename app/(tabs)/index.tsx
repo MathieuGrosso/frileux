@@ -27,7 +27,7 @@ import { clearSuggestion, patchSuggestionAdoption, patchSuggestionImage, readSug
 import { REJECTION_REASONS, insertRejection, type RejectionReason } from "@/lib/rejections";
 import { embedOutfitTextWithHash } from "@/lib/embedOutfit";
 import { enrichOutfitInBackground } from "@/lib/enrich-outfit";
-import { recordCritiqueFacts } from "@/lib/style-memory";
+import { recordCritiqueFacts, recordRefinementFeedback } from "@/lib/style-memory";
 import { SuggestionSwipeArea } from "@/components/SuggestionSwipeArea";
 import { WardrobeNudge } from "@/components/WardrobeNudge";
 import { WardrobeCombos } from "@/components/WardrobeCombos";
@@ -371,6 +371,12 @@ export default function TodayScreen() {
         weather_data: weather,
         occasion,
         reason_note: notePieces.join(" · ") || null,
+      });
+      void recordRefinementFeedback({
+        reason: reason ?? "autre",
+        reason_note: notePieces.join(" · ") || null,
+        steer_text: trimmedText || null,
+        steer_brands: brands.length ? brands : undefined,
       });
       const bundle = await (profilePromiseRef.current ?? loadProfileBundle());
       if (bundle.userId) {
