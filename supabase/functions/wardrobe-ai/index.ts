@@ -393,24 +393,23 @@ Deno.serve(async (req: Request) => {
       ];
       result = (await callGemini(parts, ANALYSIS_MULTI_SCHEMA)) as { items: ClothingAnalysis[] };
     } else if (action === "analyze_text") {
-      const { text, user_id } = body;
+      const { text } = body;
       if (typeof text !== "string" || text.length === 0 || text.length > 1000) {
         throw new Error("text required (max 1000 chars)");
       }
       const analysis = (await callGemini([{ text: analyzeTextPrompt(text) }], ANALYSIS_SCHEMA)) as ClothingAnalysis;
-      let photo_url: string | null = null;
-      if (user_id) photo_url = await generateProductImage(analysis.description, user_id);
+      // Storage path is derived from the JWT-verified user id, never from the request body.
+      const photo_url = await generateProductImage(analysis.description, authUserId);
       result = { ...analysis, photo_url };
     } else if (action === "refine_image") {
-      const { current_photo_url, refinement, description, user_id } = body;
-      if (!user_id) throw new Error("user_id required");
+      const { current_photo_url, refinement, description } = body;
       if (!current_photo_url) throw new Error("current_photo_url required");
       if (!refinement) throw new Error("refinement required");
       const photo_url = await refineProductImage(
         current_photo_url,
         refinement,
         description ?? "clothing item",
-        user_id
+        authUserId
       );
       result = { photo_url };
     } else if (action === "describe_worn") {
@@ -447,10 +446,9 @@ Réponds UNIQUEMENT avec la description, sans introduction.`;
       if (!items?.length) throw new Error("items required");
       result = await callGemini([{ text: combosPrompt(items) }], COMBOS_SCHEMA);
     } else if (action === "generate_outfit_image") {
-      const { suggestion, user_id } = body;
-      if (!user_id) throw new Error("user_id required");
+      const { suggestion } = body;
       if (!suggestion) throw new Error("suggestion required");
-      const photo_url = await generateOutfitImage(String(suggestion), user_id);
+      const photo_url = await generateOutfitImage(String(suggestion), authUserId);
       result = { photo_url };
     } else if (action === "generate_pieces") {
       const { items } = body as { items: ItemLite[] };
