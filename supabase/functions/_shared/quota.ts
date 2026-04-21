@@ -101,6 +101,9 @@ export async function enforceQuota(userId: string, fnKey: string): Promise<Quota
       }
     }
 
+    // increment_ai_usage is atomic since migration 048:
+    // INSERT ... ON CONFLICT DO UPDATE ... WHERE count < limit — une seule opération
+    // sous lock de row. Deux appels concurrents ne peuvent plus dépasser la limite.
     const { data, error } = await admin().rpc("increment_ai_usage", {
       p_user_id: userId,
       p_function_name: fnKey,
@@ -110,7 +113,8 @@ export async function enforceQuota(userId: string, fnKey: string): Promise<Quota
       console.warn("[quota] increment_ai_usage failed, fail-open:", error.message);
       return { ok: true };
     }
-    const row = Array.isArray(data) ? data[0] : data;
+    type QuotaRow = { allowed: boolean; remaining: number; current_count: number };
+    const row: QuotaRow | null = Array.isArray(data) ? (data[0] ?? null) : (data ?? null);
     if (row && row.allowed === false) {
       return buildDenied(
         429,
