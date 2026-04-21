@@ -1170,6 +1170,26 @@ export default function TodayScreen() {
             </View>
           )}
 
+          <Pressable
+            onPress={() => router.push("/eye")}
+            className="mt-8 self-start active:bg-paper-200"
+            hitSlop={8}
+          >
+            <Text
+              className="font-display text-ink-900"
+              style={{ fontSize: 16, letterSpacing: 1 }}
+            >
+              + DÉPOSER DANS L'ŒIL
+            </Text>
+            <View className="h-px bg-ice-600 mt-0.5" />
+            <Text
+              className="font-body text-ink-500 mt-1"
+              style={{ fontSize: 11, letterSpacing: 1.2 }}
+            >
+              NOURRIR LE MODÈLE
+            </Text>
+          </Pressable>
+
           <View className="-mx-6 mt-10">
             <WardrobeNudge />
           </View>
