@@ -39,6 +39,7 @@ import { SuggestionSwipeArea } from "@/components/SuggestionSwipeArea";
 import { WardrobeNudge } from "@/components/WardrobeNudge";
 import { WardrobeCombos } from "@/components/WardrobeCombos";
 import { BrandInspiration } from "@/components/BrandInspiration";
+import { EyeStrip } from "@/components/EyeStrip";
 import type { ComboItem } from "@/lib/wardrobe-combos";
 import { RefineSheet } from "@/components/RefineSheet";
 import { OutfitCritique } from "@/components/OutfitCritique";
@@ -1169,6 +1170,10 @@ export default function TodayScreen() {
               <BrandInspiration favoriteBrands={favoriteBrands} />
             </View>
           )}
+
+          <View className="-mx-6">
+            <EyeStrip />
+          </View>
 
           <View className="-mx-6 mt-10">
             <WardrobeNudge />
