@@ -20,6 +20,54 @@ async function sha256Hex(s: string): Promise<string> {
 }
 const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") ?? "*";
 
+// In-flight promise registry: serializes concurrent requests for the same
+// (user_id, text_hash) pair *within a single isolate*. Cross-isolate races
+// are mitigated by an extra SELECT after the Gemini call (before returning),
+// so a late arrival still observes the embedding written by an earlier call.
+type EmbedResult = { embedding: number[]; cached: boolean };
+const inflight = new Map<string, Promise<EmbedResult>>();
+
+type AdminClient = ReturnType<typeof createClient>;
+
+async function lookupCachedEmbedding(
+  admin: AdminClient,
+  userId: string,
+  textHash: string,
+): Promise<number[] | null> {
+  const { data } = await admin
+    .from("outfits")
+    .select("embedding")
+    .eq("user_id", userId)
+    .eq("embedding_text_hash", textHash)
+    .not("embedding", "is", null)
+    .limit(1)
+    .maybeSingle();
+  const emb = (data as { embedding?: unknown } | null)?.embedding;
+  return Array.isArray(emb) ? (emb as number[]) : null;
+}
+
+async function fetchEmbeddingFromGemini(text: string): Promise<number[]> {
+  const res = await fetch(ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": GEMINI_API_KEY ?? "",
+    },
+    body: JSON.stringify({
+      content: { parts: [{ text }] },
+      taskType: "SEMANTIC_SIMILARITY",
+    }),
+  });
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(`gemini embed ${res.status}: ${msg.slice(0, 200)}`);
+  }
+  const json = await res.json();
+  const values = json?.embedding?.values;
+  if (!Array.isArray(values)) throw new Error("embedding missing in response");
+  return values as number[];
+}
+
 async function requireUser(req: Request): Promise<string | null> {
   const auth = req.headers.get("Authorization");
   if (!auth?.startsWith("Bearer ")) return null;
@@ -59,47 +107,38 @@ Deno.serve(async (req: Request) => {
     if (!guard.ok) return guard.response(cors);
 
     // Dedup: if we've already embedded an outfit with the same text for this user,
-    // reuse that embedding instead of hitting Gemini again.
+    // reuse that embedding instead of hitting Gemini again. Concurrent requests
+    // for the same (user_id, text_hash) are de-duplicated via an in-isolate
+    // promise registry so a single Gemini call serves them all.
     const textHash = await sha256Hex(text);
-    if (SERVICE_ROLE) {
-      const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
-      const { data: existing } = await admin
-        .from("outfits")
-        .select("embedding")
-        .eq("user_id", userId)
-        .eq("embedding_text_hash", textHash)
-        .not("embedding", "is", null)
-        .limit(1)
-        .maybeSingle();
-      if (existing?.embedding && Array.isArray(existing.embedding)) {
-        return new Response(JSON.stringify({ embedding: existing.embedding, cached: true, text_hash: textHash }), {
-          headers: { "Content-Type": "application/json", ...cors },
-        });
+    const admin = SERVICE_ROLE ? createClient(SUPABASE_URL, SERVICE_ROLE) : null;
+    const dedupKey = `${userId}:${textHash}`;
+
+    const compute = async (): Promise<EmbedResult> => {
+      if (admin) {
+        const cached = await lookupCachedEmbedding(admin, userId, textHash);
+        if (cached) return { embedding: cached, cached: true };
       }
+      const values = await fetchEmbeddingFromGemini(text);
+      // Re-check after the upstream call to catch a cross-isolate race where
+      // another invocation wrote the same embedding while we were fetching.
+      if (admin) {
+        const racedCached = await lookupCachedEmbedding(admin, userId, textHash);
+        if (racedCached) return { embedding: racedCached, cached: true };
+      }
+      return { embedding: values, cached: false };
+    };
+
+    let resultPromise = inflight.get(dedupKey);
+    if (!resultPromise) {
+      resultPromise = compute().finally(() => {
+        inflight.delete(dedupKey);
+      });
+      inflight.set(dedupKey, resultPromise);
     }
+    const { embedding, cached } = await resultPromise;
 
-    const res = await fetch(ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": GEMINI_API_KEY,
-      },
-      body: JSON.stringify({
-        content: { parts: [{ text }] },
-        taskType: "SEMANTIC_SIMILARITY",
-      }),
-    });
-
-    if (!res.ok) {
-      const msg = await res.text();
-      throw new Error(`gemini embed ${res.status}: ${msg.slice(0, 200)}`);
-    }
-
-    const json = await res.json();
-    const values = json?.embedding?.values;
-    if (!Array.isArray(values)) throw new Error("embedding missing in response");
-
-    return new Response(JSON.stringify({ embedding: values, text_hash: textHash }), {
+    return new Response(JSON.stringify({ embedding, cached, text_hash: textHash }), {
       headers: { "Content-Type": "application/json", ...cors },
     });
   } catch (e) {
