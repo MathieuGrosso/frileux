@@ -28,6 +28,7 @@ type TabDef = {
 const TABS: TabDef[] = [
   { name: "index", icon: "sun", label: "AUJOURD'HUI" },
   { name: "wardrobe", icon: "grid", label: "GARDE-ROBE" },
+  { name: "gout", icon: "target", label: "GOÛT" },
   { name: "history", icon: "clock", label: "HISTORIQUE" },
   { name: "feed", icon: "globe", label: "FEED" },
 ];

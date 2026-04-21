@@ -27,6 +27,54 @@ Format par session :
 
 ## Sessions
 
+## 2026-04-22 session — L'ŒIL (dépôt d'inspirations externes)
+
+### Fait
+- PR #164 ✅ draft · feat/oeil-inspirations · worktree ../frileux-oeil
+  - Migration 048_user_inspirations (enum piece/shop/lookbook, RLS, indexes)
+  - lib/inspirations.ts (CRUD + fetchOgPreview + inspirationToDerivedPref)
+  - lib/profile.ts : injection **en tête** de derived_prefs (5 inspirations max, 6 mois de rétention)
+  - Composants : EyeCard, EyeKindChips, EyeAddSheet (3 routes PHOTO/LIEN/TEXTE)
+  - Hook useEyeAdd (mirror simplifié de useWardrobeAdd)
+  - Écrans app/eye/ : _layout + index (grid 2-col + filtres TOUT/PIÈCES/ADRESSES/PLANCHES) + [id] (fiche détail)
+  - Edge function og-scrape (16KB cap, regex OG + twitter, quota 30/h)
+  - Entry points : Settings > Goût & style > L'œil + bouton "+ DÉPOSER DANS L'ŒIL" sur Today sous À chiner
+  - typecheck vert, lint:colors : aucun hex ajouté
+
+### Décisions prises en autonomie
+- **Naming** : "L'ŒIL" choisi avec l'user (vs CHINÉ qui entrait en collision avec "À CHINER" algo).
+- **Kinds** : enum DB en anglais (piece/shop/lookbook), UI en français (PIÈCE/ADRESSE/PLANCHE) via KIND_LABEL.
+- **Storage** : bucket wardrobe réutilisé, path {user_id}/eye/ — pas de nouvelle migration storage.
+- **Pas de bouton presse-papiers** sur route LIEN — évite d'ajouter expo-clipboard. L'user colle manuellement via long-press iOS.
+- **Police mono URL** : Platform.select Menlo/monospace système, zéro nouvelle dépendance.
+- **Pas de "COMPOSER AUTOUR"** ni try-on visuel dans cette PR — scope validé avec l'user, reporté.
+- **approved=false** auto si description < 10 chars (non-vêtement, ambigu) → exclu de derived_prefs mais visible dans L'ŒIL.
+
+### Bloqué / À faire côté user
+- **Migration prod bloquée** (permission denied) → l'user doit exécuter :
+  ```
+  supabase db push --linked
+  supabase functions deploy og-scrape --project-ref qkghokrzqrbddqrsoksm
+  ```
+- **Vérif iOS sim bloquée** (permission denied sur `expo start`) → l'user doit lancer :
+  ```
+  cd ../frileux-oeil && npx expo start --ios
+  ```
+  Parcours à tester : Settings → L'œil → + DÉPOSER → PHOTO galerie → analyse → DÉPOSER → card visible → fiche → RETIRER. Puis LIEN (URL Ssense) puis TEXTE. Vérifier les logs suggest-outfit pour voir "inspiration (PIÈCE) : …" en tête de derived_prefs.
+
+### Questions pour toi (review du matin)
+- Label "L'ŒIL" tient la route à l'usage ? Alternatives si besoin : "REPÉRÉ", "ARCHIVÉ".
+- "+ DÉPOSER DANS L'ŒIL" sur Today — position sous "À CHINER" te paraît-elle bonne, ou trop bas dans la scroll ?
+- Try-on visuel suivant : Gemini Image API (selfie ¾ + item overlay) ou approche plus simple ? (PR dédiée).
+
+### Idées ajoutées au BACKLOG
+- Bouton "COMPOSER AUTOUR" (force une inspiration comme ancre dans suggest-outfit).
+- Try-on visuel Gemini Image API (selfie + item).
+- Auto-pattern : "tu épingles souvent du camel" → promu en style_memory.
+- Partage d'inspirations dans Circles.
+
+---
+
 ## 2026-04-14 nuit — Reco usable (Today + Wardrobe)
 
 ### Fait

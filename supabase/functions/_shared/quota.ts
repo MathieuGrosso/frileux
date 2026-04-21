@@ -28,6 +28,7 @@ export const DAILY_LIMITS: Record<string, number> = {
   "wardrobe-ai:generate_pieces": 10,
   "wardrobe-ai:generate_outfit_image": 5,
   "wardrobe-ai:describe_worn": 30,
+  "og-scrape:fetch": 30,
 };
 
 // Short-term debounce (seconds between two calls).

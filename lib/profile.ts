@@ -1,6 +1,8 @@
 import { supabase } from "./supabase";
+import { inspirationToDerivedPref } from "./inspirations";
 import type {
   ColdnessLevel,
+  InspirationKind,
   OutfitOccasion,
   ThermalFeeling,
 } from "./types";
@@ -206,6 +208,32 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
     return `mémoire (${tag}) : ${m.fact}`;
   });
 
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const { data: inspirationRows } = await supabase
+    .from("user_inspirations")
+    .select(
+      "kind, extracted_description, extracted_tags, extracted_color, extracted_material, title, note, created_at"
+    )
+    .eq("user_id", user.id)
+    .eq("approved", true)
+    .gte("created_at", sixMonthsAgo.toISOString())
+    .order("created_at", { ascending: false })
+    .limit(5);
+  const inspiration_prefs = (inspirationRows ?? [])
+    .map((i) =>
+      inspirationToDerivedPref({
+        kind: i.kind as InspirationKind,
+        extracted_description: (i.extracted_description as string | null) ?? null,
+        extracted_tags: (i.extracted_tags as string[] | null) ?? [],
+        extracted_color: (i.extracted_color as string | null) ?? null,
+        extracted_material: (i.extracted_material as string | null) ?? null,
+        title: (i.title as string | null) ?? null,
+        note: (i.note as string | null) ?? null,
+      })
+    )
+    .filter((v): v is string => !!v);
+
   const swipes = (swipesRes.data ?? []) as Array<{
     kind: string;
     payload: Record<string, unknown> | null;
@@ -277,9 +305,10 @@ export async function loadProfileBundle(): Promise<ProfileBundle> {
       return `calibrage goût [${val.axis}] : penche vers ${tag} (${val.count}×)`;
     });
 
-  // Priorité d'injection : signaux explicites (calibrage, mémoire) > patterns dérivés > volume swipe.
+  // Priorité : inspirations explicites de l'utilisateur > calibrage > mémoire > patterns.
   // Max 10 entrées et 280 chars par entrée — validation stricte côté edge (rejette >300).
   const derived_prefs = [
+    ...inspiration_prefs,
     ...sortedTagPrefs,
     ...memory_prefs,
     ...regret_prefs,

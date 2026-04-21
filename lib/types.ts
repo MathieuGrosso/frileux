@@ -243,3 +243,42 @@ export interface AISuggestion {
   accessories: string[];
   vibe: string;
 }
+
+export type InspirationKind = "piece" | "shop" | "lookbook";
+
+export interface UserInspiration {
+  id: string;
+  user_id: string;
+  kind: InspirationKind;
+  image_url: string | null;
+  external_url: string | null;
+  title: string | null;
+  site_name: string | null;
+  note: string | null;
+  extracted_description: string | null;
+  extracted_tags: string[];
+  extracted_color: string | null;
+  extracted_material: string | null;
+  approved: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateInspirationInput {
+  kind: InspirationKind;
+  imageBase64?: string;
+  mime?: string;
+  textDescription?: string;
+  externalUrl?: string;
+  title?: string;
+  siteName?: string;
+  note?: string;
+}
+
+export interface OgPreview {
+  ok: boolean;
+  image: string | null;
+  title: string | null;
+  site_name: string | null;
+  description: string | null;
+}

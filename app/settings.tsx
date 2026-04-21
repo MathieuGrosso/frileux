@@ -368,6 +368,19 @@ export default function SettingsScreen() {
               </Text>
               <Text className="font-body text-body-sm text-ink-300">›</Text>
             </Pressable>
+
+            <Pressable
+              onPress={() => router.push("/eye")}
+              className="flex-row items-center py-4 border-b border-paper-300 active:bg-paper-200"
+            >
+              <View className="flex-1 pr-4">
+                <Text className="font-body text-body text-ink-900">L'œil</Text>
+                <Text className="font-body text-caption text-ink-500 mt-1">
+                  Ce que tu aimes ailleurs — nourrit l'algo.
+                </Text>
+              </View>
+              <Text className="font-body text-body-sm text-ink-300">›</Text>
+            </Pressable>
           </View>
 
           {/* Placard */}

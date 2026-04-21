@@ -78,17 +78,23 @@ Muji, System magazine, Ssense product UI, signage combini japonais (Lawson/7-Ele
 ```
 app/
 ├── _layout.tsx            # Auth guard + redirection onboarding
-├── (tabs)/
-│   ├── index.tsx          # Aujourd'hui — la réponse principale
-│   ├── history.tsx
-│   └── circle.tsx
+├── (tabs)/                # 5 onglets canoniques
+│   ├── index.tsx          # AUJOURD'HUI — la réponse matinale
+│   ├── wardrobe.tsx       # GARDE-ROBE — pièces possédées
+│   ├── gout.tsx           # GOÛT — hub de self-curation (Œil / duels / mémoire / marques / swipes)
+│   ├── history.tsx        # HISTORIQUE
+│   └── feed.tsx           # FEED — social
+├── eye/{index,[id]}.tsx   # L'ŒIL — dépôt d'inspirations externes
 ├── auth/{login,register}.tsx
 ├── onboarding/{index,swipe,profile}.tsx
 ├── outfit/[id].tsx
 └── settings.tsx
 ```
 
-- Tabs = **surface principale**. Nouvelles vues = stack screens enfants, **pas** de nouvel onglet sans validation.
+- **5 onglets max** dans la tab bar. iOS bascule en "More" au-delà de 5 — on ne passe jamais cette limite.
+- **Tabs = surface principale.** Les 5 existants (AUJOURD'HUI / GARDE-ROBE / GOÛT / HISTORIQUE / FEED) sont stables. **Ajouter ou remplacer un tab = validation produit explicite.**
+- Nouvelles vues liées à un tab existant = stack screens enfants, pas de nouvel onglet.
+- Pages de détail ou outils secondaires = stack screen au niveau `app/` (ex: `app/eye/`, `app/calibrate.tsx`, `app/memory.tsx`, `app/settings.tsx`) — accessibles via push depuis un tab.
 - `_layout.tsx` est la seule source d'auth + redirection onboarding. Ne **jamais** dupliquer cette logique.
 
 ---
