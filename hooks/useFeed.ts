@@ -32,6 +32,14 @@ export function useFeed(): UseFeedReturn {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const offsetRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const fetchPage = useCallback(
     async (offset: number): Promise<OutfitWithProfile[]> => {
@@ -55,6 +63,7 @@ export function useFeed(): UseFeedReturn {
   const load = useCallback(async () => {
     setLoading(true);
     const rows = dedupe(await fetchPage(0));
+    if (!mountedRef.current) return;
     offsetRef.current = rows.length;
     setOutfits(rows);
     setHasMore(rows.length === PAGE_SIZE);
@@ -64,6 +73,7 @@ export function useFeed(): UseFeedReturn {
   const refresh = useCallback(async () => {
     setRefreshing(true);
     const rows = dedupe(await fetchPage(0));
+    if (!mountedRef.current) return;
     offsetRef.current = rows.length;
     setOutfits(rows);
     setHasMore(rows.length === PAGE_SIZE);
@@ -74,6 +84,7 @@ export function useFeed(): UseFeedReturn {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
     const rows = await fetchPage(offsetRef.current);
+    if (!mountedRef.current) return;
     setOutfits((prev) => dedupe([...prev, ...rows]));
     offsetRef.current += rows.length;
     setHasMore(rows.length === PAGE_SIZE);
@@ -101,6 +112,7 @@ export function useFeed(): UseFeedReturn {
             .eq("id", row.id)
             .maybeSingle()
             .then(({ data }) => {
+              if (!mountedRef.current) return;
               if (!data) return;
               setOutfits((prev) => {
                 if (prev.some((o) => o.id === data.id)) return prev;
