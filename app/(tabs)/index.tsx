@@ -676,7 +676,7 @@ export default function TodayScreen() {
               </Text>
             )}
 
-            {forecast && (forecast.morning || forecast.midday || forecast.evening) && (
+            {!todayOutfit && forecast && (forecast.morning || forecast.midday || forecast.evening) && (
               <View className="flex-row items-end mb-3" style={{ gap: 14 }}>
                 {forecast.morning && (
                   <View className="flex-col gap-0.5">
@@ -705,7 +705,7 @@ export default function TodayScreen() {
               </View>
             )}
 
-            {verdict && (
+            {!todayOutfit && verdict && (
               <View className="mb-2.5">
                 <Text className={`font-body-medium text-micro ${verdictToneClass}`}>
                   {verdict.label.toUpperCase()}
@@ -713,7 +713,7 @@ export default function TodayScreen() {
               </View>
             )}
 
-            {weather && (
+            {!todayOutfit && weather && (
               <View className="flex-row items-center flex-wrap" style={{ gap: 6 }}>
                 <Text className="font-body text-caption text-ink-500">Ressenti {weather.feels_like}°</Text>
                 <Text className="font-body text-caption text-ink-200">·</Text>
@@ -1056,7 +1056,7 @@ export default function TodayScreen() {
           </>
           )}
 
-          {weather && coldness !== null && (
+          {!todayOutfit && weather && coldness !== null && (
             <View className="-mx-6">
               <WardrobeCombos
                 items={wardrobeItems}
@@ -1066,15 +1066,17 @@ export default function TodayScreen() {
             </View>
           )}
 
-          {favoriteBrands.length > 0 && (
+          {!todayOutfit && favoriteBrands.length > 0 && (
             <View className="-mx-6">
               <BrandInspiration favoriteBrands={favoriteBrands} />
             </View>
           )}
 
-          <View className="-mx-6 mt-10">
-            <WardrobeNudge />
-          </View>
+          {!todayOutfit && (
+            <View className="-mx-6 mt-10">
+              <WardrobeNudge />
+            </View>
+          )}
         </ScrollView>
       </SafeAreaView>
 
