@@ -158,63 +158,74 @@ export default function GoutHub() {
         </View>
 
         <View className="px-6 pt-6">
-          {sections.map((s, idx) => (
+          {sections.map((s) => (
             <PressableScale
               key={s.num}
               onPress={s.onPress}
               className={
-                "mb-3 p-5 " +
-                (s.primary
-                  ? "bg-ink-900"
-                  : "bg-paper-50 border border-paper-300")
+                s.primary
+                  ? "mb-3 p-5 bg-ink-900"
+                  : "mb-3 p-5 bg-paper-50 border border-paper-300"
               }
+              style={{
+                backgroundColor: s.primary ? colors.ink[900] : colors.paper[50],
+              }}
             >
               <View className="flex-row items-start justify-between">
                 <View className="flex-1 pr-4">
                   <Text
-                    className={
-                      "font-body-medium " +
-                      (s.primary ? "text-ice-200" : "text-ink-300")
-                    }
-                    style={{ fontSize: 10, letterSpacing: 2 }}
+                    className={s.primary ? "font-body-medium text-ice-200" : "font-body-medium text-ink-300"}
+                    style={{
+                      fontSize: 10,
+                      letterSpacing: 2,
+                      color: s.primary ? colors.ice[200] : colors.ink[300],
+                    }}
                   >
                     {s.num}
                   </Text>
                   <Text
                     className={
-                      "font-display tracking-tight mt-1 " +
-                      (s.primary ? "text-paper" : "text-ink-900")
+                      s.primary
+                        ? "font-display tracking-tight mt-1 text-paper"
+                        : "font-display tracking-tight mt-1 text-ink-900"
                     }
-                    style={{ fontSize: 28, lineHeight: 32 }}
+                    style={{
+                      fontSize: 28,
+                      lineHeight: 32,
+                      color: s.primary ? colors.paper[50] : colors.ink[900],
+                    }}
                   >
                     {s.title}
                   </Text>
                   <Text
-                    className={
-                      "font-body mt-2 " +
-                      (s.primary ? "text-ink-300" : "text-ink-500")
-                    }
-                    style={{ fontSize: 13, lineHeight: 18 }}
+                    className={s.primary ? "font-body mt-2 text-ink-300" : "font-body mt-2 text-ink-500"}
+                    style={{
+                      fontSize: 13,
+                      lineHeight: 18,
+                      color: s.primary ? colors.ink[300] : colors.ink[500],
+                    }}
                   >
                     {s.description}
                   </Text>
                 </View>
                 <Text
-                  className={
-                    "font-body-medium " +
-                    (s.primary ? "text-ice-200" : "text-ice-600")
-                  }
-                  style={{ fontSize: 10, letterSpacing: 1.6 }}
+                  className={s.primary ? "font-body-medium text-ice-200" : "font-body-medium text-ice-600"}
+                  style={{
+                    fontSize: 10,
+                    letterSpacing: 1.6,
+                    color: s.primary ? colors.ice[200] : colors.ice[600],
+                  }}
                 >
                   {s.stat.toUpperCase()}
                 </Text>
               </View>
               <View className="mt-3 flex-row justify-end">
                 <Text
-                  className={
-                    "font-body " + (s.primary ? "text-paper" : "text-ink-900")
-                  }
-                  style={{ fontSize: 14 }}
+                  className={s.primary ? "font-body text-paper" : "font-body text-ink-900"}
+                  style={{
+                    fontSize: 14,
+                    color: s.primary ? colors.paper[50] : colors.ink[900],
+                  }}
                 >
                   →
                 </Text>
