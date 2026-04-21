@@ -87,8 +87,21 @@ export default function RootLayout() {
   // Fetch onboarding flag whenever session changes.
   useEffect(() => {
     if (!session) return;
-    refreshOnboardingFlag();
-  }, [session, refreshOnboardingFlag]);
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("onboarding_completed, taste_completed")
+        .eq("id", session.user.id)
+        .single();
+      if (!active) return;
+      setOnboardingCompleted(data?.onboarding_completed ?? false);
+      setTasteCompleted(data?.taste_completed ?? false);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [session]);
 
   useEffect(() => {
     if (loading) return;
@@ -120,11 +133,16 @@ export default function RootLayout() {
 
     // Hello calibrage : propose un batch à la connexion tant que l'utilisatrice
     // n'a pas assez calibré son goût. N'interrompt pas quand déjà sur /calibrate.
+    let active = true;
     if (!inCalibrate) {
       shouldShowCalibrationGate().then((show) => {
+        if (!active) return;
         if (show) router.replace("/calibrate");
       }).catch(() => { /* fail-open — on reste sur Today */ });
     }
+    return () => {
+      active = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, loading, onboardingCompleted, tasteCompleted]);
 

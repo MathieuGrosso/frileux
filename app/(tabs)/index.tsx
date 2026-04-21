@@ -454,12 +454,6 @@ export default function TodayScreen() {
         steer_text: trimmedText || null,
         steer_brands: brands.length ? brands : undefined,
       });
-      void recordRefinementFeedback({
-        reason: reason ?? "autre",
-        reason_note: notePieces.join(" · ") || null,
-        steer_text: trimmedText || null,
-        steer_brands: brands.length ? brands : undefined,
-      });
       const bundle = await (profilePromiseRef.current ?? loadProfileBundle());
       if (bundle.userId) {
         await clearSuggestion({
