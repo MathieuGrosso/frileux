@@ -11,7 +11,12 @@ const EMBED_MODEL = "text-embedding-004";
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${EMBED_MODEL}:embedContent`;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+// Fail-fast at cold-start: silently skipping the cache on missing SERVICE_ROLE
+// would multiply Gemini calls unnoticed. Crash explicitly instead.
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+if (!SERVICE_ROLE) {
+  throw new Error("Missing env: SUPABASE_SERVICE_ROLE_KEY");
+}
 
 async function sha256Hex(s: string): Promise<string> {
   const buf = new TextEncoder().encode(s);
@@ -61,21 +66,19 @@ Deno.serve(async (req: Request) => {
     // Dedup: if we've already embedded an outfit with the same text for this user,
     // reuse that embedding instead of hitting Gemini again.
     const textHash = await sha256Hex(text);
-    if (SERVICE_ROLE) {
-      const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
-      const { data: existing } = await admin
-        .from("outfits")
-        .select("embedding")
-        .eq("user_id", userId)
-        .eq("embedding_text_hash", textHash)
-        .not("embedding", "is", null)
-        .limit(1)
-        .maybeSingle();
-      if (existing?.embedding && Array.isArray(existing.embedding)) {
-        return new Response(JSON.stringify({ embedding: existing.embedding, cached: true, text_hash: textHash }), {
-          headers: { "Content-Type": "application/json", ...cors },
-        });
-      }
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+    const { data: existing } = await admin
+      .from("outfits")
+      .select("embedding")
+      .eq("user_id", userId)
+      .eq("embedding_text_hash", textHash)
+      .not("embedding", "is", null)
+      .limit(1)
+      .maybeSingle();
+    if (existing?.embedding && Array.isArray(existing.embedding)) {
+      return new Response(JSON.stringify({ embedding: existing.embedding, cached: true, text_hash: textHash }), {
+        headers: { "Content-Type": "application/json", ...cors },
+      });
     }
 
     const res = await fetch(ENDPOINT, {

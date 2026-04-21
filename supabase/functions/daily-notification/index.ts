@@ -121,6 +121,54 @@ async function fetchTomorrowMorning(
   };
 }
 
+const FALLBACK_SUGGESTION = "Ouvre Frileux pour voir ta suggestion du jour.";
+
+interface AnthropicMessageResponse {
+  content?: Array<{ type?: string; text?: string }>;
+}
+
+async function callAnthropic(prompt: string): Promise<string | null> {
+  const key = requireEnv("ANTHROPIC_API_KEY", ANTHROPIC_API_KEY);
+  let res: Response;
+  try {
+    res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 200,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.warn(`[daily-notification] anthropic network error: ${msg.slice(0, 200)}`);
+    return null;
+  }
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.warn(`[daily-notification] anthropic http ${res.status}: ${body.slice(0, 200)}`);
+    return null;
+  }
+
+  let data: AnthropicMessageResponse;
+  try {
+    data = await res.json() as AnthropicMessageResponse;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.warn(`[daily-notification] anthropic json parse failed: ${msg.slice(0, 200)}`);
+    return null;
+  }
+
+  const text = data.content?.[0]?.text;
+  return typeof text === "string" && text.trim().length > 0 ? text : null;
+}
+
 async function generateSuggestion(
   weather: WeatherData,
   coldnessLevel: number,
@@ -142,24 +190,8 @@ ${horizon} : ${weather.temp}°C (ressenti ${weather.feels_like}°C), ${weather.d
 
 Donne une suggestion de tenue ULTRA COURTE en français (1 phrase, 15 mots max). Liste 3 à 5 pièces séparées par des virgules. Pas de markdown, pas d'emoji, pas d'introduction. Format : "pull laine grise, jean droit, manteau noir, bottines cuir."`;
 
-  const key = requireEnv("ANTHROPIC_API_KEY", ANTHROPIC_API_KEY);
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 200,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-
-  if (!res.ok) throw new Error(`Anthropic error ${res.status}`);
-  const data = await res.json();
-  return data.content?.[0]?.text ?? "Couvre-toi bien aujourd'hui !";
+  const text = await callAnthropic(prompt);
+  return text ?? FALLBACK_SUGGESTION;
 }
 
 function weatherEmoji(temp: number, rain: boolean, snow: boolean): string {
@@ -226,8 +258,14 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  interface ProfileOutcome {
+    user_id: string;
+    reason: string;
+  }
+
+  const typedProfiles = profiles as Profile[];
   const results = await Promise.allSettled(
-    (profiles as Profile[]).map(async (profile) => {
+    typedProfiles.map(async (profile): Promise<ProfileOutcome> => {
       const weather = forTomorrow
         ? await fetchTomorrowMorning(profile.last_latitude, profile.last_longitude)
         : await fetchWeather(profile.last_latitude, profile.last_longitude);
@@ -243,16 +281,27 @@ Deno.serve(async (req: Request) => {
 
       await sendPushNotification(profile.push_token, title, suggestion);
 
-      return profile.id;
+      return { user_id: profile.id, reason: "ok" };
     })
   );
 
   const sent = results.filter((r) => r.status === "fulfilled").length;
-  const errors = results
-    .filter((r) => r.status === "rejected")
-    .map((r) => (r as PromiseRejectedResult).reason?.message);
+  const failures: ProfileOutcome[] = results.map((r, idx) => {
+    if (r.status === "fulfilled") return null;
+    const reason = (r as PromiseRejectedResult).reason;
+    const message = reason instanceof Error ? reason.message : String(reason ?? "unknown");
+    return { user_id: typedProfiles[idx].id, reason: message.slice(0, 200) };
+  }).filter((x): x is ProfileOutcome => x !== null);
 
-  return new Response(JSON.stringify({ mode, sent, errors }), {
-    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-  });
+  if (failures.length > 0) {
+    // Logged as error to permit manual retry by admin via Supabase logs search.
+    console.error(
+      `[daily-notification] ${mode} push failures (${failures.length}): ${JSON.stringify(failures)}`,
+    );
+  }
+
+  return new Response(
+    JSON.stringify({ mode, sent, failures }),
+    { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } },
+  );
 });
