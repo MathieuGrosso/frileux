@@ -33,7 +33,7 @@ import {
 } from "@/lib/rejections";
 import { embedOutfitTextWithHash } from "@/lib/embedOutfit";
 import { enrichOutfitInBackground } from "@/lib/enrich-outfit";
-import { recordCritiqueFacts, recordRefinementFeedback } from "@/lib/style-memory";
+import { recordRefinementFeedback } from "@/lib/style-memory";
 import { shouldShowCalibrationNudge } from "@/lib/tasteProbes";
 import { SuggestionSwipeArea } from "@/components/SuggestionSwipeArea";
 import { WardrobeNudge } from "@/components/WardrobeNudge";
@@ -41,8 +41,6 @@ import { WardrobeCombos } from "@/components/WardrobeCombos";
 import { BrandInspiration } from "@/components/BrandInspiration";
 import type { ComboItem } from "@/lib/wardrobe-combos";
 import { RefineSheet } from "@/components/RefineSheet";
-import { OutfitCritique } from "@/components/OutfitCritique";
-import { fetchOutfitCritique } from "@/lib/critique";
 import { colors, motion } from "@/lib/theme";
 import { useFocusEffect, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -78,7 +76,6 @@ export default function TodayScreen() {
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [refining, setRefining] = useState(false);
   const [steerText, setSteerText] = useState("");
   const [steerBrands, setSteerBrands] = useState<string[]>([]);
@@ -92,54 +89,14 @@ export default function TodayScreen() {
   const [refineOpen, setRefineOpen] = useState(false);
   const [postPublic, setPostPublic] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [critique, setCritique] = useState<import("@/lib/types").OutfitCritique | null>(null);
-  const [critiqueLoading, setCritiqueLoading] = useState(false);
-  const [critiqueError, setCritiqueError] = useState<string | null>(null);
-  const [critiqueCanRetry, setCritiqueCanRetry] = useState(false);
-  const [critiqueOutfitId, setCritiqueOutfitId] = useState<string | null>(null);
   const [calibrationNudge, setCalibrationNudge] = useState(false);
-  const critiqueTargetRef = useRef<string | null>(null);
 
-  const runCritique = useCallback((outfitId: string) => {
-    setCritique(null);
-    setCritiqueError(null);
-    setCritiqueCanRetry(false);
-    setCritiqueLoading(true);
-    setCritiqueOutfitId(outfitId);
-    critiqueTargetRef.current = outfitId;
-    fetchOutfitCritique(outfitId)
-      .then((result) => {
-        if (critiqueTargetRef.current !== outfitId) return;
-        if (result.status === "done") {
-          setCritique(result.critique);
-          setCritiqueError(null);
-          setCritiqueCanRetry(false);
-          void recordCritiqueFacts(outfitId, result.critique);
-          if (result.critique.score <= 4) {
-            void supabase.from("outfits").update({ regretted: true }).eq("id", outfitId);
-          }
-        } else {
-          setCritique(null);
-          setCritiqueError(result.error);
-          setCritiqueCanRetry(result.canRetry);
-        }
-      })
-      .catch((err) => {
-        if (__DEV__) console.warn("runCritique:", err);
-        if (critiqueTargetRef.current !== outfitId) return;
-        setCritiqueError("network");
-        setCritiqueCanRetry(true);
-      })
-      .finally(() => {
-        if (critiqueTargetRef.current === outfitId) setCritiqueLoading(false);
-      });
-  }, []);
   const [todayOutfit, setTodayOutfit] = useState<{
     id: string;
     photo_url: string;
     occasion: OutfitOccasion | null;
     rating: number | null;
-    notes: string | null;
+    critique_score: number | null;
   } | null>(null);
   const router = useRouter();
 
@@ -198,7 +155,7 @@ export default function TodayScreen() {
       // plusieurs rows par jour pour le feed/cercles, mais la home n'en affiche qu'une).
       const { data } = await supabase
         .from("outfits")
-        .select("id, photo_url, occasion, rating, notes, critique, critique_status, critique_error")
+        .select("id, photo_url, occasion, rating, critique_score")
         .eq("user_id", user.id)
         .eq("date", todayStr)
         .not("photo_url", "is", null)
@@ -211,25 +168,8 @@ export default function TodayScreen() {
           photo_url: data.photo_url,
           occasion: (data.occasion ?? null) as OutfitOccasion | null,
           rating: data.rating ?? null,
-          notes: data.notes ?? null,
+          critique_score: data.critique_score ?? null,
         });
-        setCritiqueOutfitId(data.id);
-        critiqueTargetRef.current = data.id;
-        if (data.critique) {
-          setCritique(data.critique as import("@/lib/types").OutfitCritique);
-          setCritiqueError(null);
-          setCritiqueCanRetry(false);
-          setCritiqueLoading(false);
-        } else if (data.critique_status === "failed") {
-          // Échec connu : on ne rejoue pas auto (éviter boucle), on laisse
-          // l'utilisateur relancer via le bouton Retenter.
-          setCritique(null);
-          setCritiqueError(data.critique_error ?? "previous_failure");
-          setCritiqueCanRetry(true);
-          setCritiqueLoading(false);
-        } else {
-          runCritique(data.id);
-        }
       }
     } catch (e) { if (__DEV__) console.warn("loadTodayOutfit:", e); }
   }
@@ -648,15 +588,6 @@ export default function TodayScreen() {
       }
 
       if (savedId) {
-        setTodayOutfit({
-          id: savedId,
-          photo_url: urlData.publicUrl,
-          occasion,
-          rating: rating || null,
-          notes: notes.trim() || null,
-        });
-        runCritique(savedId);
-
         const capturedSuggestion = suggestion;
         void enrichOutfitInBackground({
           outfitId: savedId,
@@ -668,14 +599,14 @@ export default function TodayScreen() {
         });
       }
 
-      setSaved(true);
       setPhotoUri(null);
       setRating(0);
       setOccasion(null);
       setIntention(null);
       setNotes("");
       setAdoptedOutfitId(null);
-      setTimeout(() => setSaved(false), 3000);
+
+      if (savedId) router.push(`/outfit/${savedId}`);
     } catch (e: any) {
       if (__DEV__) console.error("saveOutfit error:", e);
       Alert.alert("Impossible de sauvegarder", e?.message ?? "Erreur inconnue");
@@ -822,42 +753,50 @@ export default function TodayScreen() {
               <Text className="font-body-medium text-eyebrow text-ice mb-3">
                 TENUE DU JOUR
               </Text>
-              <View className="h-[520px] mb-5">
+              <Pressable
+                onPress={() => router.push(`/outfit/${todayOutfit.id}`)}
+                className="h-[520px] mb-4"
+              >
                 <Image
                   source={{ uri: todayOutfit.photo_url }}
                   className="w-full h-full"
                   resizeMode="cover"
                 />
-              </View>
-              {(todayOutfit.occasion || todayOutfit.rating || todayOutfit.notes) && (
-                <View className="mb-6" style={{ gap: 8 }}>
-                  {todayOutfit.occasion && (
-                    <Text className="font-body text-body-sm text-ink-700">
-                      {OUTFIT_OCCASIONS.find((o) => o.value === todayOutfit.occasion)?.label}
-                    </Text>
-                  )}
-                  {todayOutfit.rating ? (
-                    <Text className="font-body text-body-sm text-ink-700">
-                      {"★".repeat(todayOutfit.rating)}
-                      {"☆".repeat(Math.max(0, 5 - todayOutfit.rating))}
-                    </Text>
-                  ) : null}
-                  {todayOutfit.notes && (
-                    <Text className="font-body text-body-sm text-ink-500">
-                      {todayOutfit.notes}
-                    </Text>
-                  )}
-                </View>
-              )}
+              </Pressable>
+              {(() => {
+                const bits: string[] = [];
+                if (todayOutfit.critique_score !== null) {
+                  bits.push(`${todayOutfit.critique_score}/10`);
+                }
+                if (todayOutfit.occasion) {
+                  const label = OUTFIT_OCCASIONS.find((o) => o.value === todayOutfit.occasion)?.label;
+                  if (label) bits.push(label);
+                }
+                if (todayOutfit.rating) {
+                  bits.push(
+                    "★".repeat(todayOutfit.rating) +
+                    "☆".repeat(Math.max(0, 5 - todayOutfit.rating)),
+                  );
+                }
+                if (bits.length === 0) return null;
+                return (
+                  <Text className="font-body text-body-sm text-ink-700 mb-6">
+                    {bits.join(" · ")}
+                  </Text>
+                );
+              })()}
               <View className="flex-row" style={{ gap: 24 }}>
+                <Pressable
+                  onPress={() => router.push(`/outfit/${todayOutfit.id}`)}
+                  hitSlop={8}
+                >
+                  <Text className="font-body-medium text-micro text-ink-300">
+                    VOIR LA NOTE →
+                  </Text>
+                </Pressable>
                 <Pressable
                   onPress={() => {
                     setTodayOutfit(null);
-                    setCritique(null);
-                    setCritiqueError(null);
-                    setCritiqueCanRetry(false);
-                    setCritiqueOutfitId(null);
-                    critiqueTargetRef.current = null;
                     if (weather) fetchSuggestion(weather, { skipCache: true });
                   }}
                   hitSlop={8}
@@ -866,36 +805,7 @@ export default function TodayScreen() {
                     NOUVELLE SUGGESTION
                   </Text>
                 </Pressable>
-                <Pressable
-                  onPress={() => {
-                    setAdoptedOutfitId(todayOutfit.id);
-                    setRating(todayOutfit.rating ?? 0);
-                    setOccasion(todayOutfit.occasion);
-                    setNotes(todayOutfit.notes ?? "");
-                    setTodayOutfit(null);
-                    setPhotoUri(null);
-                  }}
-                  hitSlop={8}
-                >
-                  <Text className="font-body-medium text-micro text-ink-300">
-                    MODIFIER LA PHOTO
-                  </Text>
-                </Pressable>
               </View>
-              {critiqueOutfitId === todayOutfit.id && (
-                <View className="mt-8 -mx-6">
-                  <OutfitCritique
-                    critique={critique}
-                    loading={critiqueLoading}
-                    error={critiqueError}
-                    onRetry={
-                      critiqueCanRetry && !critiqueLoading
-                        ? () => runCritique(todayOutfit.id)
-                        : undefined
-                    }
-                  />
-                </View>
-              )}
             </View>
           ) : (
           <>
@@ -1144,14 +1054,6 @@ export default function TodayScreen() {
             </>
           )}
           </>
-          )}
-
-          {saved && (
-            <View className="py-3 items-center mt-2 border-t border-b border-paper-300">
-              <Text className="font-body-medium text-eyebrow text-ice">
-                SAUVEGARDÉ
-              </Text>
-            </View>
           )}
 
           {weather && coldness !== null && (
