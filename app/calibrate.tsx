@@ -30,6 +30,14 @@ const ERROR_COPY: Record<CalibrateErrorCode, string> = {
   unknown: "Calibrage indisponible.",
 };
 
+const AXIS_QUESTION: Record<string, string> = {
+  silhouette: "Quelle coupe ?",
+  palette: "Quelle palette ?",
+  texture: "Quelle matière ?",
+  registre: "Quel registre ?",
+  proportion: "Quelle proportion ?",
+};
+
 export default function CalibrateScreen() {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("loading");
@@ -168,25 +176,34 @@ export default function CalibrateScreen() {
   }
 
   const current = probes[cursor];
+  const axisQuestion = current
+    ? (AXIS_QUESTION[current.axis] ?? "Lequel te ressemble ?")
+    : "";
 
   return (
     <SafeAreaView className="flex-1 bg-paper" edges={["top", "bottom"]}>
-      <View className="flex-1 px-6 pt-6 pb-6">
-        <CalibrationGauge current={judgedTotal} target={CALIBRATION_TARGET} />
-
-        <View className="mt-8 mb-8">
-          <Text className="font-display text-display-2xl text-ink-900 tracking-tight leading-[0.95]">
-            Hello.{"\n"}Dis-moi ce que tu aimes.
-          </Text>
-          <Text className="font-body text-micro text-ice uppercase tracking-widest mt-4">
-            {probes.length} duels · {probes.length * 15} secondes
+      <View className="flex-1 px-6 pt-4 pb-10">
+        <View className="flex-row items-center justify-between mb-8">
+          <View className="flex-1 mr-6">
+            <CalibrationGauge current={judgedTotal} target={CALIBRATION_TARGET} />
+          </View>
+          <Text className="font-body-medium text-eyebrow text-ink-300 uppercase tracking-widest">
+            Duel {String(cursor + 1).padStart(2, "0")} / {String(probes.length).padStart(2, "0")}
           </Text>
         </View>
 
-        <View className="flex-1 justify-center">
-          <Text className="font-body text-micro text-ink-400 uppercase tracking-widest mb-2">
-            Duel {String(cursor + 1).padStart(2, "0")} / {String(probes.length).padStart(2, "0")}
+        <View className="mb-8">
+          {current && (
+            <Text className="font-body-medium text-micro text-ice uppercase tracking-widest mb-2">
+              {current.axis_label_fr}
+            </Text>
+          )}
+          <Text className="font-display text-h1 text-ink-900 tracking-tight">
+            {axisQuestion}
           </Text>
+        </View>
+
+        <View className="flex-1">
           {current && (
             <TasteDuel
               probe={current}
@@ -196,7 +213,16 @@ export default function CalibrateScreen() {
           )}
         </View>
 
-        <View className="flex-row justify-end pt-4">
+        <View className="flex-row justify-between items-center pt-6">
+          <Pressable
+            onPress={() => handleChoose("none")}
+            disabled={submitting}
+            hitSlop={10}
+          >
+            <Text className="font-body text-micro text-ink-400 uppercase tracking-widest">
+              Ni l'un ni l'autre
+            </Text>
+          </Pressable>
           <Pressable onPress={goToday} hitSlop={10}>
             <Text className="font-body text-micro text-ink-400 uppercase tracking-widest">
               Plus tard →
