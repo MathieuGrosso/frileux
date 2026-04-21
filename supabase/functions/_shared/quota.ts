@@ -20,7 +20,6 @@ export const DAILY_LIMITS: Record<string, number> = {
   "suggest-outfit": 8,
   "critique-outfit": 10,
   "embed-outfit": 50,
-  "daily-taste-probe": 20,
   "wardrobe-ai:analyze_image": 30,
   "wardrobe-ai:analyze_image_multi": 30,
   "wardrobe-ai:analyze_text": 50,
@@ -35,7 +34,6 @@ export const DAILY_LIMITS: Record<string, number> = {
 export const RATE_LIMITS: Record<string, number> = {
   "suggest-outfit": 30,
   "critique-outfit": 15,
-  "daily-taste-probe": 20,
   "wardrobe-ai:generate_outfit_image": 10,
   "wardrobe-ai:generate_combos": 10,
   "wardrobe-ai:generate_pieces": 10,
