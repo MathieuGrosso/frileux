@@ -1,11 +1,22 @@
 import { useState } from "react";
 import { View, Text, Pressable } from "react-native";
-import type { TasteProbe } from "@/lib/tasteProbes";
+import type { TasteProbe, TastePiece } from "@/lib/tasteProbes";
 
 interface Props {
   probe: TasteProbe;
   onChoose: (choice: "a" | "b" | "none") => void;
   disabled?: boolean;
+}
+
+function renderPieces(pieces: TastePiece[] | null): string | null {
+  if (!pieces || pieces.length === 0) return null;
+  return pieces
+    .slice(0, 6)
+    .map((p) => {
+      const color = p.color ? ` ${p.color}` : "";
+      return `${p.description}${color ? "" : ""}`;
+    })
+    .join(" · ");
 }
 
 export function TasteDuel({ probe, onChoose, disabled }: Props) {
@@ -16,6 +27,9 @@ export function TasteDuel({ probe, onChoose, disabled }: Props) {
     if (choice !== "none") setPressed(choice);
     onChoose(choice);
   }
+
+  const piecesA = renderPieces(probe.option_a_pieces);
+  const piecesB = renderPieces(probe.option_b_pieces);
 
   return (
     <View>
@@ -32,8 +46,8 @@ export function TasteDuel({ probe, onChoose, disabled }: Props) {
           <Text className="font-body text-micro text-ink-300 uppercase tracking-widest mb-3">
             Option A
           </Text>
-          <Text className="font-display text-body text-ink-900 leading-snug mb-4">
-            {probe.option_a_text}
+          <Text className="font-display text-body text-ink-900 leading-snug mb-3">
+            {piecesA ?? probe.option_a_text}
           </Text>
           {probe.option_a_tags.length > 0 && (
             <Text className="font-body text-micro text-ink-400 uppercase tracking-widest">
@@ -52,8 +66,8 @@ export function TasteDuel({ probe, onChoose, disabled }: Props) {
           <Text className="font-body text-micro text-ink-300 uppercase tracking-widest mb-3">
             Option B
           </Text>
-          <Text className="font-display text-body text-ink-900 leading-snug mb-4">
-            {probe.option_b_text}
+          <Text className="font-display text-body text-ink-900 leading-snug mb-3">
+            {piecesB ?? probe.option_b_text}
           </Text>
           {probe.option_b_tags.length > 0 && (
             <Text className="font-body text-micro text-ink-400 uppercase tracking-widest">

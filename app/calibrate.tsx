@@ -6,13 +6,29 @@ import { CalibrationGauge } from "@/components/CalibrationGauge";
 import { TasteDuel } from "@/components/TasteDuel";
 import {
   CALIBRATION_TARGET,
+  CalibrateError,
+  type CalibrateErrorCode,
   getJudgedCount,
   requestBatch,
   submitProbeChoice,
   type TasteProbe,
 } from "@/lib/tasteProbes";
+import { colors } from "@/lib/theme";
 
 type Phase = "loading" | "duels" | "done" | "error";
+
+const ERROR_COPY: Record<CalibrateErrorCode, string> = {
+  config_missing: "Service de calibrage non configuré.",
+  gemini_down: "Le générateur de pièces n'a pas répondu.",
+  claude_down: "Le compositeur de tenues n'a pas répondu.",
+  schema_mismatch: "Réponse IA inexploitable — on retente.",
+  no_valid_duels: "Aucun duel exploitable cette fois.",
+  db_error: "Écriture en base impossible.",
+  unauthorized: "Session expirée. Reconnecte-toi.",
+  invalid_payload: "Réponse inattendue du service.",
+  network: "Réseau instable.",
+  unknown: "Calibrage indisponible.",
+};
 
 export default function CalibrateScreen() {
   const router = useRouter();
@@ -22,9 +38,12 @@ export default function CalibrateScreen() {
   const [judgedTotal, setJudgedTotal] = useState(0);
   const [sessionJudged, setSessionJudged] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [errorCode, setErrorCode] = useState<CalibrateErrorCode>("unknown");
+  const [errorDetail, setErrorDetail] = useState<string>("");
   const loadedOnce = useRef(false);
 
   const load = useCallback(async () => {
+    setPhase("loading");
     try {
       const [batch, total] = await Promise.all([requestBatch(), getJudgedCount()]);
       setProbes(batch.probes);
@@ -32,13 +51,19 @@ export default function CalibrateScreen() {
       setJudgedTotal(total);
       setSessionJudged(0);
       setPhase(batch.probes.length > 0 ? "duels" : "error");
+      if (batch.probes.length === 0) {
+        setErrorCode("no_valid_duels");
+        setErrorDetail("0 probes returned");
+      }
     } catch (e) {
-      if (__DEV__) {
-        console.warn("calibrate load:", e);
-        const ctx = (e as { context?: Response }).context;
-        if (ctx && typeof ctx.text === "function") {
-          ctx.text().then((body) => console.warn("daily-taste-probe response body:", body)).catch(() => {});
-        }
+      if (e instanceof CalibrateError) {
+        setErrorCode(e.code);
+        setErrorDetail(e.detail);
+        if (__DEV__) console.warn(`calibrate: ${e.code} · ${e.detail}`);
+      } else {
+        setErrorCode("unknown");
+        setErrorDetail(e instanceof Error ? e.message : String(e));
+        if (__DEV__) console.warn("calibrate load:", e);
       }
       setPhase("error");
     }
@@ -76,7 +101,7 @@ export default function CalibrateScreen() {
   if (phase === "loading") {
     return (
       <SafeAreaView className="flex-1 bg-paper items-center justify-center">
-        <ActivityIndicator color="#0F0F0D" />
+        <ActivityIndicator color={colors.ink[900]} />
         <Text className="font-body text-body-sm text-ink-400 mt-4">
           Préparation des duels…
         </Text>
@@ -85,21 +110,34 @@ export default function CalibrateScreen() {
   }
 
   if (phase === "error") {
+    const copy = ERROR_COPY[errorCode] ?? ERROR_COPY.unknown;
     return (
       <SafeAreaView className="flex-1 bg-paper">
         <View className="flex-1 px-6 pt-20">
           <Text className="font-display text-display-xl text-ink-900 tracking-tight mb-4">
-            Calibrage indisponible.
+            {copy}
           </Text>
           <Text className="font-body text-body-sm text-ink-500 mb-10 leading-snug">
-            Un souci côté IA — réessaie dans quelques minutes. Ta journée commence
-            quand même : la suggestion du jour t'attend.
+            Ta journée commence quand même : la suggestion du matin t'attend.
+            Tu peux retenter dans un instant.
           </Text>
-          <Pressable onPress={goToday} hitSlop={8}>
-            <Text className="font-body-medium text-eyebrow text-ink-900 uppercase tracking-widest">
-              Aller à Aujourd'hui →
+          {__DEV__ && errorDetail ? (
+            <Text className="font-body text-micro text-ink-300 uppercase tracking-widest mb-8">
+              {errorCode} · {errorDetail.slice(0, 80)}
             </Text>
-          </Pressable>
+          ) : null}
+          <View className="flex-row">
+            <Pressable onPress={load} hitSlop={8} className="mr-8">
+              <Text className="font-body-medium text-eyebrow text-ink-900 uppercase tracking-widest">
+                Retenter →
+              </Text>
+            </Pressable>
+            <Pressable onPress={goToday} hitSlop={8}>
+              <Text className="font-body-medium text-eyebrow text-ink-400 uppercase tracking-widest">
+                Aller à Aujourd'hui
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -141,7 +179,7 @@ export default function CalibrateScreen() {
             Hello.{"\n"}Dis-moi ce que tu aimes.
           </Text>
           <Text className="font-body text-micro text-ice uppercase tracking-widest mt-4">
-            {probes.length} duels · {probes.length * 8} secondes
+            {probes.length} duels · {probes.length * 15} secondes
           </Text>
         </View>
 

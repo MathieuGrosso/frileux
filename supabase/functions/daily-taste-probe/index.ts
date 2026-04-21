@@ -1,21 +1,182 @@
 // Supabase Edge Function: daily-taste-probe
-// Génère un batch de duels A/B pour calibrer le goût de l'utilisatrice.
-// Sonnet 4.6 : même modèle que suggest-outfit/critique-outfit, comportement stable.
+// Génère 3 duels A/B pour affiner le goût de l'utilisatrice.
+//
+// Architecture 2 étapes :
+//   1. Gemini 2.5-flash → pool de pièces fictives structurées (type, couleur,
+//      matière, tags, description), schéma JSON forcé + retries.
+//   2. Claude Sonnet 4.6 → compose ces pièces en 2 tenues contrastées sur un
+//      axe de goût (silhouette / palette / texture / registre / proportion).
+//      tool_use forcé + Zod → JSON garanti.
+//
+// Contrat client :
+//   - Succès : { status: "ok", batch_id, probes: [...] }
+//   - Échec  : HTTP 200 { status: "failed", error, detail } pour que
+//     supabase-js ne masque pas la vraie cause.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { z } from "npm:zod@^3.23";
 import { enforceQuota, recordTokens } from "../_shared/quota.ts";
-import { sanitizeUserInput } from "../_shared/sanitize.ts";
+import { callStructured, GeminiStructuredError } from "../_shared/gemini.ts";
+import { callTool, AnthropicToolError, type AnthropicTool } from "../_shared/anthropic.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 const ALLOWED_ORIGIN = Deno.env.get("ALLOWED_ORIGIN") ?? "*";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const BATCH_SIZE = 5;
+const CLAUDE_MODEL = "claude-sonnet-4-6";
+const GEMINI_MODEL = "gemini-2.5-flash";
+const DUELS_TOOL_NAME = "emit_duels";
+const BATCH_SIZE = 3;
+const POOL_MIN = 12;
+const POOL_MAX = 16;
 
-type GenderPresentation = "menswear" | "womenswear" | "both" | null;
+type PieceType = "top" | "bottom" | "outerwear" | "shoes" | "accessory";
+
+interface GeneratedPiece {
+  piece_id: string;
+  type: PieceType;
+  color: string;
+  material: string;
+  style_tags: string[];
+  description: string;
+}
+
+interface StoredPiece {
+  type: PieceType;
+  color: string;
+  material: string | null;
+  style_tags: string[];
+  description: string;
+}
+
+const PIECES_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    pieces: {
+      type: "ARRAY",
+      minItems: POOL_MIN,
+      maxItems: POOL_MAX,
+      items: {
+        type: "OBJECT",
+        properties: {
+          piece_id: { type: "STRING" },
+          type: {
+            type: "STRING",
+            enum: ["top", "bottom", "outerwear", "shoes", "accessory"],
+          },
+          color: { type: "STRING" },
+          material: { type: "STRING" },
+          style_tags: { type: "ARRAY", items: { type: "STRING" } },
+          description: { type: "STRING" },
+        },
+        required: ["piece_id", "type", "color", "material", "style_tags", "description"],
+      },
+    },
+  },
+  required: ["pieces"],
+};
+
+const AXES = ["silhouette", "palette", "texture", "registre", "proportion"] as const;
+type Axis = typeof AXES[number];
+
+const DuelsSchema = z.object({
+  duels: z
+    .array(
+      z.object({
+        axis: z.enum(AXES),
+        axis_label_fr: z.string().min(1).max(40),
+        option_a_piece_ids: z.array(z.string()).min(3).max(6),
+        option_a_tags: z.array(z.string()).min(1).max(4),
+        option_a_text: z.string().min(1).max(280),
+        option_b_piece_ids: z.array(z.string()).min(3).max(6),
+        option_b_tags: z.array(z.string()).min(1).max(4),
+        option_b_text: z.string().min(1).max(280),
+      }),
+    )
+    .min(1)
+    .max(BATCH_SIZE),
+});
+
+type DuelsPayload = z.infer<typeof DuelsSchema>;
+
+const duelsTool: AnthropicTool = {
+  name: DUELS_TOOL_NAME,
+  description:
+    "Compose les duels A/B à partir du pool de pièces fourni. Appelle cet outil EXACTEMENT une fois.",
+  input_schema: {
+    type: "object",
+    required: ["duels"],
+    properties: {
+      duels: {
+        type: "array",
+        minItems: 1,
+        maxItems: BATCH_SIZE,
+        items: {
+          type: "object",
+          required: [
+            "axis",
+            "axis_label_fr",
+            "option_a_piece_ids",
+            "option_a_tags",
+            "option_a_text",
+            "option_b_piece_ids",
+            "option_b_tags",
+            "option_b_text",
+          ],
+          properties: {
+            axis: { type: "string", enum: AXES as unknown as string[] },
+            axis_label_fr: {
+              type: "string",
+              description: "Étiquette courte affichée à l'écran, ex. COUPE / PALETTE.",
+            },
+            option_a_piece_ids: {
+              type: "array",
+              items: { type: "string" },
+              minItems: 3,
+              maxItems: 6,
+              description:
+                "IDs des pièces du pool composant l'option A. 4-6 idéalement, jamais dupliqués.",
+            },
+            option_a_tags: {
+              type: "array",
+              items: { type: "string" },
+              minItems: 1,
+              maxItems: 4,
+            },
+            option_a_text: {
+              type: "string",
+              maxLength: 280,
+              description:
+                "Phrase FR unique listant les pièces de A séparées par virgules, matières nommées.",
+            },
+            option_b_piece_ids: {
+              type: "array",
+              items: { type: "string" },
+              minItems: 3,
+              maxItems: 6,
+            },
+            option_b_tags: {
+              type: "array",
+              items: { type: "string" },
+              minItems: 1,
+              maxItems: 4,
+            },
+            option_b_text: {
+              type: "string",
+              maxLength: 280,
+            },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    additionalProperties: false,
+  },
+};
 
 async function requireUser(req: Request): Promise<string | null> {
   const auth = req.headers.get("Authorization");
@@ -27,52 +188,133 @@ async function requireUser(req: Request): Promise<string | null> {
   return data.user.id;
 }
 
-interface ProbeOption {
-  text: string;
-  tags: string[];
+type FailCode =
+  | "config_missing"
+  | "gemini_down"
+  | "claude_down"
+  | "schema_mismatch"
+  | "no_valid_duels"
+  | "db_error"
+  | "unknown";
+
+type OkPayload = {
+  status: "ok";
+  batch_id: string;
+  probes: Array<Record<string, unknown>>;
+};
+type FailPayload = { status: "failed"; error: FailCode; detail: string };
+
+function jsonResponse(body: unknown, status: number, cors: Record<string, string>): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...cors },
+  });
 }
 
-interface Probe {
-  axis: string;
-  axis_label_fr: string;
-  option_a: ProbeOption;
-  option_b: ProbeOption;
+function fail(code: FailCode, detail: string, cors: Record<string, string>): Response {
+  console.error(`[daily-taste-probe] ${code}: ${detail}`);
+  return jsonResponse(
+    { status: "failed", error: code, detail: detail.slice(0, 300) } satisfies FailPayload,
+    200,
+    cors,
+  );
 }
 
-function sanitizeOption(raw: unknown): ProbeOption | null {
-  if (!raw || typeof raw !== "object") return null;
-  const o = raw as Record<string, unknown>;
-  const text = typeof o.text === "string" ? o.text.trim() : "";
-  if (!text || text.length > 280) return null;
-  const tags = Array.isArray(o.tags)
-    ? o.tags
-        .filter((t): t is string => typeof t === "string")
-        .slice(0, 4)
-        .map((t) => sanitizeUserInput(t, 40))
-        .filter((t) => t.length > 0)
-    : [];
-  return { text: sanitizeUserInput(text, 280), tags };
-}
+function buildPiecesPrompt(profile: Record<string, unknown> | null): string {
+  const genderPresentation = profile?.gender_presentation as string | null | undefined;
+  const genderHint = genderPresentation === "menswear"
+    ? "Toutes les pièces proviennent d'un vestiaire menswear."
+    : genderPresentation === "womenswear"
+    ? "Toutes les pièces proviennent d'un vestiaire womenswear."
+    : "Mix menswear + womenswear, pioche librement, alterne d'une pièce à l'autre.";
 
-function sanitizeProbe(raw: unknown): Probe | null {
-  if (!raw || typeof raw !== "object") return null;
-  const p = raw as Record<string, unknown>;
-  const axis = typeof p.axis === "string" ? sanitizeUserInput(p.axis, 40) : "";
-  const axis_label_fr = typeof p.axis_label_fr === "string"
-    ? sanitizeUserInput(p.axis_label_fr, 40)
+  const universes = Array.isArray(profile?.style_universes)
+    ? (profile?.style_universes as string[]).slice(0, 4).join(", ")
     : "";
-  const a = sanitizeOption(p.option_a);
-  const b = sanitizeOption(p.option_b);
-  if (!axis || !axis_label_fr || !a || !b) return null;
-  return { axis, axis_label_fr, option_a: a, option_b: b };
+  const brands = Array.isArray(profile?.favorite_brands)
+    ? (profile?.favorite_brands as string[]).slice(0, 5).join(", ")
+    : "";
+  const avoid = Array.isArray(profile?.avoid_tags)
+    ? (profile?.avoid_tags as string[]).slice(0, 5).join(", ")
+    : "";
+
+  return `Tu génères un pool de pièces de vêtement fictives pour calibrer le goût d'une utilisatrice éditoriale (références Ssense, System Magazine, Muji, Highsnobiety). Ces pièces serviront à composer des duels A/B.
+
+Consignes de vestiaire :
+- ${genderHint}
+- Univers stylistiques à couvrir : ${universes || "large, varié, éditorial"}.
+- Inspirations de vocabulaire (ne nomme jamais les marques) : ${brands || "—"}.
+- À éviter : ${avoid || "le générique, le convenu, le bling"}.
+
+Règles dures :
+- Retourne entre ${POOL_MIN} et ${POOL_MAX} pièces, équilibrées par catégorie (vise ≈4 top, ≈3 bottom, ≈3 outerwear, ≈3 shoes, ≈2 accessory).
+- Les pièces couvrent volontairement des contrastes nets sur 5 axes : silhouette (tailored vs ample), palette (neutres vs couleur affirmée), texture (lisse/technique vs brute), registre (habillé vs streetwear/workwear), proportion (près du corps vs oversize).
+- piece_id : 3 caractères stables (ex. "p01", "p02", ...), unique dans le pool.
+- type : "top" | "bottom" | "outerwear" | "shoes" | "accessory".
+- color : couleur précise en français (ex. "camel", "anthracite chiné", "ivoire", "bleu ardoise").
+- material : matière nommée en français (ex. "laine mérinos côtelée", "coton poplin", "cuir grainé", "cachemire", "nylon technique"). Jamais vide — si vraiment incertain, écris "mixte".
+- style_tags : 2 à 4 tags courts FR (ex. "tailored","slim","workwear","oversize","sport-tech","minimal").
+- description : une ligne FR concise, texture + coupe + palette (ex. "Pull laine mérinos côtelée anthracite, coupe oversize").
+- Aucune mention de marque. Zéro adjectif mou (basique, joli, classique).
+
+Réponds strictement conforme au schéma JSON (pas de texte hors JSON).`;
 }
 
-function extractJson(text: string): unknown {
-  const trimmed = text.trim();
-  const start = trimmed.indexOf("{");
-  const end = trimmed.lastIndexOf("}");
-  if (start < 0 || end <= start) throw new Error("no JSON object in model output");
-  return JSON.parse(trimmed.slice(start, end + 1));
+function buildDuelsPrompt(args: {
+  profile: Record<string, unknown> | null;
+  pool: GeneratedPiece[];
+  pastAxes: Array<{ axis: string; chosen: string | null }>;
+}): string {
+  const { profile, pool, pastAxes } = args;
+
+  const poolLines = pool.map((p) =>
+    `- [${p.piece_id}] (${p.type}) ${p.description} · couleur ${p.color} · matière ${p.material} · tags ${p.style_tags.slice(0, 4).join("|")}`
+  );
+
+  const recentByAxis = pastAxes.slice(0, 15).map((p) =>
+    `- ${p.axis}: ${p.chosen === "a" ? "A" : p.chosen === "b" ? "B" : "aucune"}`
+  );
+  const recentBlock = recentByAxis.length > 0
+    ? `\n\nDerniers axes testés (évite de retomber tout de suite sur ceux déjà matraqués, cherche un déplacement) :\n${recentByAxis.join("\n")}`
+    : "";
+
+  const coldness = profile?.coldness_level ?? 3;
+  const gender = (profile?.gender_presentation as string | undefined) ?? "both";
+
+  return `Tu construis des duels A/B pour calibrer le goût d'une utilisatrice (${gender}, coldness ${coldness}/5). Tu disposes d'un POOL de pièces fictives (déjà généré). Tu dois composer EXACTEMENT ${BATCH_SIZE} duels, chacun testant UN axe différent parmi : silhouette, palette, texture, registre, proportion.
+
+Règles dures :
+- Chaque option = 4 à 6 pièces du pool, cohérentes entre elles (pas de shorts en hiver, pas de mocassins avec un short de sport).
+- Les 2 options d'un duel partagent une occasion de port comparable et un niveau de soin équivalent : le contraste se joue UNIQUEMENT sur l'axe du duel.
+- option_x_text : phrase FR unique qui liste les pièces séparées par des virgules, en conservant matière + couleur. Max 280 caractères.
+- option_x_tags : 2-4 tags courts qui résument l'option (ex. "tailored","slim" vs "oversize","workwear").
+- Axe différent pour chaque duel. axis_label_fr : étiquette courte all-caps-friendly (ex. "COUPE", "PALETTE", "MATIÈRE", "REGISTRE", "PROPORTION").
+- Réutilisation possible d'une pièce entre 2 duels si cohérent, mais pas dans le même duel.
+
+POOL :
+${poolLines.join("\n")}${recentBlock}
+
+Appelle l'outil ${DUELS_TOOL_NAME} une seule fois avec les ${BATCH_SIZE} duels. Ne produis aucun texte hors de l'appel.`;
+}
+
+function resolvePieces(ids: string[], pool: GeneratedPiece[]): StoredPiece[] {
+  const byId = new Map(pool.map((p) => [p.piece_id, p]));
+  const seen = new Set<string>();
+  const out: StoredPiece[] = [];
+  for (const id of ids) {
+    if (seen.has(id)) continue;
+    const p = byId.get(id);
+    if (!p) continue;
+    seen.add(id);
+    out.push({
+      type: p.type,
+      color: p.color,
+      material: p.material && p.material !== "mixte" ? p.material : p.material || null,
+      style_tags: p.style_tags.slice(0, 4),
+      description: p.description,
+    });
+  }
+  return out;
 }
 
 Deno.serve(async (req: Request) => {
@@ -83,189 +325,139 @@ Deno.serve(async (req: Request) => {
     "Vary": "Origin",
   };
 
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const userId = await requireUser(req);
-  if (!userId) {
-    return new Response(JSON.stringify({ error: "unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
-  }
+  if (!userId) return jsonResponse({ error: "unauthorized" }, 401, corsHeaders);
+
+  if (!ANTHROPIC_API_KEY) return fail("config_missing", "ANTHROPIC_API_KEY", corsHeaders);
+  if (!GEMINI_API_KEY) return fail("config_missing", "GEMINI_API_KEY", corsHeaders);
 
   try {
-    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
-
     const guard = await enforceQuota(userId, "daily-taste-probe");
     if (!guard.ok) return guard.response(corsHeaders);
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Profil minimal pour contextualiser la génération.
-    const { data: profile } = await admin
-      .from("profiles")
-      .select(
-        "coldness_level, gender_presentation, style_universes, favorite_brands, avoid_tags, fit_preference"
-      )
-      .eq("id", userId)
-      .single();
+    const [{ data: profile }, { data: pastProbes }] = await Promise.all([
+      admin
+        .from("profiles")
+        .select(
+          "coldness_level, gender_presentation, style_universes, favorite_brands, avoid_tags, fit_preference",
+        )
+        .eq("id", userId)
+        .single(),
+      admin
+        .from("taste_probes")
+        .select("axis, chosen")
+        .eq("user_id", userId)
+        .not("judged_at", "is", null)
+        .order("judged_at", { ascending: false })
+        .limit(20),
+    ]);
 
-    const genderPresentation = (profile?.gender_presentation as GenderPresentation) ?? null;
-    const genderHint = genderPresentation === "menswear"
-      ? "menswear uniquement"
-      : genderPresentation === "womenswear"
-      ? "womenswear uniquement"
-      : "mix menswear + womenswear (pioche librement, alterne d'un duel à l'autre)";
-
-    // Historique des derniers jugements pour éviter de reposer les mêmes questions.
-    const { data: pastProbes } = await admin
-      .from("taste_probes")
-      .select("axis, option_a_text, option_a_tags, option_b_text, option_b_tags, chosen")
-      .eq("user_id", userId)
-      .not("judged_at", "is", null)
-      .order("judged_at", { ascending: false })
-      .limit(30);
-
-    const pastLines = (pastProbes ?? []).map((p: Record<string, unknown>) => {
-      const chosenLabel = p.chosen === "a" ? "A" : p.chosen === "b" ? "B" : "aucune";
-      const aTags = Array.isArray(p.option_a_tags) ? (p.option_a_tags as string[]).join(", ") : "";
-      const bTags = Array.isArray(p.option_b_tags) ? (p.option_b_tags as string[]).join(", ") : "";
-      return `- [${p.axis}] A=${p.option_a_text} (${aTags}) vs B=${p.option_b_text} (${bTags}) → choisi ${chosenLabel}`;
-    });
-    const pastBlock = pastLines.length > 0
-      ? `\n\nJugements passés (NE REFAIS PAS les mêmes duels, déplace l'axe ou change le contraste) :\n${pastLines.slice(0, 20).join("\n")}`
-      : "";
-
-    const universes = Array.isArray(profile?.style_universes)
-      ? (profile?.style_universes as string[]).slice(0, 4).join(", ")
-      : "";
-    const brands = Array.isArray(profile?.favorite_brands)
-      ? (profile?.favorite_brands as string[]).slice(0, 5).join(", ")
-      : "";
-    const profileLines: string[] = [];
-    profileLines.push(`- Présentation : ${genderHint}`);
-    if (universes) profileLines.push(`- Univers déclarés : ${universes}`);
-    if (brands) profileLines.push(`- Marques d'inspiration (vocabulaire, jamais nommer) : ${brands}`);
-    if (profile?.fit_preference) profileLines.push(`- Coupe préférée : ${profile.fit_preference}`);
-    const avoidTags = Array.isArray(profile?.avoid_tags)
-      ? (profile?.avoid_tags as string[]).slice(0, 5).join(", ")
-      : "";
-    if (avoidTags) profileLines.push(`- À éviter : ${avoidTags}`);
-
-    const prompt = `Tu construis un calibrage de goût pour une utilisatrice qui prend son style au sérieux. Niveau de goût cible : éditorial (Ssense, Highsnobiety, System Magazine, Muji).
-
-Profil :
-${profileLines.join("\n")}
-
-Tu dois générer ${BATCH_SIZE} duels A/B de tenues complètes. Chaque duel teste UN axe de goût avec un contraste NET. Les axes à couvrir (un par duel, ne répète pas) :
-1. silhouette — tailored vs ample / fluide
-2. palette — neutres monochromes vs couleur affirmée ou contrastée
-3. texture — matières lisses/techniques vs matières brutes/textiles marqués
-4. registre — habillé / tailoring vs streetwear / workwear
-5. proportion — pièces près du corps vs volumes exagérés
-
-Règles dures :
-- Chaque option = 1 phrase en français, 4-6 pièces séparées par virgules, matières nommées (ex : "pull laine côtelée anthracite, pantalon tailoring écru, mocassins cuir noir, trench poplin beige, écharpe cachemire crème").
-- Les 2 options d'un duel doivent être aussi désirables l'une que l'autre pour quelqu'un qui ne sait pas encore — le contraste est sur l'axe, pas sur la qualité.
-- Pas de "basique", "classique", "joli". Parti-pris sur chaque pièce.
-- Chaque option a 2-4 tags courts (ex : ["tailored","slim"] ou ["oversize","workwear"]).
-${pastBlock}
-
-Réponds STRICTEMENT en JSON, aucun texte autour, ce schéma exact :
-{
-  "probes": [
-    {
-      "axis": "silhouette",
-      "axis_label_fr": "COUPE",
-      "option_a": { "text": "...", "tags": ["tailored", "slim"] },
-      "option_b": { "text": "...", "tags": ["oversize", "fluide"] }
-    }
-    // ... ${BATCH_SIZE} probes total, axes différents
-  ]
-}`;
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 1800,
+    // Étape 1 — Gemini : pool de pièces.
+    let pool: GeneratedPiece[];
+    try {
+      const res = await callStructured<{ pieces: GeneratedPiece[] }>({
+        apiKey: GEMINI_API_KEY,
+        model: GEMINI_MODEL,
+        prompt: buildPiecesPrompt(profile as Record<string, unknown> | null),
+        responseSchema: PIECES_SCHEMA,
         temperature: 0.9,
-        messages: [{ role: "user", content: prompt }],
-      }),
+      });
+      pool = res.data.pieces ?? [];
+      recordTokens(userId, "daily-taste-probe:gemini", res.tokensIn, res.tokensOut).catch(() => {});
+    } catch (e) {
+      if (e instanceof GeminiStructuredError) {
+        return fail("gemini_down", `${e.code}:${e.detail}`, corsHeaders);
+      }
+      return fail("gemini_down", e instanceof Error ? e.message : "unknown", corsHeaders);
+    }
+
+    // Dédupe piece_id et filtre les pièces invalides.
+    const seen = new Set<string>();
+    pool = pool.filter((p) => {
+      if (!p.piece_id || seen.has(p.piece_id)) return false;
+      if (!p.type || !p.color || !Array.isArray(p.style_tags) || !p.description) return false;
+      seen.add(p.piece_id);
+      return true;
     });
-
-    if (!response.ok) {
-      const bodyText = await response.text().catch(() => "");
-      console.error(`[daily-taste-probe] anthropic ${response.status} :: ${bodyText.slice(0, 500)}`);
-      throw new Error(`Anthropic error ${response.status}: ${bodyText.slice(0, 200)}`);
+    if (pool.length < 8) {
+      return fail("gemini_down", `pool too small: ${pool.length}`, corsHeaders);
     }
 
-    const data = await response.json();
-    const tokensIn = data?.usage?.input_tokens ?? 0;
-    const tokensOut = data?.usage?.output_tokens ?? 0;
-    recordTokens(userId, "daily-taste-probe", tokensIn, tokensOut).catch(() => {});
-
-    const text: string = data.content?.[0]?.text ?? "";
-    const parsed = extractJson(text) as { probes?: unknown };
-    if (!parsed || !Array.isArray(parsed.probes)) {
-      throw new Error("malformed model output (probes missing)");
+    // Étape 2 — Claude tool_use : compose les duels.
+    let duels: DuelsPayload;
+    try {
+      const res = await callTool<DuelsPayload>({
+        apiKey: ANTHROPIC_API_KEY,
+        model: CLAUDE_MODEL,
+        tool: duelsTool,
+        prompt: buildDuelsPrompt({
+          profile: profile as Record<string, unknown> | null,
+          pool,
+          pastAxes: (pastProbes ?? []) as Array<{ axis: string; chosen: string | null }>,
+        }),
+        maxTokens: 1800,
+        schema: DuelsSchema,
+      });
+      duels = res.data;
+      recordTokens(userId, "daily-taste-probe:claude", res.tokensIn, res.tokensOut).catch(() => {});
+    } catch (e) {
+      if (e instanceof AnthropicToolError) {
+        const code: FailCode = e.code === "schema_mismatch" ? "schema_mismatch" : "claude_down";
+        return fail(code, e.detail, corsHeaders);
+      }
+      return fail("claude_down", e instanceof Error ? e.message : "unknown", corsHeaders);
     }
 
-    const probes: Probe[] = [];
-    const seenAxes = new Set<string>();
-    for (const raw of parsed.probes) {
-      const p = sanitizeProbe(raw);
-      if (!p) continue;
-      if (seenAxes.has(p.axis)) continue;
-      seenAxes.add(p.axis);
-      probes.push(p);
-      if (probes.length >= BATCH_SIZE) break;
-    }
-    if (probes.length === 0) throw new Error("no valid probes produced");
-
+    // Résout piece_ids → pièces stockées, écarte les duels qui perdent trop de pièces.
+    const usedAxes = new Set<Axis>();
+    const rows: Array<Record<string, unknown>> = [];
     const batchId = crypto.randomUUID();
-    const rows = probes.map((p) => ({
-      user_id: userId,
-      batch_id: batchId,
-      axis: p.axis,
-      axis_label_fr: p.axis_label_fr,
-      option_a_text: p.option_a.text,
-      option_a_tags: p.option_a.tags,
-      option_b_text: p.option_b.text,
-      option_b_tags: p.option_b.tags,
-    }));
+
+    for (const d of duels.duels) {
+      if (usedAxes.has(d.axis)) continue;
+      const piecesA = resolvePieces(d.option_a_piece_ids, pool);
+      const piecesB = resolvePieces(d.option_b_piece_ids, pool);
+      if (piecesA.length < 3 || piecesB.length < 3) continue;
+      usedAxes.add(d.axis);
+      rows.push({
+        user_id: userId,
+        batch_id: batchId,
+        axis: d.axis,
+        axis_label_fr: d.axis_label_fr,
+        option_a_text: d.option_a_text,
+        option_a_tags: d.option_a_tags,
+        option_a_pieces: piecesA,
+        option_b_text: d.option_b_text,
+        option_b_tags: d.option_b_tags,
+        option_b_pieces: piecesB,
+      });
+      if (rows.length >= BATCH_SIZE) break;
+    }
+
+    if (rows.length === 0) {
+      return fail("no_valid_duels", "0 duels after piece resolution", corsHeaders);
+    }
 
     const { data: inserted, error: insertErr } = await admin
       .from("taste_probes")
       .insert(rows)
-      .select("id, axis, axis_label_fr, option_a_text, option_a_tags, option_b_text, option_b_tags");
-    if (insertErr) throw insertErr;
+      .select(
+        "id, axis, axis_label_fr, option_a_text, option_a_tags, option_a_pieces, option_b_text, option_b_tags, option_b_pieces",
+      );
+    if (insertErr) {
+      return fail("db_error", insertErr.message, corsHeaders);
+    }
 
-    return new Response(
-      JSON.stringify({ batch_id: batchId, probes: inserted }),
-      { headers: { "Content-Type": "application/json", ...corsHeaders } },
+    return jsonResponse(
+      { status: "ok", batch_id: batchId, probes: inserted } satisfies OkPayload,
+      200,
+      corsHeaders,
     );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "unknown";
-    const stack = error instanceof Error ? error.stack : undefined;
-    console.error("[daily-taste-probe] fatal:", message, stack);
-    const status = message.includes("unauthorized") ? 401 : 500;
-    return new Response(
-      JSON.stringify({
-        error: "Impossible de générer les duels de calibrage.",
-        detail: message.slice(0, 300),
-      }),
-      {
-        status,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      },
-    );
+  } catch (e) {
+    return fail("unknown", e instanceof Error ? e.message : String(e), corsHeaders);
   }
 });

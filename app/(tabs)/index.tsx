@@ -34,6 +34,7 @@ import {
 import { embedOutfitTextWithHash } from "@/lib/embedOutfit";
 import { enrichOutfitInBackground } from "@/lib/enrich-outfit";
 import { recordCritiqueFacts, recordRefinementFeedback } from "@/lib/style-memory";
+import { shouldShowCalibrationNudge } from "@/lib/tasteProbes";
 import { SuggestionSwipeArea } from "@/components/SuggestionSwipeArea";
 import { WardrobeNudge } from "@/components/WardrobeNudge";
 import { WardrobeCombos } from "@/components/WardrobeCombos";
@@ -96,6 +97,7 @@ export default function TodayScreen() {
   const [critiqueError, setCritiqueError] = useState<string | null>(null);
   const [critiqueCanRetry, setCritiqueCanRetry] = useState(false);
   const [critiqueOutfitId, setCritiqueOutfitId] = useState<string | null>(null);
+  const [calibrationNudge, setCalibrationNudge] = useState(false);
   const critiqueTargetRef = useRef<string | null>(null);
 
   const runCritique = useCallback((outfitId: string) => {
@@ -165,6 +167,9 @@ export default function TodayScreen() {
         .eq("id", data.user.id)
         .then(() => {});
     });
+    shouldShowCalibrationNudge()
+      .then(setCalibrationNudge)
+      .catch(() => setCalibrationNudge(false));
   }, []);
 
   useFocusEffect(
@@ -797,6 +802,18 @@ export default function TodayScreen() {
               </View>
             )}
           </View>
+
+          {calibrationNudge && (
+            <Pressable
+              onPress={() => router.push("/calibrate")}
+              hitSlop={8}
+              className="mb-4"
+            >
+              <Text className="font-body-medium text-eyebrow text-ice uppercase tracking-widest">
+                AFFINE TON GOÛT · 3 DUELS →
+              </Text>
+            </Pressable>
+          )}
 
           <View className="h-px bg-paper-300 mb-6" />
 
