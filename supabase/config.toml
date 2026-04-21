@@ -316,6 +316,12 @@ verify_jwt = false
 [functions.derive-taste]
 verify_jwt = false
 
+[functions.critique-outfit]
+verify_jwt = false
+
+[functions.embed-outfit]
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.
