@@ -370,7 +370,10 @@ Deno.serve(async (req: Request) => {
       recordTokens(userId, "daily-taste-probe:gemini", res.tokensIn, res.tokensOut).catch(() => {});
     } catch (e) {
       if (e instanceof GeminiStructuredError) {
-        return fail("gemini_down", `${e.code}:${e.detail}`, corsHeaders);
+        // "parse" = JSON malformé après retries → distinct du réseau pour faciliter le debug.
+        const code: FailCode = e.code === "parse" ? "schema_mismatch" : "gemini_down";
+        console.warn(`[daily-taste-probe] gemini ${e.code}: ${e.detail}`);
+        return fail(code, `${e.code}:${e.detail}`, corsHeaders);
       }
       return fail("gemini_down", e instanceof Error ? e.message : "unknown", corsHeaders);
     }
