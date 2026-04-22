@@ -1,14 +1,21 @@
+import { useCallback, useState } from "react";
 import { FlatList, RefreshControl, View, Text, ActivityIndicator, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useFeed } from "@/hooks/useFeed";
 import { OutfitFeedCard } from "@/components/feed/OutfitFeedCard";
+import { PhotoLightbox } from "@/components/feed/PhotoLightbox";
 import { EmptyState } from "@/components/EmptyState";
 import { ChallengeBanner } from "@/components/ChallengeBanner";
+import { colors } from "@/lib/theme";
 
 export default function FeedScreen() {
   const { outfits, loading, refreshing, loadingMore, refresh, loadMore } = useFeed();
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+
+  const openPhoto = useCallback((url: string) => setLightboxUrl(url), []);
+  const closePhoto = useCallback(() => setLightboxUrl(null), []);
 
   return (
     <SafeAreaView className="flex-1 bg-paper-100">
@@ -33,18 +40,24 @@ export default function FeedScreen() {
           className="pb-1 active:opacity-60"
           accessibilityLabel="Messages"
         >
-          <Feather name="message-circle" size={22} color="#0F0F0D" />
+          <Feather name="message-circle" size={22} color={colors.ink[900]} />
         </Pressable>
       </View>
       <ChallengeBanner />
       <FlatList
         data={outfits}
-        renderItem={({ item }) => <OutfitFeedCard outfit={item} />}
+        renderItem={({ item }) => (
+          <OutfitFeedCard outfit={item} onOpenPhoto={openPhoto} />
+        )}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24 }}
+        contentContainerStyle={{ paddingTop: 16, paddingBottom: 24 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#637D8E" />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refresh}
+            tintColor={colors.ice[600]}
+          />
         }
         onEndReached={() => { void loadMore(); }}
         onEndReachedThreshold={0.4}
@@ -59,11 +72,12 @@ export default function FeedScreen() {
         ListFooterComponent={
           loadingMore ? (
             <View className="py-4 items-center">
-              <ActivityIndicator color="#637D8E" />
+              <ActivityIndicator color={colors.ice[600]} />
             </View>
           ) : null
         }
       />
+      <PhotoLightbox photoUrl={lightboxUrl} onClose={closePhoto} />
     </SafeAreaView>
   );
 }
