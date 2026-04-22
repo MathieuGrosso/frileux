@@ -7,6 +7,7 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -18,13 +19,18 @@ import { weatherEmoji } from "@/lib/weather";
 import { RatingStars } from "@/components/RatingStars";
 import { OutfitNotes } from "@/components/outfit/OutfitNotes";
 import { OutfitCritique } from "@/components/OutfitCritique";
+import { PhotoLightbox } from "@/components/feed/PhotoLightbox";
 import { fetchOutfitCritique } from "@/lib/critique";
 import { colors } from "@/lib/theme";
 import { confirmAction, notifyError } from "@/lib/ui";
 
+const DEFAULT_PHOTO_RATIO = 4 / 5;
+const DETAIL_PHOTO_MAX_HEIGHT_RATIO = 0.72;
+
 export default function OutfitDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const [outfit, setOutfit] = useState<Outfit | null>(null);
   const [rating, setRating] = useState(0);
   const [notes, setNotes] = useState("");
@@ -37,6 +43,8 @@ export default function OutfitDetailScreen() {
   const [critiqueLoading, setCritiqueLoading] = useState(false);
   const [critiqueError, setCritiqueError] = useState<string | null>(null);
   const [critiqueCanRetry, setCritiqueCanRetry] = useState(false);
+  const [photoRatio, setPhotoRatio] = useState<number>(DEFAULT_PHOTO_RATIO);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => { loadOutfit(); }, [id]);
 
@@ -173,15 +181,39 @@ export default function OutfitDetailScreen() {
       <SafeAreaView className="flex-1">
         <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
 
-          <View className="relative" style={{ height: 520 }}>
-            <Image
-              source={{ uri: outfit.photo_url }}
-              className="w-full h-full"
-              resizeMode="cover"
-            />
+          <View
+            className="relative bg-paper-200"
+            style={{
+              height: Math.min(
+                screenWidth / photoRatio,
+                screenHeight * DETAIL_PHOTO_MAX_HEIGHT_RATIO,
+              ),
+            }}
+          >
+            <Pressable
+              onPress={() => setLightboxOpen(true)}
+              accessibilityLabel="Voir la photo en plein écran"
+              style={{ flex: 1 }}
+            >
+              <Image
+                source={{ uri: outfit.photo_url }}
+                style={{ width: "100%", height: "100%" }}
+                contentFit="contain"
+                cachePolicy="memory-disk"
+                onLoad={(e) => {
+                  const w = e.source?.width;
+                  const h = e.source?.height;
+                  if (w && h && h > 0) {
+                    const r = w / h;
+                    if (Math.abs(r - photoRatio) > 0.01) setPhotoRatio(r);
+                  }
+                }}
+              />
+            </Pressable>
             <Pressable
               onPress={() => router.back()}
               className="absolute top-4 left-4 bg-paper-100/90 px-3.5 py-2 border border-paper-300"
+              accessibilityLabel="Retour"
             >
               <Text className="font-body-medium text-body-sm text-ink-900">←</Text>
             </Pressable>
@@ -467,6 +499,10 @@ export default function OutfitDetailScreen() {
             <View style={{ height: 40 }} />
           </View>
         </ScrollView>
+        <PhotoLightbox
+          photoUrl={lightboxOpen ? outfit.photo_url : null}
+          onClose={() => setLightboxOpen(false)}
+        />
       </SafeAreaView>
     </View>
   );
