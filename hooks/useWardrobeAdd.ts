@@ -90,11 +90,18 @@ export function useWardrobeAdd(options: UseWardrobeAddOptions = {}) {
       return;
     }
     const result = fromCamera
-      ? await ImagePicker.launchCameraAsync({ quality: 0.85, base64: true })
+      ? await ImagePicker.launchCameraAsync({
+          quality: 0.85,
+          base64: true,
+          allowsEditing: true,
+          aspect: [1, 1],
+        })
       : await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ["images"],
           quality: 0.85,
           base64: true,
+          allowsEditing: true,
+          aspect: [1, 1],
         });
     if (result.canceled) return;
     const asset = result.assets[0];

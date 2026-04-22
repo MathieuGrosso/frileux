@@ -3,13 +3,13 @@ import {
   Modal,
   View,
   Text,
-  Image,
   TextInput,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   useWindowDimensions,
 } from "react-native";
+import { Image } from "expo-image";
 import Animated, { useReducedMotion } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { PressableScale } from "@/components/ui/PressableScale";
@@ -66,7 +66,7 @@ export default function AddWardrobeItemSheet({ visible, onClose, onItemAdded }: 
         <PressableScale
           onPress={onClose}
           scaleTo={1}
-          style={{ position: "absolute", top: 0, left: 0, right: 0, height: height * 0.25 }}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, height: height * 0.2 }}
           accessibilityLabel="Fermer"
         />
         <View className="bg-paper border-t border-paper-300">
@@ -82,10 +82,10 @@ export default function AddWardrobeItemSheet({ visible, onClose, onItemAdded }: 
                       VESTIAIRE / +
                     </Text>
                     <Text
-                      className="font-display text-ink-900 mt-1"
-                      style={{ fontSize: 44, letterSpacing: -0.8, lineHeight: 44 }}
+                      className="font-display text-ink-900 mt-2"
+                      style={{ fontSize: 36, letterSpacing: -0.6, lineHeight: 38 }}
                     >
-                      AJOUTER{"\n"}UNE PIÈCE
+                      AJOUTER UNE PIÈCE
                     </Text>
                   </View>
                   <PressableScale onPress={onClose} hitSlop={12}>
@@ -99,91 +99,46 @@ export default function AddWardrobeItemSheet({ visible, onClose, onItemAdded }: 
                 </View>
               </Animated.View>
 
-              <View className="h-px bg-paper-300 my-6" />
+              <View className="h-px bg-paper-300 mt-5 mb-4" />
 
               <Animated.View entering={enterFadeUp(1, reducedMotion ?? false)}>
-                <PressableScale
+                <ActionRow
+                  label="CAMÉRA"
+                  caption="prends la photo"
+                  variant="primary"
                   disabled={analyzing}
                   onPress={() => pickPhoto(true)}
-                  className="bg-ink-900 px-5 py-5"
-                  style={{ opacity: analyzing ? 0.4 : 1 }}
-                >
-                  <View className="flex-row items-end justify-between">
-                    <Text
-                      className="font-display text-paper"
-                      style={{ fontSize: 22, letterSpacing: 0.4 }}
-                    >
-                      CAMÉRA
-                    </Text>
-                    <Text
-                      className="font-body text-ink-300"
-                      style={{ fontSize: 11, letterSpacing: 1.2 }}
-                    >
-                      PRENDS LA PHOTO
-                    </Text>
-                  </View>
-                </PressableScale>
+                />
               </Animated.View>
 
               <Animated.View
                 entering={enterFadeUp(2, reducedMotion ?? false)}
                 className="mt-2"
               >
-                <PressableScale
+                <ActionRow
+                  label="GALERIE"
+                  caption="depuis tes photos"
+                  variant="secondary"
                   disabled={analyzing}
                   onPress={() => pickPhoto(false)}
-                  className="border border-ink-900 bg-paper-50 px-5 py-5"
-                  style={{ opacity: analyzing ? 0.4 : 1 }}
-                >
-                  <View className="flex-row items-end justify-between">
-                    <Text
-                      className="font-display text-ink-900"
-                      style={{ fontSize: 22, letterSpacing: 0.4 }}
-                    >
-                      GALERIE
-                    </Text>
-                    <Text
-                      className="font-body text-ice-600"
-                      style={{ fontSize: 11, letterSpacing: 1.2 }}
-                    >
-                      DEPUIS TES PHOTOS
-                    </Text>
-                  </View>
-                </PressableScale>
+                />
               </Animated.View>
 
               <Animated.View
                 entering={enterFadeUp(3, reducedMotion ?? false)}
                 className="mt-2"
               >
-                <PressableScale
+                <ActionRow
+                  label="TEXTE"
+                  caption="gemini génère l'image"
+                  variant="secondary"
                   disabled={analyzing}
                   onPress={() => setTextOpen(true)}
-                  className="border border-paper-300 bg-paper-50 px-5 py-4"
-                  style={{ opacity: analyzing ? 0.4 : 1 }}
-                >
-                  <View className="flex-row items-center justify-between">
-                    <Text
-                      className="font-body-medium text-ink-900"
-                      style={{ fontSize: 13, letterSpacing: 1.4 }}
-                    >
-                      + DÉCRIRE EN TEXTE
-                    </Text>
-                    <Text
-                      className="font-body text-ink-300"
-                      style={{ fontSize: 10, letterSpacing: 1.6 }}
-                    >
-                      GEMINI GÉNÈRE
-                    </Text>
-                  </View>
-                </PressableScale>
+                />
               </Animated.View>
 
               {analyzing && (
-                <Animated.View
-                  entering={enterFadeUp(0, reducedMotion ?? false)}
-                  className="flex-row items-center gap-2 mt-5"
-                >
+                <View className="flex-row items-center gap-2 mt-5">
                   <ActivityIndicator color={colors.ice[600]} size="small" />
                   <Text
                     className="font-body text-ice-600"
@@ -191,7 +146,7 @@ export default function AddWardrobeItemSheet({ visible, onClose, onItemAdded }: 
                   >
                     GEMINI ANALYSE…
                   </Text>
-                </Animated.View>
+                </View>
               )}
             </View>
           </SafeAreaView>
@@ -205,67 +160,63 @@ export default function AddWardrobeItemSheet({ visible, onClose, onItemAdded }: 
         onRequestClose={cancelPending}
         statusBarTranslucent
       >
-        <View className="flex-1 bg-ink-900/60 justify-end">
-          <View className="bg-paper px-6 pt-6 pb-10">
-            <Text
-              className="font-body-medium text-ice-600"
-              style={{ fontSize: 10, letterSpacing: 2 }}
-            >
-              CETTE PHOTO
-            </Text>
-            {pendingPhoto && (
-              <Image
-                source={{ uri: pendingPhoto.uri }}
-                style={{ width: "100%", height: 220, marginTop: 12, backgroundColor: colors.paper[300] }}
-              />
-            )}
-            <Text
-              className="font-body text-ink-500 mt-3"
-              style={{ fontSize: 12 }}
-            >
-              Une seule pièce, ou plusieurs à extraire ?
-            </Text>
-            <View className="mt-4 gap-2">
-              <PressableScale
-                onPress={confirmPendingAsSingle}
-                className="border border-ink-900 bg-paper-50 px-5 py-4"
-              >
+        <View className="flex-1 bg-ink-900/70 justify-end">
+          <View className="bg-paper">
+            <SafeAreaView edges={["bottom"]}>
+              <View className="px-6 pt-6 pb-6">
+                <View className="flex-row items-center justify-between">
+                  <Text
+                    className="font-body-medium text-ice-600"
+                    style={{ fontSize: 10, letterSpacing: 2 }}
+                  >
+                    CETTE PHOTO
+                  </Text>
+                  <PressableScale onPress={cancelPending} hitSlop={12}>
+                    <Text
+                      className="font-body-medium text-ink-500"
+                      style={{ fontSize: 10, letterSpacing: 2 }}
+                    >
+                      ANNULER
+                    </Text>
+                  </PressableScale>
+                </View>
+
+                {pendingPhoto && (
+                  <View className="mt-4 bg-paper-300" style={{ aspectRatio: 1 }}>
+                    <Image
+                      source={{ uri: pendingPhoto.uri }}
+                      style={{ width: "100%", height: "100%" }}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                    />
+                  </View>
+                )}
+
                 <Text
-                  className="font-display text-ink-900"
-                  style={{ fontSize: 18, letterSpacing: 0.4 }}
+                  className="font-body text-ink-500 mt-4"
+                  style={{ fontSize: 12, letterSpacing: 0.2 }}
                 >
-                  UNE PIÈCE
+                  Une pièce, ou plusieurs à extraire ?
                 </Text>
-                <Text className="font-body text-ink-500 mt-0.5" style={{ fontSize: 11 }}>
-                  une photo, une entrée
-                </Text>
-              </PressableScale>
-              <PressableScale
-                onPress={confirmPendingAsMulti}
-                className="bg-ink-900 px-5 py-4"
-              >
-                <Text
-                  className="font-display text-paper"
-                  style={{ fontSize: 18, letterSpacing: 0.4 }}
-                >
-                  EXTRAIRE LES PIÈCES
-                </Text>
-                <Text className="font-body text-ink-300 mt-0.5" style={{ fontSize: 11 }}>
-                  Gemini sépare chaque vêtement
-                </Text>
-              </PressableScale>
-              <PressableScale
-                onPress={cancelPending}
-                className="px-5 py-3 items-center"
-              >
-                <Text
-                  className="font-body-medium text-ink-500"
-                  style={{ fontSize: 11, letterSpacing: 1.6 }}
-                >
-                  ANNULER
-                </Text>
-              </PressableScale>
-            </View>
+
+                <View className="mt-3">
+                  <ActionRow
+                    label="UNE PIÈCE"
+                    caption="une photo, une entrée"
+                    variant="primary"
+                    onPress={confirmPendingAsSingle}
+                  />
+                </View>
+                <View className="mt-2">
+                  <ActionRow
+                    label="PLUSIEURS"
+                    caption="gemini sépare les vêtements"
+                    variant="secondary"
+                    onPress={confirmPendingAsMulti}
+                  />
+                </View>
+              </View>
+            </SafeAreaView>
           </View>
         </View>
       </Modal>
@@ -281,58 +232,96 @@ export default function AddWardrobeItemSheet({ visible, onClose, onItemAdded }: 
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           className="flex-1 bg-ink-900/60 justify-end"
         >
-          <View className="bg-paper px-6 pt-6 pb-10">
-            <Text
-              className="font-body-medium text-ice-600"
-              style={{ fontSize: 10, letterSpacing: 2 }}
-            >
-              DÉCRIS LA PIÈCE
-            </Text>
-            <Text
-              className="font-body text-ink-500 mt-2"
-              style={{ fontSize: 12 }}
-            >
-              Ex : « pull oversize beige en laine », « jean noir droit taille haute »
-            </Text>
-            <TextInput
-              value={textInput}
-              onChangeText={setTextInput}
-              multiline
-              autoFocus
-              placeholder="Ta pièce…"
-              placeholderTextColor={colors.ink[300]}
-              className="mt-4 border border-ink-900 bg-paper-50 p-4 font-body text-ink-900"
-              style={{ minHeight: 88, fontSize: 15, textAlignVertical: "top" }}
-            />
-            <View className="flex-row gap-2 mt-4">
-              <PressableScale
-                onPress={() => setTextOpen(false)}
-                className="flex-1 border border-ink-900 bg-paper-50 py-4 items-center"
-              >
+          <View className="bg-paper">
+            <SafeAreaView edges={["bottom"]}>
+              <View className="px-6 pt-6 pb-6">
+                <View className="flex-row items-center justify-between">
+                  <Text
+                    className="font-body-medium text-ice-600"
+                    style={{ fontSize: 10, letterSpacing: 2 }}
+                  >
+                    DÉCRIS LA PIÈCE
+                  </Text>
+                  <PressableScale onPress={() => setTextOpen(false)} hitSlop={12}>
+                    <Text
+                      className="font-body-medium text-ink-500"
+                      style={{ fontSize: 10, letterSpacing: 2 }}
+                    >
+                      FERMER
+                    </Text>
+                  </PressableScale>
+                </View>
                 <Text
-                  className="font-display-medium text-ink-900"
-                  style={{ fontSize: 14, letterSpacing: 1.2 }}
+                  className="font-body text-ink-500 mt-3"
+                  style={{ fontSize: 12 }}
                 >
-                  ANNULER
+                  Ex : « pull oversize beige en laine », « jean noir droit taille haute »
                 </Text>
-              </PressableScale>
-              <PressableScale
-                onPress={onSubmitText}
-                disabled={!textInput.trim()}
-                className="flex-1 bg-ink-900 py-4 items-center"
-                style={{ opacity: textInput.trim() ? 1 : 0.4 }}
-              >
-                <Text
-                  className="font-display text-paper"
-                  style={{ fontSize: 14, letterSpacing: 1.4 }}
-                >
-                  ANALYSER
-                </Text>
-              </PressableScale>
-            </View>
+                <TextInput
+                  value={textInput}
+                  onChangeText={setTextInput}
+                  multiline
+                  autoFocus
+                  placeholder="Ta pièce…"
+                  placeholderTextColor={colors.ink[300]}
+                  className="mt-4 border border-ink-900 bg-paper-50 p-4 font-body text-ink-900"
+                  style={{ minHeight: 88, fontSize: 15, textAlignVertical: "top" }}
+                />
+                <View className="mt-3">
+                  <ActionRow
+                    label="ANALYSER"
+                    caption="gemini lit et génère"
+                    variant="primary"
+                    disabled={!textInput.trim()}
+                    onPress={onSubmitText}
+                  />
+                </View>
+              </View>
+            </SafeAreaView>
           </View>
         </KeyboardAvoidingView>
       </Modal>
     </Modal>
+  );
+}
+
+interface ActionRowProps {
+  label: string;
+  caption: string;
+  variant: "primary" | "secondary";
+  disabled?: boolean;
+  onPress: () => void;
+}
+
+function ActionRow({ label, caption, variant, disabled, onPress }: ActionRowProps) {
+  const isPrimary = variant === "primary";
+  const containerClass = isPrimary
+    ? "bg-ink-900 px-5 py-4"
+    : "border border-ink-900 bg-paper-50 px-5 py-4";
+  const labelClass = isPrimary ? "text-paper" : "text-ink-900";
+  const captionClass = isPrimary ? "text-ink-300" : "text-ice-600";
+
+  return (
+    <PressableScale
+      disabled={disabled}
+      onPress={onPress}
+      className={containerClass}
+      style={{ opacity: disabled ? 0.4 : 1 }}
+    >
+      <View className="flex-row items-baseline justify-between">
+        <Text
+          className={`font-display ${labelClass}`}
+          style={{ fontSize: 20, letterSpacing: 0.4 }}
+        >
+          {label}
+        </Text>
+        <Text
+          className={`font-body ${captionClass}`}
+          style={{ fontSize: 11, letterSpacing: 1.2 }}
+        >
+          {caption.toUpperCase()}
+        </Text>
+      </View>
+    </PressableScale>
   );
 }
