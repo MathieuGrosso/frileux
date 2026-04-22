@@ -128,6 +128,15 @@ Chaque feature suit le format : *Pourquoi · Scope · Hors scope · Fichiers · 
 
 > Section vivante : quand le backlog est épuisé, ajouter ici de nouvelles features alignées avec §1 du `CLAUDE.md`. Ne pas s'arrêter.
 
+### Éditorial bonus — FEED (issues du design council 2026-04-22)
+
+- **Wantbook** · bouton silencieux « même pièce » sur un outfit vu dans le feed. Ajoute une référence à une liste privée consultable depuis GOÛT. Table `user_wantbook(user_id, outfit_id, created_at)`. Pas de DM, pas de notif au poster.
+- **Memory replay** · filtre HISTORIQUE « il y a 1 an, ±2°C ». Requête `outfits` + filtre `weather_data->>'temp'`. Aucune fashion app ne le fait aujourd'hui.
+- **Critique structurée 3 axes** · remplacer le champ NOTES libre par 3 inputs courts (80 chars) : `fit` / `color` / `styling`. Stocker en colonnes ou `jsonb`. Se rapproche d'une fiche critique System magazine.
+- **Zonal tag** · long-press sur zone photo (head / torso / legs / feet) révèle la pièce wardrobe correspondante si le poster a taggé. Gros chantier — coordonnées normalisées, UI de tag côté poster, lookup côté viewer.
+- **Hype anonyme par cercle** · quand les cercles reviennent, leaderboard hype/jour non public, réservé au cercle. Ramène Lookbook.nu dans l'intime.
+- **Collection auto-contextuelle** · le système groupe les outfits liked dans un cercle par contexte météo détecté (« pluie légère 12-14° »). Auto-boards, pas Pinterest-manuel.
+
 ### Idées de départ (non spécifiées, à scoper avant exécution)
 - **Mode « lookbook du jour »** : carrousel d'1–3 références éditoriales (images du wardrobe user) qui matchent la météo.
 - **Capsule saisonnière auto** : à mi-saison, l'app propose d'archiver les pièces hors-saison du wardrobe.

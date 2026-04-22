@@ -232,7 +232,8 @@ export interface OutfitComment {
   id: string;
   outfit_id: string;
   user_id: string;
-  body: string;
+  body: string | null;
+  photo_url: string | null;
   created_at: string;
   profile?: Pick<Profile, "username" | "avatar_url">;
 }
