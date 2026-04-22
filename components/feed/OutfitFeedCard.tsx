@@ -1,4 +1,5 @@
-import { View, Text, Pressable } from "react-native";
+import { useState } from "react";
+import { View, Text, Pressable, useWindowDimensions } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import type { OutfitWithProfile } from "@/lib/types";
@@ -6,7 +7,13 @@ import { MemberAvatar } from "@/components/MemberAvatar";
 
 interface Props {
   outfit: OutfitWithProfile;
+  onOpenPhoto: (photoUrl: string) => void;
 }
+
+const FEED_PADDING_X = 24;
+const MAX_CARD_WIDTH = 560;
+const VIEWPORT_HEIGHT_RATIO = 0.78;
+const DEFAULT_RATIO = 4 / 5;
 
 function formatDay(iso: string): string {
   const d = new Date(iso);
@@ -16,17 +23,30 @@ function formatDay(iso: string): string {
   return `${weekday.toUpperCase()} ${day} ${month.toUpperCase()}`;
 }
 
-export function OutfitFeedCard({ outfit }: Props) {
+export function OutfitFeedCard({ outfit, onOpenPhoto }: Props) {
   const router = useRouter();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const [ratio, setRatio] = useState<number>(DEFAULT_RATIO);
+
   const username = outfit.profile?.username ?? "Anonyme";
   const temp = outfit.weather_data?.temp;
 
+  const cardWidth = Math.min(screenWidth - FEED_PADDING_X * 2, MAX_CARD_WIDTH);
+  const naturalHeight = cardWidth / ratio;
+  const photoHeight = Math.min(naturalHeight, screenHeight * VIEWPORT_HEIGHT_RATIO);
+
+  function goToDetail() {
+    router.push(`/outfit/${outfit.id}`);
+  }
+
   return (
-    <Pressable
-      onPress={() => router.push(`/outfit/${outfit.id}`)}
-      className="mb-10 active:opacity-70"
-    >
-      <View className="flex-row items-center gap-2.5 mb-3">
+    <View className="mb-10" style={{ width: cardWidth, alignSelf: "center" }}>
+      <Pressable
+        onPress={goToDetail}
+        hitSlop={4}
+        className="flex-row items-center gap-2.5 mb-3 active:opacity-60"
+        accessibilityLabel={`Ouvrir la tenue de ${username}`}
+      >
         <MemberAvatar
           username={outfit.profile?.username}
           avatarUrl={outfit.profile?.avatar_url}
@@ -51,13 +71,31 @@ export function OutfitFeedCard({ outfit }: Props) {
             {temp}°
           </Text>
         )}
-      </View>
-      <Image
-        source={{ uri: outfit.photo_url }}
-        style={{ width: "100%", height: 420 }}
-        contentFit="cover"
-        cachePolicy="memory-disk"
-      />
-    </Pressable>
+      </Pressable>
+      <Pressable
+        onPress={() => onOpenPhoto(outfit.photo_url)}
+        accessibilityLabel="Voir la photo en plein écran"
+      >
+        <View
+          className="bg-paper-200"
+          style={{ width: cardWidth, height: photoHeight }}
+        >
+          <Image
+            source={{ uri: outfit.photo_url }}
+            style={{ width: "100%", height: "100%" }}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            onLoad={(e) => {
+              const w = e.source?.width;
+              const h = e.source?.height;
+              if (w && h && h > 0) {
+                const r = w / h;
+                if (Math.abs(r - ratio) > 0.01) setRatio(r);
+              }
+            }}
+          />
+        </View>
+      </Pressable>
+    </View>
   );
 }
