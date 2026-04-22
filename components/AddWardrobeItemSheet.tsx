@@ -104,22 +104,30 @@ export default function AddWardrobeItemSheet({ visible, onClose, onItemAdded }: 
               <Animated.View entering={enterFadeUp(1, reducedMotion ?? false)}>
                 <PressableScale
                   disabled={analyzing}
-                  onPress={() => pickPhoto(true)}
-                  className="bg-ink-900 px-5 py-5"
+                  onPress={() => pickPhoto(false)}
+                  className="bg-ink-900 px-6 py-7"
                   style={{ opacity: analyzing ? 0.4 : 1 }}
                 >
-                  <View className="flex-row items-end justify-between">
+                  <View className="flex-row items-start justify-between">
+                    <View className="flex-1 pr-4">
+                      <Text
+                        className="font-display text-paper"
+                        style={{ fontSize: 28, letterSpacing: 0.4, lineHeight: 30 }}
+                      >
+                        GALERIE
+                      </Text>
+                      <Text
+                        className="font-body text-ink-300 mt-1"
+                        style={{ fontSize: 12 }}
+                      >
+                        choisis dans tes photos
+                      </Text>
+                    </View>
                     <Text
-                      className="font-display text-paper"
-                      style={{ fontSize: 22, letterSpacing: 0.4 }}
+                      className="font-body-medium text-ink-300"
+                      style={{ fontSize: 10, letterSpacing: 2 }}
                     >
-                      CAMÉRA
-                    </Text>
-                    <Text
-                      className="font-body text-ink-300"
-                      style={{ fontSize: 11, letterSpacing: 1.2 }}
-                    >
-                      PRENDS LA PHOTO
+                      01
                     </Text>
                   </View>
                 </PressableScale>
@@ -127,53 +135,66 @@ export default function AddWardrobeItemSheet({ visible, onClose, onItemAdded }: 
 
               <Animated.View
                 entering={enterFadeUp(2, reducedMotion ?? false)}
-                className="mt-2"
+                className="mt-3 border-t border-paper-300"
               >
                 <PressableScale
                   disabled={analyzing}
-                  onPress={() => pickPhoto(false)}
-                  className="border border-ink-900 bg-paper-50 px-5 py-5"
+                  onPress={() => pickPhoto(true)}
+                  className="border-b border-paper-300 py-5"
                   style={{ opacity: analyzing ? 0.4 : 1 }}
                 >
-                  <View className="flex-row items-end justify-between">
+                  <View className="flex-row items-start justify-between">
+                    <View className="flex-1 pr-4">
+                      <Text
+                        className="font-display text-ink-900"
+                        style={{ fontSize: 20, letterSpacing: 0.4 }}
+                      >
+                        CAMÉRA
+                      </Text>
+                      <Text
+                        className="font-body text-ink-500 mt-0.5"
+                        style={{ fontSize: 12 }}
+                      >
+                        nouvelle photo
+                      </Text>
+                    </View>
                     <Text
-                      className="font-display text-ink-900"
-                      style={{ fontSize: 22, letterSpacing: 0.4 }}
+                      className="font-body-medium text-ink-300"
+                      style={{ fontSize: 10, letterSpacing: 2 }}
                     >
-                      GALERIE
-                    </Text>
-                    <Text
-                      className="font-body text-ice-600"
-                      style={{ fontSize: 11, letterSpacing: 1.2 }}
-                    >
-                      DEPUIS TES PHOTOS
+                      02
                     </Text>
                   </View>
                 </PressableScale>
               </Animated.View>
 
-              <Animated.View
-                entering={enterFadeUp(3, reducedMotion ?? false)}
-                className="mt-2"
-              >
+              <Animated.View entering={enterFadeUp(3, reducedMotion ?? false)}>
                 <PressableScale
                   disabled={analyzing}
                   onPress={() => setTextOpen(true)}
-                  className="border border-paper-300 bg-paper-50 px-5 py-4"
+                  className="py-5 border-b border-paper-300"
                   style={{ opacity: analyzing ? 0.4 : 1 }}
                 >
-                  <View className="flex-row items-center justify-between">
+                  <View className="flex-row items-start justify-between">
+                    <View className="flex-1 pr-4">
+                      <Text
+                        className="font-display text-ink-900"
+                        style={{ fontSize: 20, letterSpacing: 0.4 }}
+                      >
+                        TEXTE
+                      </Text>
+                      <Text
+                        className="font-body text-ink-500 mt-0.5"
+                        style={{ fontSize: 12 }}
+                      >
+                        décris en un mot
+                      </Text>
+                    </View>
                     <Text
-                      className="font-body-medium text-ink-900"
-                      style={{ fontSize: 13, letterSpacing: 1.4 }}
+                      className="font-body-medium text-ink-300"
+                      style={{ fontSize: 10, letterSpacing: 2 }}
                     >
-                      + DÉCRIRE EN TEXTE
-                    </Text>
-                    <Text
-                      className="font-body text-ink-300"
-                      style={{ fontSize: 10, letterSpacing: 1.6 }}
-                    >
-                      GEMINI GÉNÈRE
+                      03
                     </Text>
                   </View>
                 </PressableScale>
@@ -182,12 +203,12 @@ export default function AddWardrobeItemSheet({ visible, onClose, onItemAdded }: 
               {analyzing && (
                 <Animated.View
                   entering={enterFadeUp(0, reducedMotion ?? false)}
-                  className="flex-row items-center gap-2 mt-5"
+                  className="flex-row items-center justify-end gap-2 mt-5"
                 >
                   <ActivityIndicator color={colors.ice[600]} size="small" />
                   <Text
-                    className="font-body text-ice-600"
-                    style={{ fontSize: 11, letterSpacing: 1.2 }}
+                    className="font-body-medium text-ice-600"
+                    style={{ fontSize: 10, letterSpacing: 2 }}
                   >
                     GEMINI ANALYSE…
                   </Text>
@@ -206,65 +227,92 @@ export default function AddWardrobeItemSheet({ visible, onClose, onItemAdded }: 
         statusBarTranslucent
       >
         <View className="flex-1 bg-ink-900/60 justify-end">
-          <View className="bg-paper px-6 pt-6 pb-10">
-            <Text
-              className="font-body-medium text-ice-600"
-              style={{ fontSize: 10, letterSpacing: 2 }}
-            >
-              CETTE PHOTO
-            </Text>
-            {pendingPhoto && (
-              <Image
-                source={{ uri: pendingPhoto.uri }}
-                style={{ width: "100%", height: 220, marginTop: 12, backgroundColor: colors.paper[300] }}
-              />
-            )}
-            <Text
-              className="font-body text-ink-500 mt-3"
-              style={{ fontSize: 12 }}
-            >
-              Une seule pièce, ou plusieurs à extraire ?
-            </Text>
-            <View className="mt-4 gap-2">
-              <PressableScale
-                onPress={confirmPendingAsSingle}
-                className="border border-ink-900 bg-paper-50 px-5 py-4"
+          <View className="bg-paper px-6 pt-6 pb-8">
+            <View className="flex-row items-start justify-between">
+              <Text
+                className="font-body-medium text-ice-600"
+                style={{ fontSize: 10, letterSpacing: 2 }}
               >
-                <Text
-                  className="font-display text-ink-900"
-                  style={{ fontSize: 18, letterSpacing: 0.4 }}
-                >
-                  UNE PIÈCE
-                </Text>
-                <Text className="font-body text-ink-500 mt-0.5" style={{ fontSize: 11 }}>
-                  une photo, une entrée
-                </Text>
-              </PressableScale>
-              <PressableScale
-                onPress={confirmPendingAsMulti}
-                className="bg-ink-900 px-5 py-4"
-              >
-                <Text
-                  className="font-display text-paper"
-                  style={{ fontSize: 18, letterSpacing: 0.4 }}
-                >
-                  EXTRAIRE LES PIÈCES
-                </Text>
-                <Text className="font-body text-ink-300 mt-0.5" style={{ fontSize: 11 }}>
-                  Gemini sépare chaque vêtement
-                </Text>
-              </PressableScale>
-              <PressableScale
-                onPress={cancelPending}
-                className="px-5 py-3 items-center"
-              >
+                CETTE PHOTO
+              </Text>
+              <PressableScale onPress={cancelPending} hitSlop={12}>
                 <Text
                   className="font-body-medium text-ink-500"
-                  style={{ fontSize: 11, letterSpacing: 1.6 }}
+                  style={{ fontSize: 10, letterSpacing: 2 }}
                 >
                   ANNULER
                 </Text>
               </PressableScale>
+            </View>
+            {pendingPhoto && (
+              <Image
+                source={{ uri: pendingPhoto.uri }}
+                style={{ width: "100%", height: 320, marginTop: 14, backgroundColor: colors.paper[300] }}
+              />
+            )}
+            <Text
+              className="font-body text-ink-500 mt-5"
+              style={{ fontSize: 12 }}
+            >
+              Une pièce, ou plusieurs à extraire ?
+            </Text>
+            <View className="mt-4">
+              <PressableScale
+                onPress={confirmPendingAsMulti}
+                className="bg-ink-900 px-6 py-7"
+              >
+                <View className="flex-row items-start justify-between">
+                  <View className="flex-1 pr-4">
+                    <Text
+                      className="font-display text-paper"
+                      style={{ fontSize: 28, letterSpacing: 0.4, lineHeight: 30 }}
+                    >
+                      EXTRAIRE
+                    </Text>
+                    <Text
+                      className="font-body text-ink-300 mt-1"
+                      style={{ fontSize: 12 }}
+                    >
+                      Gemini sépare chaque vêtement
+                    </Text>
+                  </View>
+                  <Text
+                    className="font-body-medium text-ink-300"
+                    style={{ fontSize: 10, letterSpacing: 2 }}
+                  >
+                    01
+                  </Text>
+                </View>
+              </PressableScale>
+              <View className="mt-3 border-t border-paper-300">
+                <PressableScale
+                  onPress={confirmPendingAsSingle}
+                  className="border-b border-paper-300 py-5"
+                >
+                  <View className="flex-row items-start justify-between">
+                    <View className="flex-1 pr-4">
+                      <Text
+                        className="font-display text-ink-900"
+                        style={{ fontSize: 20, letterSpacing: 0.4 }}
+                      >
+                        UNE SEULE PIÈCE
+                      </Text>
+                      <Text
+                        className="font-body text-ink-500 mt-0.5"
+                        style={{ fontSize: 12 }}
+                      >
+                        une photo → une entrée
+                      </Text>
+                    </View>
+                    <Text
+                      className="font-body-medium text-ink-300"
+                      style={{ fontSize: 10, letterSpacing: 2 }}
+                    >
+                      02
+                    </Text>
+                  </View>
+                </PressableScale>
+              </View>
             </View>
           </View>
         </View>
