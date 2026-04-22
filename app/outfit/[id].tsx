@@ -20,6 +20,8 @@ import { RatingStars } from "@/components/RatingStars";
 import { OutfitNotes } from "@/components/outfit/OutfitNotes";
 import { OutfitCritique } from "@/components/OutfitCritique";
 import { PhotoLightbox } from "@/components/feed/PhotoLightbox";
+import { ReactionStrip } from "@/components/feed/ReactionStrip";
+import { useOutfitReactions } from "@/hooks/useOutfitReactions";
 import { fetchOutfitCritique } from "@/lib/critique";
 import { colors } from "@/lib/theme";
 import { confirmAction, notifyError } from "@/lib/ui";
@@ -45,6 +47,8 @@ export default function OutfitDetailScreen() {
   const [critiqueCanRetry, setCritiqueCanRetry] = useState(false);
   const [photoRatio, setPhotoRatio] = useState<number>(DEFAULT_PHOTO_RATIO);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  const reactions = useOutfitReactions(id ?? null, { realtime: true });
 
   useEffect(() => { loadOutfit(); }, [id]);
 
@@ -246,6 +250,21 @@ export default function OutfitDetailScreen() {
                 <WeatherStat label="Ciel" value={weather.description} />
               </View>
             )}
+
+            <View className="mb-6">
+              <Text
+                className="font-body-medium text-micro tracking-widest text-ink-300 mb-1"
+                style={{ letterSpacing: 1.8 }}
+              >
+                NOTÉ PAR
+              </Text>
+              <ReactionStrip
+                counts={reactions.counts}
+                mine={reactions.mine}
+                onToggle={reactions.toggle}
+                size="md"
+              />
+            </View>
 
             {isOwner && (critiqueLoading || outfit.critique || critiqueError) && (
               <View className="-mx-6 mb-6">
