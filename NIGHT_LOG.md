@@ -27,6 +27,57 @@ Format par session :
 
 ## Sessions
 
+## 2026-04-22 session — FEED éditorial (lightbox + réactions + photos DM)
+
+### Fait
+- **Lot 1** ✅ PR #177 · `feat/feed-lightbox` · commit de7a178
+  - Fix P0 crop iPad : ratio adaptatif mesuré via `onLoad`, letterbox warm `paper-200`, plafond 78% viewport. Max card width 560 centrée sur iPad.
+  - Nouveau `components/feed/PhotoLightbox.tsx` : modal plein écran, pinch zoom 1x-4x, pan quand zoomé, swipe vertical pour fermer, tap pour dismiss. Aucune nouvelle dépendance.
+  - Split tap zones : méta → détail, photo → lightbox.
+- **Lot 2** ✅ PR #178 · `feat/feed-reactions` · commit 877e560 · empilé sur #177
+  - Migration `050_outfit_reactions.sql` appliquée **en prod** (enum fit/color/styling/piece, RLS, realtime).
+  - `hooks/useOutfitReactions.ts` : counts + mine + toggle optimiste, realtime optionnel.
+  - `components/feed/ReactionStrip.tsx` : 4 compteurs typographiques sous la photo, axe actif souligné.
+  - `components/feed/ReactionRadial.tsx` : modal long-press avec les 4 axes en Barlow Condensed 28px.
+  - Sur OutfitFeedCard : double-tap → toggle `fit` + trait `ice` 2px pulse + haptic success. Long-press → radial.
+  - Sur écran détail : ReactionStrip en grand format avec realtime.
+- **Lot 3** ✅ PR #179 · `feat/outfit-comment-photo` · commit c98b2e9 · empilé sur #178
+  - Migration `051_outfit_comments_photo.sql` écrite mais **non appliquée** (sandbox a bloqué `supabase db push` pour cette migration).
+  - Bucket `outfit_replies` public, 5 MB cap, RLS `{user_id}/*`.
+  - `OutfitNotes` : bouton image galerie, preview 72×96 avec × pour retirer, thumbnail 128×170 dans le thread, tap → PhotoLightbox. Légende optionnelle.
+- **Lot 4** ✅ PR #180 · `feat/dm-photo` · commit 0a3d966 · empilé sur #179
+  - Migration `052_dm_messages_attachment.sql` écrite, non appliquée.
+  - Bucket privé `dm_media` 8 MB, RLS stricte 2-participants, path `{thread_id}/{user_id}/*`.
+  - Trigger `dm_bump_thread` mis à jour : `last_message_preview` fallback `[photo]` quand body null.
+  - Écran DM : bouton image, preview 80×108 dans le composer, bulle photo 160×210, tap → lightbox.
+
+### Décisions prises en autonomie
+- **Pas d'étoiles ni de slider 1-10** pour noter : trop consumer, incompatible §2. Remplacé par 4 axes qualitatifs courts (fit / color / styling / piece) + double-tap silencieux sur axe `fit`.
+- **Double-tap ≠ cœur Instagram** : trait `ice` 2px vertical pulse sur le bord gauche 220ms, zéro iconographie cœur.
+- **Radial menu simplifié** en modal centré (labels en colonne) au lieu de drag-and-release radial iOS-style — plus fiable, reste éditorial, 4 slots en display 28px.
+- **DM photo = attachment, pas éphémère** : pas de "snap" ni compteur de vues. Photo persistante comme pour tout contenu fashion (on veut pouvoir revenir dessus).
+- **Bucket `dm_media` privé** (public=false) contrairement aux buckets outfits/wardrobe : les DM sont 1-to-1 intimes, photo ne doit pas être accessible via URL publique.
+
+### Bloqué
+- **Migrations 051 et 052 non appliquées en prod** : la sandbox a refusé `supabase db push` après la 050 (auto-mode mais non autorisé spécifiquement pour ces migrations). À pousser manuellement au réveil, avant merge des PRs #179/#180. Cf. memo `feedback_apply_migrations.md`.
+- **Local Supabase non démarré** : conteneur `supabase_db_frileux` unhealthy. À `supabase start` si dev local voulu.
+- **Test device iOS requis** pour le Lot 4 (caméra / picker galerie DM) — §8. Simu iOS OK pour les Lots 1/2/3.
+
+### Questions pour toi (review du matin)
+- OK pour la position du double-tap shortcut = `fit` ? Si tu préfères `styling` c'est une ligne à changer (`DOUBLE_TAP_AXIS` dans `OutfitFeedCard.tsx`).
+- Validation produit pour le Lot 5 (wantbook, memory replay, critique structurée, zonal tag) — j'ai juste listé dans `BACKLOG.md` section Inventées > Éditorial bonus FEED. À prioriser si tu veux embarquer pour la prochaine session.
+- Les PRs sont stackées : pour merger proprement il faut soit merger #177→#178→#179→#180 dans l'ordre, soit rebaser chaque branche sur `main` après merge de la précédente.
+
+### Idées ajoutées au BACKLOG
+- **Wantbook** · bouton silencieux « même pièce » sur un outfit du feed, liste privée dans GOÛT.
+- **Memory replay** · filtre HISTORIQUE « il y a 1 an, ±2°C ».
+- **Critique structurée 3 axes** · fit/color/styling en champs courts éditoriaux.
+- **Zonal tag** · long-press sur zone photo → pièce wardrobe taggée (gros chantier).
+- **Hype anonyme par cercle** · leaderboard intime quand les cercles reviennent.
+- **Collection auto-contextuelle** · auto-boards groupés par météo détectée.
+
+---
+
 ## 2026-04-22 session — L'ŒIL (dépôt d'inspirations externes)
 
 ### Fait
