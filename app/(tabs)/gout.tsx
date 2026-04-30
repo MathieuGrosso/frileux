@@ -13,9 +13,16 @@ interface Stats {
   probes: number;
   memoryFacts: number;
   brands: number;
+  coachMessages: number;
 }
 
-const EMPTY: Stats = { inspirations: 0, probes: 0, memoryFacts: 0, brands: 0 };
+const EMPTY: Stats = {
+  inspirations: 0,
+  probes: 0,
+  memoryFacts: 0,
+  brands: 0,
+  coachMessages: 0,
+};
 
 export default function GoutHub() {
   const router = useRouter();
@@ -31,7 +38,7 @@ export default function GoutHub() {
       setLoading(false);
       return;
     }
-    const [inspirationsRes, probesRes, memoryRes, profileRes] = await Promise.all([
+    const [inspirationsRes, probesRes, memoryRes, profileRes, coachRes] = await Promise.all([
       supabase
         .from("user_inspirations")
         .select("id", { count: "exact", head: true })
@@ -51,12 +58,17 @@ export default function GoutHub() {
         .select("favorite_brands")
         .eq("id", user.id)
         .maybeSingle(),
+      supabase
+        .from("coach_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id),
     ]);
     setStats({
       inspirations: inspirationsRes.count ?? 0,
       probes: probesRes.count ?? 0,
       memoryFacts: memoryRes.count ?? 0,
       brands: (profileRes.data?.favorite_brands as string[] | null)?.length ?? 0,
+      coachMessages: coachRes.count ?? 0,
     });
     setLoading(false);
   }, []);
@@ -129,6 +141,16 @@ export default function GoutHub() {
       stat: "reset goût",
       description: "Recommencer l'onboarding taste — pour pivoter.",
       onPress: redoSwipes,
+    },
+    {
+      num: "06",
+      title: "COACH",
+      stat:
+        stats.coachMessages > 0
+          ? `${stats.coachMessages} échange${stats.coachMessages > 1 ? "s" : ""}`
+          : "audit & chat",
+      description: "Audit ta garde-robe, demande à un coach style.",
+      onPress: () => router.push("/coach"),
     },
   ];
 
