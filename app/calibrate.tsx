@@ -108,11 +108,20 @@ export default function CalibrateScreen() {
 
   if (phase === "loading") {
     return (
-      <SafeAreaView className="flex-1 bg-paper items-center justify-center">
-        <ActivityIndicator color={colors.ink[900]} />
-        <Text className="font-body text-body-sm text-ink-400 mt-4">
-          Préparation des duels…
-        </Text>
+      <SafeAreaView className="flex-1 bg-paper">
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color={colors.ink[900]} />
+          <Text className="font-body text-body-sm text-ink-400 mt-4">
+            Préparation des duels…
+          </Text>
+        </View>
+        <View className="px-6 pb-10 items-end">
+          <Pressable onPress={goToday} hitSlop={10}>
+            <Text className="font-body text-micro text-ink-400 uppercase tracking-widest">
+              Plus tard →
+            </Text>
+          </Pressable>
+        </View>
       </SafeAreaView>
     );
   }
