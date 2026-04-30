@@ -102,6 +102,16 @@ export default function CalibrateScreen() {
     }
   }
 
+  function handleSkip() {
+    if (submitting) return;
+    if (!probes[cursor]) return;
+    if (cursor + 1 >= probes.length) {
+      setPhase("done");
+    } else {
+      setCursor(cursor + 1);
+    }
+  }
+
   function goToday() {
     router.replace("/(tabs)");
   }
@@ -223,9 +233,18 @@ export default function CalibrateScreen() {
               Ni l'un ni l'autre
             </Text>
           </Pressable>
-          <Pressable onPress={goToday} hitSlop={10}>
+          <Pressable
+            onPress={handleSkip}
+            disabled={submitting}
+            hitSlop={10}
+          >
             <Text className="font-body text-micro text-ink-400 uppercase tracking-widest">
-              Plus tard →
+              Passer →
+            </Text>
+          </Pressable>
+          <Pressable onPress={goToday} hitSlop={10}>
+            <Text className="font-body text-micro text-ink-300 uppercase tracking-widest">
+              Plus tard
             </Text>
           </Pressable>
         </View>
